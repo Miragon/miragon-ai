@@ -21,7 +21,7 @@ import {
 import { CAMUNDA7_MODULE_KEY } from "../lib/profile-schema.js"
 import {
   CAMUNDA7_LIST_ENGINES,
-  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_SAVE_SETTINGS,
   CAMUNDA7_SELECT_ENGINE,
 } from "../tool-names.js"
 
@@ -202,7 +202,7 @@ describe("camunda7_select_engine racing a settings save in the same slice", () =
     const registry = { engines: [] } as unknown as EngineRegistry
     registerUserProfileTools({ tool } as unknown as MCPServer, store, registry, "operations")
     const saveProfile = tool.mock.calls.find(
-      (c) => (c[0] as { name: string }).name === CAMUNDA7_SAVE_USER_PROFILE,
+      (c) => (c[0] as { name: string }).name === CAMUNDA7_SAVE_SETTINGS,
     )![1] as (params: unknown) => Promise<{ isError?: boolean }>
 
     const [, saved] = await under(USER, async () => {

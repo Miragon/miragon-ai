@@ -341,12 +341,13 @@ export const definition: AppDefinition = {
       size: "full",
     },
     {
-      // Self-fetching: loads camunda7_user_profile_data for the signed-in caller
-      // (no pipeline step), eager-rendered by camunda7_show_user_profile.
-      id: "camunda7:user-profile",
-      ...builderText("widget.user-profile"),
+      // Self-fetching: loads camunda7_settings_data for the signed-in caller
+      // (no pipeline step), eager-rendered by camunda7_show_settings; a
+      // `<module>:settings` section of the shell's settings page.
+      id: "camunda7:settings",
+      ...builderText("widget.settings"),
       description:
-        "The signed-in user's settings (language, default engine, dashboards) — opened by camunda7_show_user_profile.",
+        "The signed-in user's camunda7 settings (available engines, default engine, dashboards) — opened by camunda7_show_settings.",
       requires: [],
       size: "full",
     },

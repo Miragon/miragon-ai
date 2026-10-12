@@ -1,11 +1,11 @@
-import type { CAMUNDA7_SAVE_USER_PROFILE, Camunda7WidgetAction } from "../../tool-names.js"
+import type { CAMUNDA7_SAVE_SETTINGS, Camunda7WidgetAction } from "../../tool-names.js"
 
 /**
  * Every write a widget performs: the engine writes the deployment's toolset
  * gates (`CAMUNDA7_WIDGET_ACTIONS`) plus the settings panel's profile save,
  * which its view gates itself (`canSave` — it also needs a signed-in caller).
  */
-export type WidgetWrite = Camunda7WidgetAction | typeof CAMUNDA7_SAVE_USER_PROFILE
+export type WidgetWrite = Camunda7WidgetAction | typeof CAMUNDA7_SAVE_SETTINGS
 
 export interface WritePolicy {
   /**
@@ -102,9 +102,9 @@ export const WRITE_POLICY: Record<WidgetWrite, WritePolicy> = {
     ),
     confirm: true,
   },
-  // The panel itself, the engine list it curates, and the app root's language gate.
-  camunda7_save_user_profile: {
-    invalidates: ["camunda7:user-profile", "camunda7:engines", "camunda7:profile-gate"],
+  // The section itself and the engine list it curates (the language is the shell's).
+  camunda7_save_settings: {
+    invalidates: ["camunda7:settings", "camunda7:engines"],
     confirm: false,
   },
 }

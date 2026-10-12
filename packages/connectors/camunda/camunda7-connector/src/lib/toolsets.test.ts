@@ -71,7 +71,7 @@ const ADMIN_ONLY = [
 ]
 
 const ENGINE_WRITES = [
-  // the saved default engine (a profile write, like camunda7_save_user_profile)
+  // the saved default engine (a profile write, like camunda7_save_settings)
   "camunda7_select_engine",
   "camunda7_start_process_instance",
   "camunda7_complete_task",

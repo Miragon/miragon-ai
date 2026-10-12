@@ -3782,7 +3782,7 @@
       "idempotentHint": true,
       "openWorldHint": false
     },
-    "description": "Update the caller's user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like \"switch the UI to German\" (language: \"de\") or \"only let me pick the prod engines\" (allowedEngineIds). Engine availability is curation, not access control.",
+    "description": "Update the caller's camunda7 settings. Only the provided fields change; omitted fields keep their value. Use it for requests like \"only let me pick the prod engines\" (allowedEngineIds) or a default dashboard. Engine availability is curation, not access control.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3801,15 +3801,6 @@
           "description": "Default engine: operations tools route here when no per-call `engine` override is given, and the cockpit lands on it. Saved via the settings page or camunda7_select_engine.",
           "type": "string"
         },
-        "language": {
-          "description": "UI + summary language; \"system\" follows the chat host (summaries in English).",
-          "enum": [
-            "system",
-            "en",
-            "de"
-          ],
-          "type": "string"
-        },
         "pinnedDashboardIds": {
           "description": "Saved-dashboard ids the user pinned, shown first in dashboard pickers.",
           "items": {
@@ -3820,8 +3811,8 @@
       },
       "type": "object"
     },
-    "name": "camunda7_save_user_profile",
-    "title": "Save user profile"
+    "name": "camunda7_save_settings",
+    "title": "Save engine & dashboard settings"
   },
   {
     "annotations": {
@@ -3999,6 +3990,29 @@
       "type": "object"
     },
     "name": "camunda7_set_task_assignee"
+  },
+  {
+    "_meta": {
+      "openai/widgetAccessible": true,
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "description": "Internal JSON feed (no UI) for the caller's camunda7 settings + the configured engine list. Prefer camunda7_show_settings.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "camunda7_settings_data",
+    "title": "Settings data (internal)"
   },
   {
     "_meta": {
@@ -4657,35 +4671,35 @@
   },
   {
     "_meta": {
-      "openai/outputTemplate": "ui://views/camunda7_show_user_profile.html",
+      "openai/outputTemplate": "ui://views/camunda7_show_settings.html",
       "openai/resultCanProduceWidget": true,
-      "openai/toolInvocation/invoked": "Profile & Settings ready",
-      "openai/toolInvocation/invoking": "Loading Profile & Settings…",
+      "openai/toolInvocation/invoked": "Engine & dashboard settings ready",
+      "openai/toolInvocation/invoking": "Loading Engine & dashboard settings…",
       "openai/widgetAccessible": true,
       "ui": {
-        "resourceUri": "ui://views/camunda7_show_user_profile.html"
+        "resourceUri": "ui://views/camunda7_show_settings.html"
       },
-      "ui/resourceUri": "ui://views/camunda7_show_user_profile.html"
+      "ui/resourceUri": "ui://views/camunda7_show_settings.html"
     },
     "annotations": {
       "idempotentHint": true,
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Open the user profile & settings panel: language, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+    "description": "Open camunda7's settings: available engines, the default engine, dashboard preferences.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
       "type": "object"
     },
-    "name": "camunda7_show_user_profile",
+    "name": "camunda7_show_settings",
     "outputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": {},
       "properties": {},
       "type": "object"
     },
-    "title": "Profile & Settings"
+    "title": "Engine & dashboard settings"
   },
   {
     "annotations": {
@@ -4777,29 +4791,6 @@
       "type": "object"
     },
     "name": "camunda7_unclaim_task"
-  },
-  {
-    "_meta": {
-      "openai/widgetAccessible": true,
-      "ui": {
-        "visibility": [
-          "app"
-        ]
-      }
-    },
-    "annotations": {
-      "idempotentHint": true,
-      "openWorldHint": true,
-      "readOnlyHint": true
-    },
-    "description": "Internal JSON feed (no UI) for the caller's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
-    "inputSchema": {
-      "additionalProperties": false,
-      "properties": {},
-      "type": "object"
-    },
-    "name": "camunda7_user_profile_data",
-    "title": "User profile data (internal)"
   },
   {
     "_meta": {
@@ -5592,5 +5583,89 @@
     },
     "name": "save-dashboard",
     "title": "Save dashboard"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Set the caller's UI language, e.g. \"switch the UI to German\" (language: \"de\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "description": "\"system\" follows the chat app. Tool summaries follow it too.",
+          "enum": [
+            "system",
+            "en",
+            "de"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "language"
+      ],
+      "type": "object"
+    },
+    "name": "shell_save_settings",
+    "title": "Save settings"
+  },
+  {
+    "_meta": {
+      "openai/widgetAccessible": true,
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Internal JSON feed (no UI) for the settings page's language section. Prefer shell_show_settings.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "shell_settings_data",
+    "title": "Settings data (internal)"
+  },
+  {
+    "_meta": {
+      "openai/outputTemplate": "ui://views/shell_show_settings.html",
+      "openai/resultCanProduceWidget": true,
+      "openai/toolInvocation/invoked": "Settings ready",
+      "openai/toolInvocation/invoking": "Loading Settings…",
+      "openai/widgetAccessible": true,
+      "ui": {
+        "resourceUri": "ui://views/shell_show_settings.html"
+      },
+      "ui/resourceUri": "ui://views/shell_show_settings.html"
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Open the settings page: the UI language and each module's settings.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "shell_show_settings",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": {},
+      "properties": {},
+      "type": "object"
+    },
+    "title": "Settings"
   }
 ]

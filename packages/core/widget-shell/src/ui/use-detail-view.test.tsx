@@ -144,6 +144,24 @@ function Detail({ seed }: { seed: Detail | null }) {
 }
 
 describe("useDetailView", () => {
+  it("hands out the failed first load, so a section can hide when its tool is missing", async () => {
+    callTool.mockRejectedValueOnce(new Error("Tool test_detail_data not found"))
+    const { result } = renderHook(
+      () =>
+        useDetailView<Detail>({
+          initialData: null,
+          key: ["test:detail", "missing"],
+          tool: "test_detail_data",
+          args: {},
+          ready: true,
+          emptyText: "Nothing",
+        }),
+      { wrapper },
+    )
+    await waitFor(() => expect(result.current.loadError).toBeInstanceOf(Error))
+    expect(String(result.current.loadError)).toContain("not found")
+  })
+
   it("offers a Retry on a failed load — never a dead end", async () => {
     callTool.mockRejectedValueOnce(new Error("[503 ProcessEngineException] down (engine prod)"))
     render(<Detail seed={null} />, { wrapper })

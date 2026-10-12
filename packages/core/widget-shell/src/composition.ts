@@ -341,10 +341,11 @@ export function composeModules<TShared>(options: {
 
 /**
  * Whether the server may register FRAMEWORK durable writes — the toolkit
- * builder's `save-dashboard`/`delete-dashboard`, which no module toolset
- * filters. Only with a caller identity (dashboards are keyed by user; without
- * OAuth every record is shared and ownerless) and only when no active module
- * sits on its read-only floor: the most restrictive module wins.
+ * builder's `save-dashboard`/`delete-dashboard` and the shell's
+ * `shell_save_settings`, which no module toolset filters. Only with a caller
+ * identity (records are keyed by user; without OAuth every record is shared
+ * and ownerless) and only when no active module sits on its read-only floor:
+ * the most restrictive module wins.
  */
 export function frameworkWritesAllowed(boot: ResolvedBoot): boolean {
   return boot.authenticated && boot.toolsets.every(({ durableWrites }) => durableWrites)

@@ -10,6 +10,7 @@ import { analyticsModule } from "@miragon-ai/analytics-connector"
 import {
   composeModules,
   createShellPlugin,
+  frameworkWritesAllowed,
   HTTP_EDGE_ENV_VARS,
   OAUTH_ENV_VARS,
   type ProfileStore,
@@ -121,10 +122,12 @@ export function getPlugins(
   const { entries } = boot
   const shared = buildSharedResources(entries, profileStore)
   return [
-    // Always-on generic widgets (`shell:*`) — no tools, no steps, so they are
-    // deliberately outside the MCP_ACTIVE_MODULES selection. Catalogue +
-    // components both live in @miragon-ai/widget-shell (apps own no domain UI).
-    createShellPlugin(),
+    // Always-on shell (`shell:*`): the generic widgets plus the settings page
+    // and the UI language, deliberately outside the MCP_ACTIVE_MODULES
+    // selection. Its language save is a framework write: OAuth and no module
+    // on its read-only floor. Catalogue, tools and components live in
+    // @miragon-ai/widget-shell (apps own no domain UI).
+    createShellPlugin({ profileStore, allowSave: frameworkWritesAllowed(boot) }),
     ...composition.pluginsFor(entries, shared),
   ]
 }

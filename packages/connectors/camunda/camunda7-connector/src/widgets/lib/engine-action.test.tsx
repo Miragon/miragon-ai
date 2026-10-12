@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
 import { AppQueryProvider, queryClient, ToastProvider } from "@miragon/mcp-toolkit-ui"
-import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../../tool-names.js"
+import { CAMUNDA7_SAVE_SETTINGS, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../../tool-names.js"
 import { useEngineAction, type ActionConfirmation } from "./engine-action.js"
 import { WRITE_POLICY } from "./write-policy.js"
 
@@ -73,7 +73,7 @@ describe("useEngineAction — the gate", () => {
 
   it("takes a self-gated write's decision from the view", () => {
     const { result } = renderHook(
-      () => useEngineAction({ tool: CAMUNDA7_SAVE_USER_PROFILE, allowed: true }),
+      () => useEngineAction({ tool: CAMUNDA7_SAVE_SETTINGS, allowed: true }),
       { wrapper },
     )
     expect(result.current.allowed).toBe(true)

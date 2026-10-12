@@ -59,9 +59,9 @@ export const CAMUNDA7_PROCESS_LIST_DATA = "camunda7_process_list_data"
 // User profile & settings: the show tool renders the settings widget, the
 // _data feed backs the widget's self-fetch (app-only), and save persists a
 // partial preference update (model-visible, e.g. "switch the UI to German").
-export const CAMUNDA7_SHOW_USER_PROFILE = "camunda7_show_user_profile"
-export const CAMUNDA7_USER_PROFILE_DATA = "camunda7_user_profile_data"
-export const CAMUNDA7_SAVE_USER_PROFILE = "camunda7_save_user_profile"
+export const CAMUNDA7_SHOW_SETTINGS = "camunda7_show_settings"
+export const CAMUNDA7_SETTINGS_DATA = "camunda7_settings_data"
+export const CAMUNDA7_SAVE_SETTINGS = "camunda7_save_settings"
 // Engine management: the read-only engine list (+ the saved default) and the
 // durable default-engine save. Widgets call ONLY the list, so its name is
 // load-bearing beyond prompt hints. No widget writes a default: cockpit

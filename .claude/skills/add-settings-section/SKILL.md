@@ -18,8 +18,9 @@ another module's slice.
 Reference implementations — read one before writing anything:
 `packages/connectors/analytics/analytics-connector/src/settings.ts` + `settings-tools.ts` +
 `src/widgets/settings-section.tsx` (pure slice), or camunda7's
-`src/lib/profile-schema.ts` + `src/tools/user-profile.ts` (slice + the cross-module
-`language` field behind one flat tool input).
+`src/lib/profile-schema.ts` + `src/tools/user-profile.ts` (`camunda7_*_settings`, a slice
+with an engine list beside it). The record-level `language` is the shell's own section
+(`packages/core/widget-shell/src/shell-settings.ts`), not a module's.
 
 **Decide first: slice or core preference?** A setting only your module understands
 (analysis window, threshold, engine availability) is a slice — everything below applies.
@@ -235,12 +236,13 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
 4. `src/tool-names.ts` — constants for the `*_data` feed and the save tool, so a rename
    trips TS at every widget call site
 
-**The `<module>:settings` id IS the registration on the settings page.**
-`settingsLayout` (`camunda7-connector/src/widgets/cockpit-app/views.ts`) assembles the
-page from the HOST's widget registry: camunda7's own `camunda7:user-profile` panel first,
-then one row per id ending in `:settings`, in registration order (the composition root's
-module order in `widget-registry.ts`). Nothing in the camunda7 package lists your module —
-which is exactly why a custom module in a composed server gets a first-class section too.
+**The `<module>:settings` id IS the registration on the settings page.** The page is the
+shell's (`shell_show_settings`, also the cockpit's settings tab): `settingsLayout`
+(`@miragon-ai/widget-shell/widgets`) assembles it from the HOST's widget registry — the
+shell's language section (`shell:settings`) first, then one row per id ending in
+`:settings`, in registration order (the composition root's module order in
+`widget-registry.ts`). Nothing lists your module — which is exactly why a custom module in
+a composed server gets a first-class section too.
 Name the widget anything else and it renders only through your own
 `<module>_show_settings` tool.
 
@@ -286,8 +288,8 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 
 `pnpm typecheck` is the **only** check covering widget `.tsx` code. Widget changes also
 need `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` plus a manual render:
-`docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, open the
-settings tab via `<module>_show_settings` in the inspector at
+`docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, open your
+section via `<module>_show_settings` (the whole page via `shell_show_settings`) in the inspector at
 `http://localhost:8400/mcp/inspector`. Exercise Save and reload — a value that doesn't survive
 the reload means the merge or the key resolution is wrong. Save needs a caller identity AND
 a write-capable toolset: the default `pnpm dev` boot has neither, so the section correctly

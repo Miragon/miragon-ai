@@ -3520,6 +3520,29 @@
   },
   {
     "_meta": {
+      "openai/widgetAccessible": true,
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": true,
+      "readOnlyHint": true
+    },
+    "description": "Internal JSON feed (no UI) for the caller's camunda7 settings + the configured engine list. Prefer camunda7_show_settings.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "camunda7_settings_data",
+    "title": "Settings data (internal)"
+  },
+  {
+    "_meta": {
       "openai/outputTemplate": "ui://views/camunda7_show_bpmn_viewer.html",
       "openai/resultCanProduceWidget": true,
       "openai/toolInvocation/invoked": "BPMN Diagram Viewer ready",
@@ -4175,58 +4198,35 @@
   },
   {
     "_meta": {
-      "openai/outputTemplate": "ui://views/camunda7_show_user_profile.html",
+      "openai/outputTemplate": "ui://views/camunda7_show_settings.html",
       "openai/resultCanProduceWidget": true,
-      "openai/toolInvocation/invoked": "Profile & Settings ready",
-      "openai/toolInvocation/invoking": "Loading Profile & Settings…",
+      "openai/toolInvocation/invoked": "Engine & dashboard settings ready",
+      "openai/toolInvocation/invoking": "Loading Engine & dashboard settings…",
       "openai/widgetAccessible": true,
       "ui": {
-        "resourceUri": "ui://views/camunda7_show_user_profile.html"
+        "resourceUri": "ui://views/camunda7_show_settings.html"
       },
-      "ui/resourceUri": "ui://views/camunda7_show_user_profile.html"
+      "ui/resourceUri": "ui://views/camunda7_show_settings.html"
     },
     "annotations": {
       "idempotentHint": true,
       "openWorldHint": true,
       "readOnlyHint": true
     },
-    "description": "Open the user profile & settings panel: language, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+    "description": "Open camunda7's settings: available engines, the default engine, dashboard preferences.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
       "type": "object"
     },
-    "name": "camunda7_show_user_profile",
+    "name": "camunda7_show_settings",
     "outputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": {},
       "properties": {},
       "type": "object"
     },
-    "title": "Profile & Settings"
-  },
-  {
-    "_meta": {
-      "openai/widgetAccessible": true,
-      "ui": {
-        "visibility": [
-          "app"
-        ]
-      }
-    },
-    "annotations": {
-      "idempotentHint": true,
-      "openWorldHint": true,
-      "readOnlyHint": true
-    },
-    "description": "Internal JSON feed (no UI) for the caller's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
-    "inputSchema": {
-      "additionalProperties": false,
-      "properties": {},
-      "type": "object"
-    },
-    "name": "camunda7_user_profile_data",
-    "title": "User profile data (internal)"
+    "title": "Engine & dashboard settings"
   },
   {
     "_meta": {
@@ -4703,5 +4703,60 @@
       "type": "object"
     },
     "title": "Render view"
+  },
+  {
+    "_meta": {
+      "openai/widgetAccessible": true,
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Internal JSON feed (no UI) for the settings page's language section. Prefer shell_show_settings.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "shell_settings_data",
+    "title": "Settings data (internal)"
+  },
+  {
+    "_meta": {
+      "openai/outputTemplate": "ui://views/shell_show_settings.html",
+      "openai/resultCanProduceWidget": true,
+      "openai/toolInvocation/invoked": "Settings ready",
+      "openai/toolInvocation/invoking": "Loading Settings…",
+      "openai/widgetAccessible": true,
+      "ui": {
+        "resourceUri": "ui://views/shell_show_settings.html"
+      },
+      "ui/resourceUri": "ui://views/shell_show_settings.html"
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Open the settings page: the UI language and each module's settings.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "shell_show_settings",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": {},
+      "properties": {},
+      "type": "object"
+    },
+    "title": "Settings"
   }
 ]

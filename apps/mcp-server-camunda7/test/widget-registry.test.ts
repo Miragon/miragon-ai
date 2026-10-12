@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest"
 import { collectLayoutWidgets } from "@miragon/mcp-toolkit-core"
 import { definition as camunda7Definition } from "@miragon-ai/camunda7-connector/definition"
 import { definition as analyticsDefinition } from "@miragon-ai/analytics-connector/definition"
-import { cockpitViews, filterLayoutToWidgets } from "@miragon-ai/camunda7-connector/widgets"
+import { cockpitViews } from "@miragon-ai/camunda7-connector/widgets"
+import { shellDefinition } from "@miragon-ai/widget-shell/server"
+import {
+  filterLayoutToWidgets,
+  settingsLayout,
+  SHELL_SETTINGS_PAGE_WIDGET,
+} from "@miragon-ai/widget-shell/widgets"
 import { widgetRegistry } from "../src/ui/widget-registry.js"
 
 /**
@@ -12,30 +18,28 @@ import { widgetRegistry } from "../src/ui/widget-registry.js"
  * widgets. A widget id catalogued in a module definition but absent here
  * renders as an empty slot in the host UI.
  */
-describe("host widget registry covers the module catalogues", () => {
-  const catalogued = [
-    ...camunda7Definition.widgets.map((w) => w.id),
-    ...analyticsDefinition.widgets.map((w) => w.id),
-  ]
+/** Every widget id the composed catalogues declare: both modules and the shell. */
+const catalogued = [
+  ...camunda7Definition.widgets.map((w) => w.id),
+  ...analyticsDefinition.widgets.map((w) => w.id),
+  ...shellDefinition.widgets.map((w) => w.id),
+]
 
-  it("has an entry for every widget id declared by the camunda7 and analytics modules", () => {
+describe("host widget registry covers the module catalogues", () => {
+  it("has an entry for every widget id declared by the modules and the shell", () => {
     const missing = catalogued.filter((id) => !(id in widgetRegistry))
     expect(missing).toEqual([])
-  })
-
-  it("keeps the always-registered generic shell widgets", () => {
-    expect(widgetRegistry).toHaveProperty("shell:kpi-grid")
-    expect(widgetRegistry).toHaveProperty("shell:data-table")
   })
 })
 
 /**
- * The settings page composes one section widget per module, and it assembles
- * that layout from THIS host's widget registry (`settingsLayout`, by the
- * `<module>:settings` convention) — so the page extends to modules the camunda7
- * package has never heard of. Its failure modes stay SILENT: a section whose
- * widget never reaches the host registry is simply absent from the settings
- * tab, and an id that resolves nowhere is dropped by `filterLayoutToWidgets`.
+ * The settings page (the shell's, #346) composes the shell's language section
+ * and one section widget per module, and it assembles that layout from THIS
+ * host's widget registry (`settingsLayout`, by the `<module>:settings`
+ * convention) — so the page extends to modules no package has heard of. Its
+ * failure modes stay SILENT: a section whose widget never reaches the host
+ * registry is simply absent from the page, and an id that resolves nowhere is
+ * dropped by `filterLayoutToWidgets`.
  * Every other check stays green either way, so this test is the only thing
  * standing between a shipped settings section and an invisible one.
  *
@@ -44,22 +48,24 @@ describe("host widget registry covers the module catalogues", () => {
  */
 describe("settings page composes every module's settings section", () => {
   // The runtime input: the ids this host bundle can render, in registration
-  // order — exactly what the cockpit passes as the view context.
+  // order — exactly what the page reads from the host registry.
   const hostWidgetIds = Object.keys(widgetRegistry)
-  // The runtime call path; the settings view ignores the route params.
-  const settingsLayoutOf = (widgetIds: string[]) =>
-    cockpitViews.settings({ engine: "prod-a" }, { widgetIds })
+  const settingsLayoutOf = (widgetIds: string[]) => settingsLayout(widgetIds)
   const sectionIds = collectLayoutWidgets(settingsLayoutOf(hostWidgetIds))
 
-  /**
-   * The convention that identifies a settings section in a module catalogue:
-   * the `<module>:settings` id a module registers for its own section. The
-   * camunda7 profile panel predates the convention and is listed explicitly.
-   */
-  const cataloguedSections = [
-    ...camunda7Definition.widgets.map((w) => w.id),
-    ...analyticsDefinition.widgets.map((w) => w.id),
-  ].filter((id) => id.endsWith(":settings") || id === "camunda7:user-profile")
+  /** The convention that identifies a settings section in a catalogue: `<module>:settings`. */
+  const cataloguedSections = catalogued.filter((id) => id.endsWith(":settings"))
+
+  it("is what the cockpit's settings tab renders, and the host bundles it", () => {
+    expect(collectLayoutWidgets(cockpitViews.settings({ engine: "prod-a" }))).toEqual([
+      SHELL_SETTINGS_PAGE_WIDGET,
+    ])
+    expect(widgetRegistry).toHaveProperty(SHELL_SETTINGS_PAGE_WIDGET)
+  })
+
+  it("leads with the shell's language section", () => {
+    expect(sectionIds[0]).toBe("shell:settings")
+  })
 
   it("lists every catalogued settings section (a missing row = an invisible section)", () => {
     const missing = cataloguedSections.filter((id) => !sectionIds.includes(id))
@@ -90,11 +96,11 @@ describe("settings page composes every module's settings section", () => {
       withoutAnalytics,
     )
     const remaining = collectLayoutWidgets(filtered)
-    expect(remaining).toContain("camunda7:user-profile")
+    expect(remaining).toContain("camunda7:settings")
     expect(remaining.some((id) => id.startsWith("analytics:"))).toBe(false)
   })
 
-  it("extends to a CUSTOM module's section without an edit in the camunda7 package", () => {
+  it("extends to a CUSTOM module's section without an edit anywhere else", () => {
     // What a composed server (the starter template) relies on: register a
     // `<module>:settings` widget in the host bundle and the page grows a row.
     const CustomSection = () => null

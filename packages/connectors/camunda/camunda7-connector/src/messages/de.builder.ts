@@ -72,9 +72,9 @@ export const deBuilder: MessageCatalog = {
   "builder.widget.job-panel.title": "Jobs",
   "builder.widget.job-panel.summary":
     "Die Jobs der Engine mit den genauen Gesamtzahlen aller Jobs und der Jobs ohne Versuche.",
-  "builder.widget.user-profile.title": "Einstellungen",
-  "builder.widget.user-profile.summary":
-    "Deine Sprache, deine Standard-Engine und deine gespeicherten Dashboards.",
+  "builder.widget.settings.title": "Engine- und Dashboard-Einstellungen",
+  "builder.widget.settings.summary":
+    "Aus welchen Engines du wählst, deine Standard-Engine und deine Dashboards.",
   "builder.widget.cockpit-app.title": "Operations Cockpit",
   "builder.widget.cockpit-app.summary":
     "Das ganze Cockpit mit seiner Navigation. Es öffnet sich als eigene Ansicht.",

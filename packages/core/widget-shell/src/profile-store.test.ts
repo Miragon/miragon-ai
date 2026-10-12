@@ -142,7 +142,7 @@ function profileStoreContract(makeStore: () => Promise<ProfileStore>) {
 
   it("keeps concurrent saves of different fields in the SAME slice: a stale value never wins", async () => {
     const store = await makeStore()
-    // The model fires camunda7_select_engine and camunda7_save_user_profile
+    // The model fires camunda7_select_engine and camunda7_save_settings
     // in one turn, and the field the select changes ALREADY holds a value.
     // A save tool that hands the store a pre-read slice (read outside the
     // lock) writes that stale value back. The patch alone, merged inside the

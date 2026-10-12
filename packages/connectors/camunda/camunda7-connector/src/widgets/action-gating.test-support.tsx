@@ -2,7 +2,7 @@ import type { ComponentType, ReactElement } from "react"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 
 import type { UserProfileView } from "../lib/profile-schema.js"
-import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
+import { CAMUNDA7_SAVE_SETTINGS, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import type {
   IncidentInstance,
   IncidentRecovery,
@@ -98,7 +98,6 @@ const JOBS: JobPanelData = {
 function profileView(canSave: boolean): UserProfileView {
   return {
     profile: {
-      language: "en",
       updatedAt: "2026-10-01T00:00:00.000Z",
       defaultEngineId: "prod",
       allowedEngineIds: [],
@@ -165,8 +164,8 @@ export const GATING_RENDERERS: Record<GatingSite, Renderer> = {
       allowed,
     ),
   // Self-gated: rendered as allowed exactly when the list holds the save.
-  "user-profile.tsx#camunda7_save_user_profile": (allowed) => {
-    const view = profileView(allowed.includes(CAMUNDA7_SAVE_USER_PROFILE))
+  "user-profile.tsx#camunda7_save_settings": (allowed) => {
+    const view = profileView(allowed.includes(CAMUNDA7_SAVE_SETTINGS))
     const Panel: ComponentType<Record<string, unknown>> = () => <UserProfileWidget data={view} />
     return host(Panel, allowed)
   },

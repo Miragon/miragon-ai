@@ -1,4 +1,4 @@
-import { CAMUNDA7_SAVE_USER_PROFILE } from "../tool-names.js"
+import { CAMUNDA7_SAVE_SETTINGS } from "../tool-names.js"
 import type { WidgetWrite } from "./lib/write-policy.js"
 
 /**
@@ -52,8 +52,8 @@ export const GATING_SITES = [
   },
   {
     // Self-gated: the view's `canSave` (toolset AND a signed-in caller).
-    site: "user-profile.tsx#camunda7_save_user_profile",
-    write: CAMUNDA7_SAVE_USER_PROFILE,
+    site: "user-profile.tsx#camunda7_save_settings",
+    write: CAMUNDA7_SAVE_SETTINGS,
     control: "Save",
   },
 ] as const satisfies ReadonlyArray<{ site: string; write: WidgetWrite; control: string }>

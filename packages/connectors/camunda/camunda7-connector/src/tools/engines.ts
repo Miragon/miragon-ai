@@ -25,7 +25,7 @@ type Register = ReturnType<typeof createToolRegistrar<EngineRegistry>>
  *   - `camunda7_select_engine` — saves an engine as the caller's default
  *     (`profile.modules.camunda7.defaultEngineId` — durable, same identity as
  *     all settings). A write, so the toolset filter keeps it out of
- *     `read-only`, exactly like `camunda7_save_user_profile` (the same field).
+ *     `read-only`, exactly like `camunda7_save_settings` (the same field).
  *
  * Neither talks to an engine: they read the configured registry and write the
  * local profile store (`openWorldHint: false`).
@@ -100,7 +100,7 @@ export function registerEngineTools(register: Register, profileStore: ProfileSto
         throw new Error(
           `Engine "${id}" is not available for this profile. ` +
             `Available: ${available.map((e) => e.id).join(", ")}. ` +
-            "Update your profile (camunda7_save_user_profile) to widen allowedEngineIds.",
+            "Update your settings (camunda7_save_settings) to widen allowedEngineIds.",
         )
       }
       // Keyless refusal mirrors requireProfileKey (the shared slice-write

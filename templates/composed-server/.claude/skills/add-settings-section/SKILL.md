@@ -158,12 +158,12 @@ One self-fetching card composed from `@miragon-ai/widget-shell/widgets` —
 - Hide Save (render disabled fields) when the view says `canSave: false`.
 
 Register it through the four-link chain (see the add-widget skill). **The
-`<module>:settings` id IS the registration on the cockpit settings page:** the
-settings tab assembles itself from THIS server's widget registry — camunda7's
-own `camunda7:user-profile` panel first, then one row per widget id ending in
-`:settings`, in registration order. Nothing in the published camunda7 package
-lists your module — which is exactly why your section gets a first-class row
-with no edit beyond the normal module wiring. Two consequences:
+`<module>:settings` id IS the registration on the settings page:** the page
+(`shell_show_settings`, also the cockpit's settings tab) assembles itself from
+THIS server's widget registry — the shell's language section first, then one
+row per widget id ending in `:settings`, in registration order. No published
+package lists your module — which is exactly why your section gets a
+first-class row with no edit beyond the normal module wiring. Two consequences:
 
 - Name your section widget `<module>:settings` and it appears on the settings
   tab as soon as your module's widget map is spread into the host registry

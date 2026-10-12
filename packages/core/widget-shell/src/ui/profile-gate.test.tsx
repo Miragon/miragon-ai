@@ -3,18 +3,20 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import { queryClient, useLocale } from "@miragon/mcp-toolkit-ui"
 import { HostBridgeProvider, type HostBridge } from "@miragon/mcp-toolkit-ui/app"
+import { SHELL_SETTINGS_DATA } from "../shell-settings-contract.js"
 import { ProfileGate } from "./profile-gate.js"
+import { SHELL_SETTINGS_KEY } from "./shell-settings.js"
 import { formatTimestamp, setFormatLocale } from "./format.js"
 import { ShellHostProvider, type ShellHost } from "./shell-host.js"
 
-const FEED = "camunda7_user_profile_data"
+const FEED = SHELL_SETTINGS_DATA
 const ISO = "2026-07-22T22:15:30.000Z"
 
-/** What the profile feed returns: the `*_data` envelope (structuredContent first). */
-function feedResult(profile: { language?: string; theme?: string }) {
+/** What `shell_settings_data` returns: the `*_data` envelope (structuredContent first). */
+function feedResult(view: { language?: string; theme?: string }) {
   return {
-    content: [{ type: "text", text: JSON.stringify({ profile }) }],
-    structuredContent: { profile },
+    content: [{ type: "text", text: JSON.stringify(view) }],
+    structuredContent: view,
   }
 }
 
@@ -36,7 +38,6 @@ const NO_HOST: ShellHost = { connected: true, displayMode: "inline", availableDi
 
 interface GateOptions {
   host?: Partial<ShellHost>
-  queryKey?: readonly string[]
   waitMs?: number
 }
 
@@ -44,7 +45,7 @@ function gateTree(callTool: HostBridge["callTool"], options: GateOptions = {}) {
   return (
     <ShellHostProvider host={{ ...NO_HOST, ...options.host }}>
       <HostBridgeProvider bridge={bridgeWith(callTool)}>
-        <ProfileGate profileTool={FEED} queryKey={options.queryKey} profileWaitMs={options.waitMs}>
+        <ProfileGate profileWaitMs={options.waitMs}>
           <LocaleProbe />
         </ProfileGate>
       </HostBridgeProvider>
@@ -81,7 +82,7 @@ function stubOsPreference(dark: boolean) {
 const isDark = () => document.documentElement.classList.contains("dark")
 
 /** The gate's query, under the feed's module default key (args `{}` appended). */
-const gateQueryStatus = () => queryClient.getQueryState(["camunda7:profile-gate", {}])?.status
+const gateQueryStatus = () => queryClient.getQueryState([...SHELL_SETTINGS_KEY, {}])?.status
 
 afterEach(async () => {
   cleanup()
@@ -273,27 +274,7 @@ describe("ProfileGate", () => {
     expect(callTool).toHaveBeenCalledTimes(2)
   })
 
-  it("keys the query under the feed's module, so a module-wide invalidation flips the locale live", async () => {
-    const callTool = vi
-      .fn()
-      .mockResolvedValueOnce(feedResult({ language: "en" }))
-      .mockResolvedValue(feedResult({ language: "de" }))
-    renderGate(callTool)
-    await waitFor(() => expect(probe()).toBe(probeFor("en")))
-
-    // What camunda7's cockpit Refresh does (refreshCockpitData).
-    await act(async () => {
-      await queryClient.invalidateQueries({
-        predicate: (query) => String(query.queryKey[0]).startsWith("camunda7:"),
-      })
-    })
-
-    // Strings and dates flip together — the tree stays mounted.
-    await waitFor(() => expect(probe()).toBe(probeFor("de")))
-    expect(document.documentElement.lang).toBe("de")
-  })
-
-  it("flips live on a profile save's targeted invalidation — no skeleton in between", async () => {
+  it("flips live when the language section's save invalidates the shared key — no skeleton in between", async () => {
     const callTool = vi
       .fn()
       .mockResolvedValueOnce(feedResult({ language: "en" }))
@@ -302,9 +283,9 @@ describe("ProfileGate", () => {
     await waitFor(() => expect(probe()).toBe(probeFor("en")))
     const shown = screen.getByTestId("locale")
 
-    // camunda7's profile save invalidates exactly this namespace (WRITE_POLICY).
+    // What the shell's language section does after shell_save_settings.
     await act(async () => {
-      await queryClient.invalidateQueries({ queryKey: ["camunda7:profile-gate"] })
+      await queryClient.invalidateQueries({ queryKey: [...SHELL_SETTINGS_KEY] })
     })
 
     await waitFor(() => expect(probe()).toBe(probeFor("de")))
@@ -314,16 +295,16 @@ describe("ProfileGate", () => {
     expect(screen.queryByRole("status")).toBeNull()
   })
 
-  it("uses an explicit query key instead of the module default", async () => {
-    renderGate(vi.fn().mockResolvedValue(feedResult({ language: "de" })), {
-      queryKey: ["custom:gate"],
-    })
+  it("reads the shell's feed under the key the language section shares", async () => {
+    const callTool = vi.fn().mockResolvedValue(feedResult({ language: "de" }))
+    renderGate(callTool)
 
     await waitFor(() => expect(probe()).toBe(probeFor("de")))
+    expect(callTool).toHaveBeenCalledWith(SHELL_SETTINGS_DATA, {})
     const keys = queryClient
       .getQueryCache()
       .getAll()
       .map((q) => q.queryKey[0])
-    expect(keys).toEqual(["custom:gate"])
+    expect(keys).toEqual([SHELL_SETTINGS_KEY[0]])
   })
 })

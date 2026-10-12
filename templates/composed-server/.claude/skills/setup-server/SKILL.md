@@ -119,9 +119,10 @@ MCP_OAUTH={"provider":"keycloak","serverUrl":"https://kc.example.com","realm":"p
 `server/src/app.ts` wires it through `oauthFromEnv`
 (`@miragon-ai/widget-shell/server`) — the same helper the stock server uses.
 `/mcp` then answers 401 without a valid bearer token, the default toolsets rise
-to `operations`/`standard`, and every settings save (`camunda7_save_user_profile`,
-`analytics_save_settings`, `camunda7_select_engine`, your own module's save
-tool) persists under the signed-in user. Without `MCP_OAUTH` there is no caller
+to `operations`/`standard`, and every settings save (`shell_save_settings` for
+the language, `camunda7_save_settings`, `analytics_save_settings`,
+`camunda7_select_engine`, your own module's save tool) persists under the
+signed-in user. Without `MCP_OAUTH` there is no caller
 identity: settings render their defaults and every save refuses. A bad
 `MCP_OAUTH` (invalid JSON, unknown provider or key, stray `MCP_USE_OAUTH_*`
 vars) fails the boot.

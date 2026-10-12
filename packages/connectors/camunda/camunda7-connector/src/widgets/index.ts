@@ -19,14 +19,11 @@ export { Camunda7StandaloneShell } from "./standalone-shell.js"
 
 /**
  * The cockpit's view→layout catalogue. Exported so a composition root can
- * ASSERT over the composition — notably that every module it composes actually
- * contributes its `<module>:settings` section to the settings page (see the
- * app's `widget-registry.test.ts`). Those assertions go through the RUNTIME
- * call path, `cockpitViews.settings(params, { widgetIds })`, so the router
- * wiring is covered too; `settingsLayout` itself stays package-internal (its
- * own unit tests import it directly) and off the published surface.
+ * ASSERT over the composition — notably that the settings tab renders the
+ * shell's settings page, whose sections the root's registry supplies (see
+ * the app's `widget-registry.test.ts`).
  */
-export { cockpitViews, filterLayoutToWidgets } from "./cockpit-app/views.js"
+export { cockpitViews } from "./cockpit-app/views.js"
 
 export type {
   ProcessListData,

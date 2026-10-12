@@ -23,9 +23,13 @@ package customers build their own connectors and composed servers on (see the
   character references such as `&#10;` and `&#38;` decoded, space folded), so two modules never
   name the same process or activity differently.
 - **The `shell:*` catalogue** (`./server`) — `shellDefinition` + `createShellPlugin` register the
-  always-on generic `shell:kpi-grid` / `shell:data-table` widgets (components in `./widgets`), the
-  standard `render-view`/builder composition targets fed via `props.dataKey`. Apps own no domain UI,
-  so the catalogue lives here.
+  always-on generic `shell:kpi-grid` / `shell:data-table` widgets, the standard
+  `render-view`/builder composition targets fed via `props.dataKey`, and the settings page.
+  `createShellPlugin({ profileStore, allowSave })` adds the settings triple: `shell_show_settings`
+  (the page: the language section, then every `<module>:settings` section the host bundles),
+  `shell_settings_data` (what `ProfileGate` reads the language from) and `shell_save_settings`
+  (pass `allowSave: frameworkWritesAllowed(boot)`). Hosts spread `shellWidgets` (`./widgets`)
+  into their registry. Apps own no domain UI, so the catalogue lives here.
 - **Shared UI primitives** (`./widgets`) — what the kit adds on top of `@miragon/mcp-toolkit-ui`
   (`WidgetShell`, tables, `ListTable` + `PagedRows`, the dual-mode data hooks, formatters,
   hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages.

@@ -2,7 +2,7 @@ import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { camunda7Widgets } from "@miragon-ai/camunda7-connector/widgets"
 import { analyticsWidgets } from "@miragon-ai/analytics-connector/widgets"
 import { notesWidgets } from "@acme/mcp-notes/widgets"
-import { GenericDataTableWidget, GenericKpiGridWidget } from "@miragon-ai/widget-shell/widgets"
+import { shellWidgets } from "@miragon-ai/widget-shell/widgets"
 
 /**
  * The host bundle map — one of the three places a new module is wired into
@@ -15,8 +15,7 @@ export const widgetRegistry = {
   ...camunda7Widgets,
   ...analyticsWidgets,
   ...notesWidgets,
-  // Generic shell widgets — composition targets any module can feed via
-  // props.dataKey.
-  "shell:kpi-grid": GenericKpiGridWidget,
-  "shell:data-table": GenericDataTableWidget,
+  // The shell's widgets: the generic composition targets any module feeds via
+  // props.dataKey, and the settings page with its language section.
+  ...shellWidgets,
 } satisfies Record<string, WidgetComponent>

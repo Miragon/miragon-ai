@@ -60,9 +60,14 @@ describe("caller identity on the wire (createApp)", () => {
     })
 
     it("reads fall back to the defaults and hide Save", async () => {
-      const profile = payload(await call(client, "camunda7_user_profile_data"))
-      expect(profile).toMatchObject({ canSave: false, profile: { language: "system" } })
-      expect(profile.profile).not.toHaveProperty("defaultDashboardId")
+      expect(payload(await call(client, "shell_settings_data"))).toEqual({
+        language: "system",
+        canSave: false,
+        readOnlyReason: "noSignIn",
+      })
+      const camunda7 = payload(await call(client, "camunda7_settings_data"))
+      expect(camunda7).toMatchObject({ canSave: false })
+      expect(camunda7.profile).not.toHaveProperty("defaultDashboardId")
 
       const analytics = payload(await call(client, "analytics_settings_data"))
       expect(analytics).toEqual({
@@ -74,15 +79,20 @@ describe("caller identity on the wire (createApp)", () => {
     it("every profile write refuses and no record changes", async () => {
       const before = await runtime.profileStore.get(SESSION)
 
-      expect(refusal(await call(client, "camunda7_save_user_profile", { language: "de" }))).toMatch(
-        /No caller identity/,
-      )
+      expect(
+        refusal(await call(client, "camunda7_save_settings", { defaultDashboardId: "d-2" })),
+      ).toMatch(/No caller identity/)
       expect(refusal(await call(client, "analytics_save_settings", { minBucketSize: 3 }))).toMatch(
         /No caller identity/,
       )
       expect(
         refusal(await call(client, "camunda7_select_engine", { engineId: "default" })),
       ).toMatch(/No caller identity/)
+
+      // The language save is a framework write: without OAuth it does not exist.
+      const tools = (await client.listTools()).tools.map((tool) => tool.name)
+      expect(tools).toContain("shell_settings_data")
+      expect(tools).not.toContain("shell_save_settings")
 
       expect(await runtime.profileStore.get(SESSION)).toEqual(before)
       // Nor does a keyless write fall back to a shared record.
@@ -108,31 +118,25 @@ describe("caller identity on the wire (createApp)", () => {
     })
 
     it("keeps two users' profiles apart — a save of one never touches the other", async () => {
-      expect(
-        (await call(alice, "camunda7_save_user_profile", { language: "de" })).isError,
-      ).toBeFalsy()
+      expect((await call(alice, "shell_save_settings", { language: "de" })).isError).toBeFalsy()
       expect(
         (await call(alice, "analytics_save_settings", { defaultPeriod: "30d" })).isError,
       ).toBeFalsy()
 
       // Bob starts from the defaults — Alice's saves are not his.
-      expect(payload(await call(bob, "camunda7_user_profile_data"))).toMatchObject({
+      expect(payload(await call(bob, "shell_settings_data"))).toMatchObject({
         canSave: true,
-        profile: { language: "system" },
+        language: "system",
       })
       expect(payload(await call(bob, "analytics_settings_data"))).toMatchObject({
         canSave: true,
         settings: { defaultPeriod: "7d" },
       })
 
-      expect(
-        (await call(bob, "camunda7_save_user_profile", { language: "en" })).isError,
-      ).toBeFalsy()
+      expect((await call(bob, "shell_save_settings", { language: "en" })).isError).toBeFalsy()
 
       // Alice's record is untouched by Bob's save, and vice versa.
-      expect(payload(await call(alice, "camunda7_user_profile_data"))).toMatchObject({
-        profile: { language: "de" },
-      })
+      expect(payload(await call(alice, "shell_settings_data"))).toMatchObject({ language: "de" })
       expect(payload(await call(alice, "analytics_settings_data"))).toMatchObject({
         settings: { defaultPeriod: "30d" },
       })

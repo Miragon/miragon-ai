@@ -1,5 +1,11 @@
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import { HandOffButton, Icon, countTone, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import {
+  countTone,
+  filterLayoutToWidgets,
+  formatNumber,
+  HandOffButton,
+  Icon,
+} from "@miragon-ai/widget-shell/widgets"
 import { ArrowRight } from "lucide-react"
 import { CountPill, FOCUS_RING, SectionHeading, TONE_DOT, cn } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
@@ -13,7 +19,6 @@ import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useEngineHealth } from "./engine-health.js"
 import { engineStatusKind } from "./landing.js"
 import { EnvironmentChip } from "../lib/engine-context.js"
-import { filterLayoutToWidgets } from "./views.js"
 
 function FleetEngineKpis({
   summary,

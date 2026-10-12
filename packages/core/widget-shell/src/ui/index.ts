@@ -69,6 +69,23 @@ export { RowCard } from "./row-card.js"
 export { NativeSelect } from "./native-select.js"
 export { SettingsCard, SettingsField, SettingsInput } from "./settings.js"
 export { HostWidgetsProvider, useHostWidgets } from "./host-widgets.js"
+export {
+  SettingsPageWidget,
+  ShellSettingsWidget,
+  SHELL_SETTINGS_KEY,
+  describeShellSettings,
+} from "./shell-settings.js"
+export { settingsLayout, filterLayoutToWidgets } from "./settings-layout.js"
+export { shellWidgets } from "./shell-widgets.js"
+export {
+  SHELL_SAVE_SETTINGS,
+  SHELL_SETTINGS_DATA,
+  SHELL_SETTINGS_PAGE_WIDGET,
+  SHELL_SETTINGS_WIDGET,
+  SHELL_SHOW_SETTINGS,
+  type ShellSettingsReadOnlyReason,
+  type ShellSettingsView,
+} from "../shell-settings-contract.js"
 export { ProfileGate, type ProfileGateProps } from "./profile-gate.js"
 export { LocalizedAppView } from "./localized-app-view.js"
 export { AppShellProviders, type AppShellProvidersProps } from "./app-shell-providers.js"

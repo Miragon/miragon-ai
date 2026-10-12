@@ -11,8 +11,9 @@
  *   `camunda7:read-only,analytics:read-only`. Only `readOnlyHint` tools plus
  *   the toolkit's unannotated `render-view`/`refresh-view`.
  * - OPERATIONS: the default under OAuth = `camunda7:operations,
- *   analytics:standard` — engine writes, the two settings saves and the
- *   toolkit's dashboard builder (OAuth + no read-only module).
+ *   analytics:standard` — engine writes, the three settings saves and the
+ *   toolkit's dashboard builder (the shell's language save and the builder
+ *   need OAuth + no read-only module).
  * - ADMIN: `camunda7:admin,analytics:standard` + `CAMUNDA_ALLOW_DEPLOYMENTS=true`
  *   under OAuth — the full surface. Never implied by a default.
  *
@@ -83,6 +84,7 @@ export const EXPECTED_TOOLS_READ_ONLY: readonly string[] = [
   "camunda7_query_historic_process_instances",
   "camunda7_query_historic_task_instances",
   "camunda7_query_historic_variable_instances",
+  "camunda7_settings_data",
   "camunda7_show_bpmn_viewer",
   "camunda7_show_cluster_detail",
   "camunda7_show_engine_health",
@@ -95,12 +97,13 @@ export const EXPECTED_TOOLS_READ_ONLY: readonly string[] = [
   "camunda7_show_process_incidents",
   "camunda7_show_process_instances",
   "camunda7_show_process_list",
-  "camunda7_show_user_profile",
-  "camunda7_user_profile_data",
+  "camunda7_show_settings",
   "camunda7_widget_actions_data",
   "get-framework-manifest",
   "refresh-view",
   "render-view",
+  "shell_settings_data",
+  "shell_show_settings",
 ]
 
 /** What `operations` (camunda7) / `standard` (analytics) and the builder add. */
@@ -110,7 +113,7 @@ const OPERATIONS_ADDS: readonly string[] = [
   "camunda7_complete_task",
   "camunda7_correlate_message",
   "camunda7_resolve_incident",
-  "camunda7_save_user_profile",
+  "camunda7_save_settings",
   "camunda7_select_engine",
   "camunda7_set_external_task_retries",
   "camunda7_set_job_retries",
@@ -123,6 +126,7 @@ const OPERATIONS_ADDS: readonly string[] = [
   "list-dashboards",
   "load-dashboard",
   "save-dashboard",
+  "shell_save_settings",
 ]
 
 /** What `camunda7:admin` (+ CAMUNDA_ALLOW_DEPLOYMENTS=true) adds — never implied. */

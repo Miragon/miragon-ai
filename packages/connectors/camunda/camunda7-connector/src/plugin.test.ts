@@ -19,7 +19,7 @@ import {
 import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "./lib/toolsets.js"
 import {
   CAMUNDA7_LIST_ENGINES,
-  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_SAVE_SETTINGS,
   CAMUNDA7_SELECT_ENGINE,
   CAMUNDA7_WIDGET_ACTIONS_DATA,
 } from "./tool-names.js"
@@ -72,7 +72,7 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
     const { names, byName, allowedActions } = await bootSurface({})
     for (const admin of CAMUNDA7_ADMIN_ONLY_TOOLS) expect(names).not.toContain(admin)
     expect(names).not.toContain("camunda7_start_process_instance")
-    expect(names).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(names).not.toContain(CAMUNDA7_SAVE_SETTINGS)
     expect(allowedActions).toEqual([])
     // The engine list is a read; saving a default is a write the floor drops.
     expect(byName.get(CAMUNDA7_LIST_ENGINES)?.definition.annotations).toMatchObject({
@@ -87,7 +87,7 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
     expect(warn).toHaveBeenCalledOnce()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "superuser"'))
     expect(names).not.toContain("camunda7_start_process_instance")
-    expect(names).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(names).not.toContain(CAMUNDA7_SAVE_SETTINGS)
     expect(allowedActions).toEqual([])
   })
 
@@ -97,7 +97,7 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
       allowDeployments: true,
     })
     expect(names).toContain("camunda7_start_process_instance")
-    expect(names).toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(names).toContain(CAMUNDA7_SAVE_SETTINGS)
     expect(names).toContain(CAMUNDA7_SELECT_ENGINE)
     for (const admin of CAMUNDA7_ADMIN_ONLY_TOOLS) expect(names).not.toContain(admin)
     expect(allowedActions).toContain("camunda7_resolve_incident")
@@ -119,7 +119,7 @@ describe("createPlugin toolset wiring (fail-closed)", () => {
         expect.arrayContaining([
           "camunda7_list_incidents",
           "camunda7_show_engine_health",
-          "camunda7_show_user_profile",
+          "camunda7_show_settings",
         ]),
       )
       expect(modelTools).not.toContain(CAMUNDA7_WIDGET_ACTIONS_DATA)

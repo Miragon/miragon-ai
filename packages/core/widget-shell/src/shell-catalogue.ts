@@ -6,6 +6,8 @@ import {
   type LocalizedText,
 } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
+import { SHELL_SETTINGS_PAGE_WIDGET, SHELL_SETTINGS_WIDGET } from "./shell-settings-contract.js"
+import { registerShellSettingsTools, type ShellSettingsToolsOptions } from "./shell-settings.js"
 
 /**
  * The `shell` module: generic, module-agnostic widgets every deployment gets.
@@ -17,10 +19,11 @@ import type { MCPServer } from "mcp-use"
  *   step:   produces ["camunda7:kpis"]
  *   layout: { widget: "shell:kpi-grid", props: { dataKey: "camunda7:kpis" } }
  *
- * Components live next door in `src/ui/generic-widgets.tsx` (exported via
- * `@miragon-ai/widget-shell/widgets`); this file carries their catalogue
- * metadata so host apps register the plugin without owning any domain UI
- * (no tools, no steps — nothing to filter per toolset).
+ * Components live next door in `src/ui/generic-widgets.tsx` and
+ * `src/ui/shell-settings.tsx` (exported via `@miragon-ai/widget-shell/widgets`,
+ * all four in `shellWidgets`); this file carries their catalogue metadata so
+ * host apps register the plugin without owning any domain UI. Its only tools
+ * are the settings triple (`shell-settings.ts`), and no step.
  *
  * `description`s are the model's text; the view builder shows people the
  * `title`/`summary` (and each top-level field's `x-display`) in English or
@@ -183,9 +186,49 @@ export const shellDefinition: AppDefinition = {
       size: "full",
       propsSchema: dataTablePropsSchema,
     },
+    {
+      // Self-fetching from shell_settings_data; one row of the settings page.
+      id: SHELL_SETTINGS_WIDGET,
+      title: both("Language", "Sprache"),
+      summary: both(
+        "The language of the views and the summaries.",
+        "Die Sprache der Ansichten und der Zusammenfassungen.",
+      ),
+      description: "The UI language section of the settings page (shell_save_settings changes it).",
+      requires: [],
+      consumes: [],
+      size: "full",
+    },
+    {
+      // The page itself: the language section, then every `<module>:settings`
+      // section the host bundles — opened by shell_show_settings and the
+      // cockpit's settings tab, not composed into a view.
+      id: SHELL_SETTINGS_PAGE_WIDGET,
+      title: both("Settings", "Einstellungen"),
+      summary: both(
+        "The language and every module's settings on one page.",
+        "Die Sprache und die Einstellungen jedes Moduls auf einer Seite.",
+      ),
+      description:
+        "The whole settings page — opened by shell_show_settings, not composed into a view.",
+      requires: [],
+      consumes: [],
+      size: "full",
+    },
   ],
 }
 
-export function createShellPlugin(): AppPlugin<MCPServer> {
-  return { definition: shellDefinition }
+export type ShellPluginOptions = ShellSettingsToolsOptions
+
+/**
+ * The always-on shell plugin. With a profile store it registers the settings
+ * triple; without one (a root that persists nothing) the page renders the
+ * module sections alone and `ProfileGate` falls back to the host's locale.
+ */
+export function createShellPlugin(options?: ShellPluginOptions): AppPlugin<MCPServer> {
+  if (!options) return { definition: shellDefinition }
+  return {
+    definition: shellDefinition,
+    registerWidgetTools: (server) => registerShellSettingsTools(server, options),
+  }
 }

@@ -4,7 +4,7 @@ import { countOf } from "./plural.js"
 /**
  * English message catalog — the fallback locale. Every key MUST exist here so
  * the translator's `requested → fallback(en) → key` chain always lands on a real
- * string. Keys are dotted by surface (`cockpit.*`, `profile.*`, `language.*`,
+ * string. Keys are dotted by surface (`cockpit.*`, `profile.*`,
  * `role.*`, `viewTitle.*`). Sentence case, active voice, no dash connectors;
  * the terms follow GLOSSARY.md.
  */
@@ -56,14 +56,14 @@ export const en: MessageCatalog = {
     `Engine ${String(engineId)} is no longer in your engine list.`,
 
   // ── Profile / settings panel ────────────────────────────────────────────────
-  "profile.heading": "Settings",
-  "profile.subtitle": "Your language, engines and dashboards, in every chat.",
+  "profile.heading": "Engines and dashboards",
+  "profile.subtitle": "Which engines you pick from and which dashboards come first, in every chat.",
   "profile.save": "Save",
   "profile.saving": "Saving…",
   "profile.discard": "Discard changes",
   "profile.saveBar.label": "Save settings",
-  "profile.saveBar.unsaved": "Your changes to language, engines or dashboards aren't saved yet.",
-  "profile.saveBar.clean": "Language, engines and dashboards are saved.",
+  "profile.saveBar.unsaved": "Your changes to engines or dashboards aren't saved yet.",
+  "profile.saveBar.clean": "Engines and dashboards are saved.",
   "profile.saveError": "Could not save the settings. Your input is still here, try again.",
   "profile.readOnly.title": "These settings are read-only here",
   "profile.readOnly.toolset":
@@ -71,15 +71,10 @@ export const en: MessageCatalog = {
   "profile.readOnly.noSignIn":
     "This connection has no sign-in, so it has no one to save settings for. Saving needs a connection with sign-in: ask your administrator to set one up.",
   "profile.loading": "Loading…",
-  "profile.none": "No profile available",
+  "profile.none": "No settings available",
 
-  "profile.section.general": "Language",
   "profile.section.engines": "Engines",
   "profile.section.dashboards": "Dashboards",
-
-  "profile.field.language": "Language",
-  "profile.field.language.help":
-    "Automatic follows your chat app. A fixed language also applies to what the tools report back to the AI.",
 
   "profile.field.allEngines": "Allow all engines",
   "profile.field.allEngines.help":
@@ -102,15 +97,12 @@ export const en: MessageCatalog = {
   "profile.field.pinnedDashboards": "Pinned dashboards",
   "profile.field.pinnedDashboards.help": "Listed first in dashboard pickers.",
 
-  "profile.summary": ({ language, engines, defaultDashboard }) =>
-    `User profile: language ${String(language)}, ${String(engines)}${String(defaultDashboard)}.`,
+  "profile.summary": ({ engines, defaultDashboard }) =>
+    `camunda7 settings: ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "all engines",
   "profile.summary.someEngines": ({ count }) => countOf(count, "allowed engine", "allowed engines"),
   "profile.summary.defaultDashboard": ({ id }) =>
     `, default dashboard "${String(id)}" (open via load-dashboard)`,
-
-  // ── Enumerated option labels ────────────────────────────────────────────────
-  "language.system": "Automatic (follows the chat app)",
 
   // ── View titles of the show tools (the host toolbar) ───────────────────────
   // Only when the profile names a language: with "system" the server does not
@@ -124,7 +116,7 @@ export const en: MessageCatalog = {
   "viewTitle.bpmnViewer": "BPMN diagram",
   "viewTitle.jobPanel": "Jobs",
   "viewTitle.engineHealth": "Engine overview",
-  "viewTitle.userProfile": "Settings",
+  "viewTitle.settings": "Engines and dashboards",
   "viewTitle.clusterDetail": ({ activity }) => `Cluster: ${String(activity)}`,
 
   // ── Model-facing widget-tool summaries (c7sum.*) ─────────────────────────────

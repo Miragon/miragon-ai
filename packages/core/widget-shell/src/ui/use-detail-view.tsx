@@ -31,7 +31,9 @@ const SEED = { initialDataMode: "seed" } as const satisfies UseViewDataOptions<u
  * under "Details", the retry); null otherwise. `refreshError` is the same
  * fact for the view's own decisions (e.g. offering no state-changing action
  * on a state it cannot confirm), from the refetch's first failed attempt
- * ({@link viewRefreshState}).
+ * ({@link viewRefreshState}). `loadError` is the failure behind the guard
+ * while no data is shown — a section on a composed page hides itself when it
+ * says the feed's tool is not on this server (`classifyError(…).kind`).
  */
 export function useDetailView<TData>(opts: {
   initialData: TData | null | undefined
@@ -56,6 +58,7 @@ export function useDetailView<TData>(opts: {
   guard: ReactElement | null
   notice: ReactElement | null
   refreshError: Error | null
+  loadError: unknown
 } {
   const locale = useLocale()
   const defaults = kitLabels(locale)
@@ -92,5 +95,5 @@ export function useDetailView<TData>(opts: {
       />
     )
   }
-  return { data, guard, notice, refreshError }
+  return { data, guard, notice, refreshError, loadError: data ? null : (error ?? null) }
 }

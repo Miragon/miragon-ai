@@ -142,7 +142,7 @@ describe("strict tool inputs on the wire (every module, every toolset)", () => {
     expect(names).toEqual(
       expect.arrayContaining([
         ...CAMUNDA7_ADMIN_ONLY_TOOLS,
-        "camunda7_save_user_profile",
+        "camunda7_save_settings",
         "analytics_save_settings",
       ]),
     )

@@ -16,12 +16,15 @@ import {
   type FormatLocale,
 } from "./format.js"
 import { formattingLocale, resolveLanguage, validTimeZone } from "./host-context.js"
+import { SHELL_SETTINGS_DATA } from "../shell-settings-contract.js"
 import { kitLabels } from "./kit-labels.js"
+import { SHELL_SETTINGS_KEY } from "./shell-settings.js"
 import { useShellHost } from "./shell-host.js"
 import { useApplyTheme } from "./use-apply-theme.js"
 
+/** The part of `shell_settings_data` the gate reads. */
 interface ProfileFeed {
-  profile?: { language?: string }
+  language?: string
 }
 
 /**
@@ -41,22 +44,6 @@ const HOST_WAIT_MS = 5_000
 
 export interface ProfileGateProps {
   /**
-   * Name of the app-only user-profile data feed (e.g.
-   * `camunda7_user_profile_data`). Hosts pass the string literal — the feed
-   * name is part of the module contract, so the host bundle takes no
-   * build-time dependency on the module's tool-name constants.
-   */
-  profileTool: string
-  /**
-   * Query key for the profile fetch. Defaults to `<module>:profile-gate`
-   * (module = the tool name up to the first `_`) ON PURPOSE: the module's
-   * cache invalidation MUST reach the gate after a profile save — camunda7's
-   * save invalidates `camunda7:profile-gate` by name (`WRITE_POLICY`), its
-   * cockpit Refresh every `camunda7:*` key — otherwise a saved language
-   * change only shows up on the next widget render instead of flipping live. The refetch never re-shows the first-paint skeleton.
-   */
-  queryKey?: readonly string[]
-  /**
    * The first paint's bound wait for the profile (ms, default
    * {@link PROFILE_WAIT_MS}), counted from the host connection — a slow
    * handshake never eats into it: a feed that neither answers nor fails in
@@ -68,7 +55,11 @@ export interface ProfileGateProps {
 }
 
 /**
- * Resolves the active user profile once at the app root and turns it, with
+ * Resolves the active user profile once at the app root — the shell's own
+ * feed (`shell_settings_data`), under the key the language section shares
+ * ({@link SHELL_SETTINGS_KEY}), so a saved language re-fetches one entry and
+ * flips every view live (the refetch never re-shows the first-paint
+ * skeleton) — and turns it, with
  * the host context ({@link useShellHost}), into the view's ONE effective
  * locale and theme — so every widget is localized and themed with zero
  * per-widget wiring:
@@ -79,13 +70,14 @@ export interface ProfileGateProps {
  * The first paint waits for the host handshake (bounded by {@link HOST_WAIT_MS}),
  * then for the profile (bounded by `profileWaitMs` from the connection) behind
  * a neutral skeleton, so a German profile or a dark host never flashes English
- * or the OS theme first. A feed that FAILS (e.g. the owning module is disabled, or
- * the host cannot call server tools) releases the gate at its first failure
+ * or the OS theme first. A feed that FAILS (e.g. a root without a profile store
+ * registers no settings tools, or the host cannot call server tools) releases
+ * the gate at its first failure
  * with the host-derived values — react-query keeps the query pending through
  * its retries, which run on in the background; a retry that answers later
  * still applies live.
  */
-export function ProfileGate({ profileTool, queryKey, profileWaitMs, children }: ProfileGateProps) {
+export function ProfileGate({ profileWaitMs, children }: ProfileGateProps) {
   const { callTool } = useHostBridge()
   // Adapt the host bridge's `Record<string, unknown>` args to the provider's
   // `object` signature.
@@ -95,9 +87,7 @@ export function ProfileGate({ profileTool, queryKey, profileWaitMs, children }: 
   )
   return (
     <AppQueryProvider callTool={callToolFn}>
-      <ProfileGateInner profileTool={profileTool} queryKey={queryKey} profileWaitMs={profileWaitMs}>
-        {children}
-      </ProfileGateInner>
+      <ProfileGateInner profileWaitMs={profileWaitMs}>{children}</ProfileGateInner>
     </AppQueryProvider>
   )
 }
@@ -138,15 +128,12 @@ function useFirstPaintSettled(
 }
 
 function ProfileGateInner({
-  profileTool,
-  queryKey,
   profileWaitMs = PROFILE_WAIT_MS,
   children,
 }: Omit<ProfileGateProps, "children"> & { children: ReactNode }) {
   const host = useShellHost()
-  const key = queryKey ?? [`${profileTool.split("_")[0]}:profile-gate`]
-  const query = useToolQuery<ProfileFeed>([...key], profileTool, {})
-  const profile = query.data?.profile
+  const query = useToolQuery<ProfileFeed>([...SHELL_SETTINGS_KEY], SHELL_SETTINGS_DATA, {})
+  const profile = query.data
   const settled = useFirstPaintSettled(host.connected, query, profileWaitMs)
 
   useApplyTheme()

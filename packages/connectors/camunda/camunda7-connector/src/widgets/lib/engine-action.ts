@@ -6,7 +6,7 @@ import {
   type ConfirmTarget,
 } from "@miragon-ai/widget-shell/widgets"
 
-import type { CAMUNDA7_SAVE_USER_PROFILE, Camunda7WidgetAction } from "../../tool-names.js"
+import type { CAMUNDA7_SAVE_SETTINGS, Camunda7WidgetAction } from "../../tool-names.js"
 import { useCanRun } from "../widget-actions.js"
 import { WRITE_POLICY, type WidgetWrite } from "./write-policy.js"
 
@@ -64,7 +64,7 @@ export interface RunOptions<TResult> {
  */
 type ActionGate =
   | { tool: Camunda7WidgetAction; allowed?: never }
-  | { tool: typeof CAMUNDA7_SAVE_USER_PROFILE; allowed: boolean }
+  | { tool: typeof CAMUNDA7_SAVE_SETTINGS; allowed: boolean }
 
 export type EngineActionOptions<TArgs> = ActionGate & {
   /** The id a call acts on (instance, job, incident, variable …) — keys the per-target state. */

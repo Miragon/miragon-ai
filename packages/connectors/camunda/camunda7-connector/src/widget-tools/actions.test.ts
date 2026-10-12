@@ -62,11 +62,11 @@ describe("camunda7_widget_actions_data", () => {
   it("reports the model surface as it stands when the feed is called", async () => {
     const surface = ["camunda7_list_incidents"]
     const { handler } = registerFeed("read-only", () => surface)
-    surface.push("camunda7_show_user_profile")
+    surface.push("camunda7_show_settings")
     const result = await handler({})
     expect(feedPayload(result).modelTools).toEqual([
       "camunda7_list_incidents",
-      "camunda7_show_user_profile",
+      "camunda7_show_settings",
     ])
   })
 

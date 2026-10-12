@@ -6,10 +6,15 @@ import {
   useHostBridge,
   useHostActions,
 } from "@miragon/mcp-toolkit-ui/app"
-import { useHostWidgets, useResetOnChange, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import {
+  filterLayoutToWidgets,
+  useHostWidgets,
+  useResetOnChange,
+  WidgetShell,
+} from "@miragon-ai/widget-shell/widgets"
 import { translator } from "../messages/index.js"
 import { NavBreadcrumb } from "./cockpit-app/breadcrumb.js"
-import { cockpitViews, filterLayoutToWidgets } from "./cockpit-app/views.js"
+import { cockpitViews } from "./cockpit-app/views.js"
 import {
   buildViewParams,
   intentToView,
@@ -226,11 +231,7 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
               </HostModelContext>
               <WidgetRenderer
                 layout={filterLayoutToWidgets(
-                  cockpitViews[current.section](buildViewParams(current, engineId ?? ""), {
-                    // Same as the cockpit: a composed view (the settings page)
-                    // assembles its rows from this host's registry.
-                    widgetIds: Object.keys(drillWidgets),
-                  }),
+                  cockpitViews[current.section](buildViewParams(current, engineId ?? "")),
                   drillWidgets,
                 )}
                 keys={{}}
