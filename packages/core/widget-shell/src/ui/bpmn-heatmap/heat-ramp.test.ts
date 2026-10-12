@@ -9,9 +9,11 @@ import {
   HEAT_GRADIENT_CSS,
   HEAT_PEAK_ALPHA,
   heatColor,
+  heatIntensity,
   heatRange,
   hexChannels,
   MIN_HEAT_INTENSITY,
+  weightRange,
 } from "./heat-utils.js"
 
 const rgba = ([r, g, b, a]: readonly number[]): Rgba => ({
@@ -85,7 +87,7 @@ describe("drawHeatLayer", () => {
     return { ctx, alphas }
   }
 
-  it("stamps every element with a value at the minimum intensity or more", () => {
+  it("stamps the smallest value at the minimum intensity, the largest at full, linear between", () => {
     const { ctx, alphas } = recordingContext()
     // The brush is a canvas of its own; a stub stands in for happy-dom's.
     const brush = {
@@ -105,16 +107,42 @@ describe("drawHeatLayer", () => {
         100,
         [
           { x: 10, y: 10, weight: 1 },
+          { x: 30, y: 30, weight: 500.5 },
           { x: 50, y: 50, weight: 1000 },
         ],
-        1000,
+        { min: 1, max: 1000 },
         20,
         buildGradientLut(),
       )
     } finally {
       document.createElement = original
     }
-    expect(alphas).toEqual([MIN_HEAT_INTENSITY, 1])
+    expect(alphas).toHaveLength(3)
+    expect(alphas[0]).toBe(MIN_HEAT_INTENSITY)
+    expect(alphas[1]).toBeCloseTo(0.65, 6)
+    expect(alphas[2]).toBe(1)
+  })
+})
+
+describe("heatIntensity (the legend's ends are the values they encode)", () => {
+  it("maps the range linearly onto the minimum intensity … 1", () => {
+    const range = { min: 1, max: 1000 }
+    expect(heatIntensity(1, range)).toBe(MIN_HEAT_INTENSITY)
+    expect(heatIntensity(1000, range)).toBe(1)
+    expect(heatIntensity(500.5, range)).toBeCloseTo(0.65)
+    // 300 of 1000 no longer paints like the minimum (the old 0.3 floor did).
+    expect(heatIntensity(300, range)).toBeGreaterThan(heatIntensity(1, range) + 0.2)
+  })
+
+  it("paints a single value at full intensity and clamps what lies outside the range", () => {
+    expect(heatIntensity(7, { min: 7, max: 7 })).toBe(1)
+    expect(heatIntensity(0, { min: 1, max: 10 })).toBe(MIN_HEAT_INTENSITY)
+    expect(heatIntensity(20, { min: 1, max: 10 })).toBe(1)
+  })
+
+  it("takes its range from the drawn weights: above zero, finite", () => {
+    expect(weightRange([0, 3, 12, -1, Number.NaN, Infinity])).toEqual({ min: 3, max: 12 })
+    expect(weightRange([0, -2])).toBeNull()
   })
 })
 

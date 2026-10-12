@@ -17,6 +17,7 @@ const viewer = vi.hoisted(() => ({
       if (service === "canvas") {
         return {
           zoom: () => 1,
+          resized: () => {},
           viewbox: () => ({
             x: 0,
             y: 0,
@@ -113,7 +114,7 @@ describe("BpmnHeatmapWidget (U16)", () => {
 })
 
 describe("BpmnHeatmap", () => {
-  it("sizes its frame from the diagram's aspect ratio unless given a height", () => {
+  it("sizes its frame from the diagram unless given a height", () => {
     const { container, rerender } = render(<BpmnHeatmap bpmnXml={XML} nodeFrequencies={{}} />)
     const frame = () => container.querySelector('[data-theme-mode="light"]') as HTMLElement
     // Before the diagram is measured: the default frame.
@@ -150,6 +151,13 @@ describe("HeatmapLegend", () => {
     expect(screen.getByText("Weniger")).toBeTruthy()
     expect(screen.getByText("Mehr")).toBeTruthy()
     expect(container.querySelector('[data-theme-mode="light"]')).toBeTruthy()
+  })
+
+  it("shows one value once, at the swatch's full end where every element paints", () => {
+    const { container } = render(<HeatmapLegend min="5" max="5" />)
+    const visible = [...container.querySelectorAll("[aria-hidden]")].map((el) => el.textContent)
+    expect(visible).toEqual(["", "5"])
+    expect(container.querySelector(".sr-only")?.textContent).toBe("5")
   })
 })
 

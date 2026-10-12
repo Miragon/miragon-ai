@@ -105,7 +105,13 @@ describe("classifyError — the mapping table", () => {
     expect(classifyError({ message: "Prometheus unreachable (x)" }).source).toEqual({
       type: "prometheus",
     })
-    expect(classifyError(null)).toEqual({ kind: "unknown", source: { type: "unknown" }, raw: null })
+    expect(classifyError(null)).toEqual({
+      kind: "unknown",
+      source: { type: "unknown" },
+      raw: null,
+      reason: null,
+      mayHaveApplied: false,
+    })
     expect(classifyError(42).raw).toBeNull()
     expect(classifyError({ message: 7 }).raw).toBeNull()
     expect(classifyError(new Error("   ")).raw).toBeNull()
@@ -114,6 +120,36 @@ describe("classifyError — the mapping table", () => {
 
   it("a missing tool wins over a status in the same text", () => {
     expect(classifyError("[404] Tool x not found").kind).toBe("notOnServer")
+  })
+
+  it("reads the source's own reason: no status code, engine suffix or write caveat", () => {
+    const reason = (text: string) => classifyError(text).reason
+    expect(reason("[500 ProcessEngineException] Cannot resolve incident (engine prod)")).toBe(
+      "Cannot resolve incident",
+    )
+    // A prefix before the bracket (a transport's wrapper) goes with it.
+    expect(reason("Error: [400 InvalidRequestException] Bad value. (engine p)")).toBe("Bad value.")
+    expect(reason("[VALIDATION] amount must be positive")).toBe("amount must be positive")
+    expect(
+      reason(
+        "connection to engine prod failed (UND_ERR_SOCKET) — the POST may still have been applied; check the current state before retrying",
+      ),
+    ).toBe("connection to engine prod failed (UND_ERR_SOCKET)")
+    expect(reason("[500] (engine prod)")).toBeNull()
+    expect(reason("plain words")).toBe("plain words")
+  })
+
+  it("knows a write whose answer never came may have gone through", () => {
+    expect(
+      classifyError(
+        "engine prod did not respond within 30000 ms (timeout) — the PUT may still have been applied; check the current state before retrying",
+      ).mayHaveApplied,
+    ).toBe(true)
+    // A read's timeout carries no caveat; an engine refusal never does.
+    expect(
+      classifyError("engine prod did not respond within 30000 ms (timeout)").mayHaveApplied,
+    ).toBe(false)
+    expect(classifyError("[500 X] boom (engine prod)").mayHaveApplied).toBe(false)
   })
 })
 

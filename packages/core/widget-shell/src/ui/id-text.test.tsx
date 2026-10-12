@@ -73,7 +73,34 @@ describe("IdText (U2, U13)", () => {
     fireEvent.click(screen.getByRole("button", { name: "5f0ce78e… kopieren" }))
     const toast = await screen.findByText("Die ID ließ sich nicht kopieren")
     expect(toast.closest('[data-slot="toast"]')?.getAttribute("data-tone")).toBe("danger")
-    expect(screen.getByText("Markier sie und kopier sie selbst.")).toBeTruthy()
+    expect(screen.getByText("Die ganze ID ist jetzt markiert. Kopier sie selbst.")).toBeTruthy()
+  })
+
+  it("leaves the WHOLE id selected in a field after a failed copy, so copying by hand works", async () => {
+    writeText.mockRejectedValue(new Error("denied"))
+    render(
+      <ToastProvider>
+        <IdText value={UUID} />
+      </ToastProvider>,
+    )
+    const button = screen.getByRole("button", { name: "Copy 5f0ce78e…" })
+    fireEvent.click(button)
+    const field = await screen.findByRole<HTMLInputElement>("textbox", { name: "Full ID" })
+    // Not the shortened "5f0ce78e…": the field holds the id itself, selected.
+    expect(field.value).toBe(UUID)
+    expect(field.readOnly).toBe(true)
+    expect(document.activeElement).toBe(field)
+    expect([field.selectionStart, field.selectionEnd]).toEqual([0, UUID.length])
+    expect(screen.queryByTitle(UUID)).toBeNull()
+
+    // Escape folds it back and returns to the button; leaving it does too.
+    fireEvent.keyDown(field, { key: "Escape" })
+    expect(screen.queryByRole("textbox")).toBeNull()
+    expect(document.activeElement).toBe(button)
+    fireEvent.click(button)
+    fireEvent.blur(await screen.findByRole("textbox", { name: "Full ID" }))
+    expect(screen.queryByRole("textbox")).toBeNull()
+    expect(screen.getByTitle(UUID)).toBeTruthy()
   })
 
   it("turns the check back into the copy icon after a moment", async () => {

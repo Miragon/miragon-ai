@@ -13,15 +13,18 @@ export type { ErrorSource } from "./error-labels.js"
  * - `failed`: any other error status or engine exception;
  * - `unknown`: nothing the kit recognises.
  */
-export type ErrorKind =
-  | "unreachable"
-  | "timeout"
-  | "notOnServer"
-  | "unauthorized"
-  | "forbidden"
-  | "notFound"
-  | "failed"
-  | "unknown"
+export const ERROR_KINDS = [
+  "unreachable",
+  "timeout",
+  "notOnServer",
+  "unauthorized",
+  "forbidden",
+  "notFound",
+  "failed",
+  "unknown",
+] as const
+
+export type ErrorKind = (typeof ERROR_KINDS)[number]
 
 /** The facts `classifyError` reads from an error, before any words. */
 export interface ErrorFacts {
@@ -31,6 +34,18 @@ export interface ErrorFacts {
   source: ErrorSource
   /** The raw text (the error's message), or null for an error without one. */
   raw: string | null
+  /**
+   * The source's own words, readable: the raw text without its bracketed
+   * status code, the engine-id suffix and the write caveat
+   * ("Cannot resolve incident"); null when nothing is left.
+   */
+  reason: string | null
+  /**
+   * The text says a write may still have gone through (the camunda7
+   * client's caveat for a write whose answer never came: a timeout, a
+   * connection lost mid-request). Retrying blindly could apply it twice.
+   */
+  mayHaveApplied: boolean
 }
 
 /** An error in words: for the toolkit's `ErrorState` (title, description, details). */
@@ -59,6 +74,22 @@ const TOOL_MISSING = /\btool\b[^\n]*\bnot found\b|\bunknown tool\b|-32601\b|\bme
 const TIMEOUT = /\(timeout\)|\btimed? ?out\b|-32001\b|did not respond within/i
 const UNREACHABLE =
   /\bunreachable\b|\bconnection to \S+(?: \S+)? failed\b|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EAI_AGAIN|\bfailed to fetch\b|\bfetch failed\b|\bnetworkerror\b|\bload failed\b/i
+/** The camunda7 client's caveat on a write whose outcome is unknown. */
+const WRITE_CAVEAT = /\s*(?:—|-|;)?\s*the \w+ may still have been applied\b[\s\S]*$/i
+/** The bracketed status and exception: `[500 ProcessEngineException] `. */
+const STATUS_CODE = /\[\d{3}(?:\s[^\]\n]{0,120})?\]\s*/
+/** Any other leading bracketed code (`withToolErrors`' `[code] …`). */
+const LEADING_CODE = /^\[[^\]\n]{1,120}\]\s*/
+/** The engine id the camunda7 client appends: ` (engine prod)`. */
+const ENGINE_SUFFIX = /\s*\(engine [^\s)]+\)\s*$/
+
+/** The raw text as the source's own words (see {@link ErrorFacts.reason}). */
+function reasonOf(text: string): string | null {
+  const rest = text.replace(WRITE_CAVEAT, "")
+  const code = STATUS_CODE.exec(rest)
+  const words = code ? rest.slice(code.index + code[0].length) : rest.replace(LEADING_CODE, "")
+  return words.replace(ENGINE_SUFFIX, "").trim() || null
+}
 
 /** The message of whatever was thrown (an `Error`, a string, an `{ message }`). */
 function rawText(error: unknown): string | null {
@@ -124,6 +155,8 @@ export function classifyError(error: unknown): ErrorFacts {
     ...(status !== undefined ? { status } : {}),
     source: sourceOf(text),
     raw,
+    reason: reasonOf(text),
+    mayHaveApplied: WRITE_CAVEAT.test(text),
   }
 }
 

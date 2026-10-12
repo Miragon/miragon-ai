@@ -1,7 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
-import { COLUMN_BREAKPOINTS, ListTable, listTableCss, type ListTableColumn } from "./list-table.js"
+import {
+  COLUMN_BREAKPOINTS,
+  ListTable,
+  listTableCss,
+  REGION_FOCUS_RING,
+  type ListTableColumn,
+} from "./list-table.js"
 import { Td } from "./table.js"
 
 afterEach(cleanup)
@@ -38,6 +44,37 @@ describe("ListTable: the table never widens the document (U2, WCAG 1.4.10)", () 
     expect(region.className).toContain("@container")
     expect(region.className).toContain("min-w-0")
     expect(region.contains(screen.getByRole("table", { name: "Failed jobs" }))).toBe(true)
+  })
+
+  it("draws its focus ring inside its own box, where no clipping wrapper can cut it", () => {
+    render(<Jobs />)
+    const region = screen.getByRole("region")
+    const regionClasses = region.className.split(/\s+/)
+    // The region is the peer and draws no ring of its own: the toolkit's
+    // outset ring is cut away by the `overflow-hidden` cards it fills edge
+    // to edge (shell:data-table, history), and the pinned column covers an
+    // outline of the region itself.
+    expect(regionClasses).toContain("peer")
+    expect(regionClasses.some((c) => c.includes("ring"))).toBe(false)
+    // The ring: the region's next sibling, over its box, inside its edge,
+    // above the pinned column, never in the accessibility tree or a click's way.
+    const ring = region.nextElementSibling as HTMLElement
+    expect(ring.hasAttribute("data-list-table-ring")).toBe(true)
+    expect(ring.getAttribute("aria-hidden")).toBe("true")
+    const ringClasses = ring.className.split(/\s+/)
+    for (const name of REGION_FOCUS_RING.split(" ")) expect(ringClasses).toContain(name)
+    expect(ringClasses).toEqual(
+      expect.arrayContaining([
+        "peer-focus-visible:-outline-offset-2",
+        "absolute",
+        "inset-0",
+        "z-[2]",
+        "pointer-events-none",
+      ]),
+    )
+    // Its frame does not scroll, so the ring stays put while the table does.
+    expect(region.parentElement!.className.split(/\s+/)).toContain("relative")
+    expect(region.parentElement!.className).not.toContain("overflow")
   })
 
   it("sets the rows in the dense table step, the heads in the 13 px caption", () => {

@@ -1016,6 +1016,92 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
 /** The inline width a chat column gives a view (the before-shots' 760 px frame). */
 const INLINE_WIDTH = 760
 
+/** A frame narrow enough that the job table (one failed job) is wider than its region. */
+const NARROW_WIDTH = 420
+
+/** A row of twelve unbroken values: far wider than any inline region. */
+const WIDE_ROW = Object.fromEntries(
+  Array.from({ length: 12 }, (_, i) => [`column${i + 1}`, `value${"x".repeat(24)}${i + 1}`]),
+)
+
+/**
+ * Screenshots of the four 4 px strips just inside an element's box (top,
+ * bottom, left, right), each without the corners: a focus indicator drawn
+ * inside the box changes them along their whole length; one a clipping
+ * wrapper cut away changes none, and one the pinned action column paints
+ * over leaves the right side (and that column's stretch of the top and
+ * bottom) unchanged — see {@link changedShare}.
+ */
+async function edgeStrips(page: Page, target: Locator): Promise<Buffer[]> {
+  const box = await target.boundingBox()
+  const table = await target.locator("table").boundingBox()
+  if (!box || !table) throw new Error("the element has no box")
+  // The box as the browser paints it: snapped to whole pixels.
+  const left = Math.round(box.x)
+  const top = Math.round(box.y)
+  const right = Math.round(box.x + box.width)
+  const bottom = Math.round(box.y + box.height)
+  const band = 4
+  const corner = 8
+  // The sides along the table's rows only: below them a scrollbar may run,
+  // which a ring under the pinned column would still change.
+  const sideEnd = Math.min(bottom, Math.round(table.y + table.height)) - corner
+  const strips = [
+    { x: left + corner, y: top, width: right - left - 2 * corner, height: band },
+    { x: left + corner, y: bottom - band, width: right - left - 2 * corner, height: band },
+    { x: left, y: top + corner, width: band, height: sideEnd - top - corner },
+    { x: right - band, y: top + corner, width: band, height: sideEnd - top - corner },
+  ]
+  return await Promise.all(strips.map((clip) => page.screenshot({ clip })))
+}
+
+/**
+ * The share of a strip's length the focus changed: of its columns (`"x"`, a
+ * top or bottom strip) or rows (`"y"`, a side), those with a pixel that
+ * differs clearly between the two shots. The browser decodes the PNGs, so
+ * the check needs no image library; a ring a positioned cell covers in part
+ * leaves that part unchanged.
+ */
+async function changedShare(
+  page: Page,
+  before: Buffer,
+  after: Buffer,
+  along: "x" | "y",
+): Promise<number> {
+  return await page.evaluate(
+    async ({ a, b, along }) => {
+      const decode = async (base64: string) => {
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }))
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+        const context = canvas.getContext("2d")!
+        context.drawImage(bitmap, 0, 0)
+        return context.getImageData(0, 0, bitmap.width, bitmap.height)
+      }
+      const [shotA, shotB] = await Promise.all([decode(a), decode(b)])
+      const lines = along === "x" ? shotA.width : shotA.height
+      const across = along === "x" ? shotA.height : shotA.width
+      let changed = 0
+      for (let line = 0; line < lines; line++) {
+        for (let step = 0; step < across; step++) {
+          const [x, y] = along === "x" ? [line, step] : [step, line]
+          const k = (y * shotA.width + x) * 4
+          const diff =
+            Math.abs(shotA.data[k] - shotB.data[k]) +
+            Math.abs(shotA.data[k + 1] - shotB.data[k + 1]) +
+            Math.abs(shotA.data[k + 2] - shotB.data[k + 2])
+          if (diff > 60) {
+            changed++
+            break
+          }
+        }
+      }
+      return changed / lines
+    },
+    { a: before.toString("base64"), b: after.toString("base64"), along },
+  )
+}
+
 /** Whether the view's own document scrolls sideways (a table that widened it). */
 async function documentOverflow(app: FrameLocator) {
   return await app.locator("html").evaluate((html) => ({
@@ -1072,6 +1158,121 @@ test.describe("layout at the inline width (760 px, U2/U20, WCAG 1.4.10)", () => 
     expect(layout.stickyCell).toBe("sticky")
     // The action column ends inside the region, never past its right edge.
     expect(layout.actionRight).toBeLessThanOrEqual(layout.regionRight + 1)
+  })
+
+  test("a table wider than its region scrolls inside it — the document never does", async ({
+    page,
+  }) => {
+    const app = await openView(page, {
+      tool: "render-view",
+      width: INLINE_WIDTH,
+      args: {
+        title: "Wide",
+        keys: { "sim:wide": [WIDE_ROW, WIDE_ROW] },
+        layout: [{ row: [{ widget: "shell:data-table", props: { dataKey: "sim:wide" } }] }],
+      },
+    })
+    const region = app.getByRole("region", { name: "Data table" })
+    await expect(region).toBeVisible({ timeout: 15_000 })
+    const sizes = await region.evaluate((el) => ({
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+    }))
+    expect(sizes.scroll, "the table really overflows its region").toBeGreaterThan(sizes.client)
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+    // The card around it clips: without the region's own scroll, the last
+    // columns would be cut off out of reach while the document stays narrow.
+    const end = await region.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth
+      const box = el.getBoundingClientRect()
+      const last = el.querySelector("tbody tr > :last-child")!.getBoundingClientRect()
+      return { scrolled: el.scrollLeft, lastRight: last.right, regionRight: box.right }
+    })
+    expect(end.scrolled, "the region itself scrolls").toBeGreaterThan(0)
+    expect(end.lastRight, "the last column scrolls into view").toBeLessThanOrEqual(
+      end.regionRight + 1,
+    )
+  })
+
+  test("a job table that overflows: the row actions stay at the region's right edge while it scrolls", async ({
+    page,
+  }) => {
+    const app = await openView(page, { tool: "camunda7_show_job_panel", width: NARROW_WIDTH })
+    const region = app.getByRole("region", { name: "Jobs", exact: true })
+    await expect(region).toBeVisible({ timeout: 15_000 })
+    const sizes = await region.evaluate((el) => ({
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+    }))
+    expect(sizes.scroll, "the table really overflows its region").toBeGreaterThan(sizes.client)
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+
+    for (const end of ["start", "end"] as const) {
+      const edges = await region.evaluate((el, at) => {
+        el.scrollLeft = at === "end" ? el.scrollWidth : 0
+        const box = el.getBoundingClientRect()
+        const action = el.querySelector("tbody tr > :last-child")!.getBoundingClientRect()
+        return {
+          scrolled: el.scrollLeft,
+          // The padding box's right edge: where `right: 0` pins the column.
+          regionRight: box.left + el.clientLeft + el.clientWidth,
+          actionLeft: action.left,
+          actionRight: action.right,
+          regionLeft: box.left,
+        }
+      }, end)
+      if (end === "end") expect(edges.scrolled).toBeGreaterThan(0)
+      expect(Math.abs(edges.actionRight - edges.regionRight), `pinned at the ${end}`).toBeLessThan(
+        1.5,
+      )
+      expect(edges.actionLeft).toBeGreaterThan(edges.regionLeft)
+    }
+  })
+
+  test("keyboard focus on a table region shows inside its box, even in a clipping card (WCAG 2.4.7)", async ({
+    page,
+  }) => {
+    // shell:data-table sits in an `overflow-hidden` card edge to edge; the
+    // job panel's region pins a column over its right edge.
+    const views = [
+      {
+        scenario: {
+          tool: "render-view",
+          width: INLINE_WIDTH,
+          args: {
+            title: "Wide",
+            keys: { "sim:wide": [WIDE_ROW] },
+            layout: [{ row: [{ widget: "shell:data-table", props: { dataKey: "sim:wide" } }] }],
+          },
+        },
+        name: "Data table",
+      },
+      { scenario: { tool: "camunda7_show_job_panel", width: NARROW_WIDTH }, name: "Jobs" },
+    ]
+    for (const { scenario, name } of views) {
+      const app = await openView(page, scenario)
+      const region = app.getByRole("region", { name, exact: true })
+      await expect(region).toBeVisible({ timeout: 15_000 })
+      await region.scrollIntoViewIfNeeded()
+      const before = await edgeStrips(page, region)
+      await region.focus()
+      expect(await region.evaluate((el) => el.matches(":focus-visible"))).toBe(true)
+      const after = await edgeStrips(page, region)
+      const sides = [
+        ["top", "x"],
+        ["bottom", "x"],
+        ["left", "y"],
+        ["right", "y"],
+      ] as const
+      for (const [i, [side, along]] of sides.entries()) {
+        expect(
+          await changedShare(page, before[i], after[i], along),
+          `${name}: the ring shows along the whole ${side} edge`,
+        ).toBeGreaterThanOrEqual(0.9)
+      }
+    }
   })
 
   test("axe: the inline views pass WCAG 2.1 A/AA (light and dark)", async ({ page }) => {

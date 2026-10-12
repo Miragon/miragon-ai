@@ -110,8 +110,10 @@ export {
 export {
   useBpmnViewer,
   diagramHeight,
+  diagramBoundsFromXml,
   DIAGRAM_MIN_HEIGHT,
   DIAGRAM_MAX_HEIGHT,
+  type DiagramBounds,
   type UseBpmnViewerOptions,
   type UseBpmnViewerResult,
   type BpmnCanvas,

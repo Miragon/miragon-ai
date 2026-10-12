@@ -16,7 +16,8 @@ export interface ErrorKindLabels {
 /**
  * The words of `describeError` (en/de). Voice (brand-tone): a title says what
  * happened, a hint what you can do; German addresses you with du; no dash as
- * a connector. Checked by the catalog text test in `brand-gates.test.ts`.
+ * a connector. Checked branch by branch (every source, the toast lines) by the
+ * catalog text and glossary tests in `brand-gates.test.ts`.
  */
 export interface ErrorLabels {
   /** The source as the subject of a title, sentence-initial. */
@@ -31,7 +32,22 @@ export interface ErrorLabels {
   notFound: ErrorKindLabels
   failed: ErrorKindLabels
   unknown: ErrorKindLabels
+  /**
+   * A failed write's toast. A toast has a title and one line, no "Details":
+   * these words never point there, and they carry the reason themselves.
+   */
+  toast: {
+    /** What happened, then the source's own reason, quoted. */
+    reason: (p: { title: string; reason: string }) => string
+    /** `failed`'s next step, without the "Details" sentence. */
+    failedHint: () => string
+    /** The write's answer never came (timeout, lost connection): it may have gone through. */
+    mayHaveApplied: () => string
+  }
 }
+
+/** A reason as a quotation ends without its own full stop; the sentence's comes after the quote. */
+const unstop = (reason: string) => reason.replace(/[.\s]+$/, "")
 
 const EN: ErrorLabels = {
   source: ({ source }) =>
@@ -83,6 +99,12 @@ const EN: ErrorLabels = {
   unknown: {
     title: () => "Something went wrong",
     hint: () => "Try again. If it fails again, ask in the chat.",
+  },
+  toast: {
+    reason: ({ title, reason }) => `${title}: “${unstop(reason)}”.`,
+    failedHint: () => "Try again, or ask in the chat.",
+    mayHaveApplied: () =>
+      "It may have worked anyway. Check the current state before you try again.",
   },
 }
 
@@ -138,6 +160,12 @@ const DE: ErrorLabels = {
   unknown: {
     title: () => "Das hat nicht geklappt",
     hint: () => "Versuch es noch mal. Klappt es wieder nicht, frag im Chat nach.",
+  },
+  toast: {
+    reason: ({ title, reason }) => `${title}: „${unstop(reason)}“.`,
+    failedHint: () => "Versuch es noch mal oder frag im Chat nach.",
+    mayHaveApplied: () =>
+      "Vielleicht hat es trotzdem geklappt. Prüf den aktuellen Stand, bevor du es noch mal versuchst.",
   },
 }
 

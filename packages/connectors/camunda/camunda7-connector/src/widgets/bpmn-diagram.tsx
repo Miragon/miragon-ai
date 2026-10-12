@@ -16,7 +16,7 @@ export { applyHighlights, dedupe, HIGHLIGHT_COLORS, type BpmnHighlight } from ".
 
 export interface BpmnDiagramProps {
   bpmnXml: string
-  /** A fixed frame height; default: from the diagram's aspect ratio (240–560 px, the kit's `diagramHeight`). */
+  /** A fixed frame height; default: the diagram's own (240–560 px, the kit's `diagramHeight`). */
   height?: number
   /**
    * Declarative highlight set. Empty / undefined renders the diagram as

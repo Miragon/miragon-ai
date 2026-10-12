@@ -231,13 +231,18 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    happened and what you can do in en/de ("Die Engine prod ist nicht erreichbar (HTTP 503)",
    "Prüf, ob die Engine läuft …"), the raw "[503 ProcessEngineException] …" only collapsed
    under "Details"; a caller's `errorTitle` heads only a failure it cannot classify, and
-   no raw engine text is ever a headline or a toast. Loading is a `skeleton` slot under a
+   no raw engine text is ever a headline. Loading is a `skeleton` slot under a
    polite sr-only status ("Ansicht wird geladen…" / "Loading view…" unless `loadingText`),
    no data the toolkit's `EmptyState`. `useDetailView`'s stale notice is an inline warning
    `ErrorState`; `LocalizedAppView` passes the same words to the toolkit's view as
-   `describeError`. A write says how it went: `useActionFeedback()` (`succeeded(title)`,
+   `describeError`, its next step only where it promises no retry (`hintNeedsNoRetry`: the
+   view offers Retry only where the host named the tool, so a "try again" hint stays the
+   toolkit's retry-aware one). A write says how it went: `useActionFeedback()` (`succeeded(title)`,
    `failed(title, error)`) raises the toolkit's toasts (the polite live region `McpAppView`
-   mounts), each naming the object; camunda7's `useEngineAction` requires a `feedback` per
+   mounts), each naming the object; a toast has no "Details", so `failureLine` quotes an
+   engine refusal's own reason without its code („Cannot resolve incident“) and says a
+   write whose answer never came may have gone through (check before retrying), never "see
+   Details"; camunda7's `useEngineAction` requires a `feedback` per
    `run` (`widgets/lib/write-feedback.ts`, `feedback.*` keys) and leaves a confirmed
    write's failure to its dialog. `ConfirmDialog` (kit, `ConfirmTarget` lines) is the one
    confirmation: an `alertdialog` on the toolkit `Dialog` (scrim, md radius, `shadow-3`),
@@ -250,11 +255,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    and hangs on the theme slot `--brand-mark-display` a customer brand sets to `none`.
    **Tables never widen the document** (U2, WCAG 1.4.10; the host simulation checks 760 px):
    `ListTable` scrolls inside a named region (`role="region"`, `tabIndex=0`, `ariaLabel`
-   required); `hideBelow: "sm" | "md" | "lg"` hides a column (header and every row's cell
+   required; its focus ring an outline drawn INSIDE the region's box by a sibling layered
+   above the pinned column, `REGION_FOCUS_RING`, since it fills clipping cards edge to
+   edge); `hideBelow: "sm" | "md" | "lg"` hides a column (header and every row's cell
    in that position, rows one cell per column) while the REGION is narrower than
    640/768/1024 px; `sticky: true` on the last column pins the row actions; `IdCell` /
    `IdText` show an id in Geist Mono, shortened ("5f0ce78e…", whole for screen readers and
-   in `title`), with a copy button and its toast. `WidgetShell` pads 24 px (16 px below
+   in `title`), with a copy button and its toast (a failed copy leaves the whole id selected
+   in a read-only field, to copy by hand). `WidgetShell` pads 24 px (16 px below
    640 px) and lets its children shrink (`min-w-0`). **Type on the scale**: kit components
    sit on the toolkit's `TYPE_SCALE`: a widget's page title 28/700 (`WidgetHeader`, an h2
    inside a view), a section `text-section` (21/600), running text `text-body` (16), dense
@@ -282,8 +290,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `KpiGrid`, `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections (form controls on the `--input` edge, `FIELD_CONTROL`); `useBpmnViewer`
    (it owns the fixed light canvas: the container is a forced-light island,
-   `data-theme-mode="light"`, on the paper token; its `height` follows the diagram's aspect
-   ratio, 240–560 px, refitted when it changes) + `BpmnZoomControls` (light in every theme,
+   `data-theme-mode="light"`, on the paper token; its `height` is the diagram's height at
+   the scale bpmn-js draws it, never past 1:1, 240–560 px, known on the first paint from the
+   XML's DI (`diagramBoundsFromXml`); every fit is centred on a fresh viewbox, since
+   diagram-js caches the container size) + `BpmnZoomControls` (light in every theme,
    Lucide, 32 px buttons) for BPMN. Every canvas colour is ONE TS token module,
    `widget-shell/src/ui/bpmn-tokens.ts` (`BPMN_TOKENS`: `--cd-*` names only, incident
    danger + danger-soft, running and open task blue + info-soft, count badges white on blue
@@ -294,8 +304,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    their tint, badge text ≥ 4.5:1). camunda7's `HIGHLIGHT_COLORS`
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`) and its
    legend (`markerSwatch`/`badgeSwatch`) read it. The heatmap's ramp is the one-hue data-viz
-   ramp `--cd-info-soft` → `--cd-blau` (never red), every value above zero at a visible
-   minimum, a legend with the smallest and largest value and the values per element as a
+   ramp `--cd-info-soft` → `--cd-blau` (never red), the smallest value above zero at a
+   visible minimum and the range mapped linearly onto the ramp (`heatIntensity`), so the
+   legend's two values are what its ends encode, and the values per element as a
    table (`HeatValuesTable`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the

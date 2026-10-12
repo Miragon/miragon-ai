@@ -49,11 +49,25 @@ const SKIP_TYPES = new Set([
 ])
 
 /**
- * The faintest an element with a value above zero ever paints: its share of
- * the maximum, raised to this floor — so a rarely taken path still shows
- * instead of fading to "never" (U16).
+ * The faintest an element with a value above zero ever paints — the
+ * smallest value's intensity — so a rarely taken path still shows instead
+ * of fading to "never" (U16).
  */
 export const MIN_HEAT_INTENSITY = 0.3
+
+/**
+ * An element's heat intensity: the range from the smallest value above zero
+ * to the largest mapped LINEARLY onto {@link MIN_HEAT_INTENSITY}…1, so the
+ * legend's ends ("1 … 1.000") are exactly the values its ends encode and its
+ * middle the middle value. (A floor on `weight / max` instead painted
+ * everything up to 30 % of the maximum like the minimum.) One value for all
+ * elements paints at full intensity.
+ */
+export function heatIntensity(weight: number, range: { min: number; max: number }): number {
+  if (!(range.max > range.min)) return 1
+  const t = Math.max(0, Math.min(1, (weight - range.min) / (range.max - range.min)))
+  return MIN_HEAT_INTENSITY + (1 - MIN_HEAT_INTENSITY) * t
+}
 
 /**
  * The heat layer's opacity at full intensity. Below 1 on purpose: the layer
@@ -201,22 +215,22 @@ export function drawHeatLayer(
   rawWidth: number,
   rawHeight: number,
   points: HeatPoint[],
-  maxWeight: number,
+  /** The smallest and largest weight of `points` (the legend's ends). */
+  range: { min: number; max: number },
   radiusPx: number,
   gradientLut: Uint8ClampedArray,
 ) {
   ctx.clearRect(0, 0, width, height)
-  if (points.length === 0 || maxWeight <= 0) return
+  if (points.length === 0 || range.max <= 0) return
 
   const blur = Math.max(8, radiusPx * 0.6)
   const brush = buildBrush(radiusPx, blur)
   const r2 = radiusPx + blur
 
-  // Pass 1: stamp greyscale alpha (intensity = weight / max).
+  // Pass 1: stamp greyscale alpha (the element's intensity, heatIntensity).
   for (const p of points) {
     if (p.x < -r2 || p.y < -r2 || p.x > width + r2 || p.y > height + r2) continue
-    const intensity = Math.max(MIN_HEAT_INTENSITY, Math.min(1, p.weight / maxWeight))
-    ctx.globalAlpha = intensity
+    ctx.globalAlpha = heatIntensity(p.weight, range)
     ctx.drawImage(brush, p.x - r2, p.y - r2)
   }
   ctx.globalAlpha = 1
@@ -241,9 +255,19 @@ export function drawHeatLayer(
 
 /** The smallest value above zero and the largest, or null when nothing is above zero. */
 export function heatRange(values: Record<string, number>): { min: number; max: number } | null {
-  const positive = Object.values(values).filter((v) => Number.isFinite(v) && v > 0)
-  if (positive.length === 0) return null
-  return { min: Math.min(...positive), max: Math.max(...positive) }
+  return weightRange(Object.values(values))
+}
+
+/** {@link heatRange} over plain weights (the drawn heat points). */
+export function weightRange(weights: readonly number[]): { min: number; max: number } | null {
+  let min = Infinity
+  let max = -Infinity
+  for (const w of weights) {
+    if (!Number.isFinite(w) || w <= 0) continue
+    if (w < min) min = w
+    if (w > max) max = w
+  }
+  return max > 0 ? { min, max } : null
 }
 
 /**

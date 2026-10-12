@@ -28,11 +28,13 @@ package customers build their own connectors and composed servers on (see the
   show an id shortened in Geist Mono with a copy button, `describeError` turns an engine or
   transport failure into what happened and what you can do (the toolkit's `ErrorState` in
   `ViewDataState`, `QueryFallback`, `useDetailView`, raw text under "Details", retry
-  required), `useActionFeedback` raises the toolkit's toasts after a write, `ConfirmDialog`
+  required), `useActionFeedback` raises the toolkit's toasts after a write (an engine
+  refusal's own reason quoted, a write whose answer never came flagged), `ConfirmDialog`
   asks before one, `TableEmptyState` has an `empty` and a `done` variant, `KometMark` /
   `AppEmptyState` carry the Miragon signature on app-level surfaces only (hidden by a brand
   that sets `--brand-mark-display: none`), and the BPMN canvas reads one token module
-  (`BPMN_TOKENS`, `BPMN_OVERLAY_CSS`) with its height from the diagram's aspect ratio. The
+  (`BPMN_TOKENS`, `BPMN_OVERLAY_CSS`) with its height from the diagram's size at the scale
+  bpmn-js draws it (`diagramHeight`, read from the XML's DI before the import). The
   toolkit's own components and helpers (`KpiGrid`, `StatusBadge`/`LivePill`/`CountPill`,
   `FilterBar`, `WidgetHeader`, `PagedListFooter`, `SectionHeading`, the `TONE_*` maps,
   `resolveTone`, `MICRO_LABEL`, `cn`, `useDebouncedValue`, …) are imported from the toolkit:

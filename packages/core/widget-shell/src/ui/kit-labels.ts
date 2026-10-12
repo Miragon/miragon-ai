@@ -42,6 +42,8 @@ export interface KitLabels {
   idCopied: string
   copyFailed: string
   copyFailedHint: string
+  /** `IdText` after a failed copy: the field showing the whole id, selected. */
+  fullId: string
   /** `ConfirmDialog`'s confirm button while the write runs. */
   working: string
   /** `shell:data-table`'s table name (it has no caption of its own). */
@@ -96,7 +98,8 @@ const LABELS: Record<Locale, KitLabels> = {
     copyId: (id) => `Copy ${id}`,
     idCopied: "ID copied",
     copyFailed: "Couldn't copy the ID",
-    copyFailedHint: "Select it and copy it yourself.",
+    copyFailedHint: "The full ID is now selected. Copy it yourself.",
+    fullId: "Full ID",
     working: "Working…",
     dataTable: "Data table",
     yes: "Yes",
@@ -142,7 +145,8 @@ const LABELS: Record<Locale, KitLabels> = {
     copyId: (id) => `${id} kopieren`,
     idCopied: "ID kopiert",
     copyFailed: "Die ID ließ sich nicht kopieren",
-    copyFailedHint: "Markier sie und kopier sie selbst.",
+    copyFailedHint: "Die ganze ID ist jetzt markiert. Kopier sie selbst.",
+    fullId: "Ganze ID",
     working: "Wird ausgeführt…",
     dataTable: "Datentabelle",
     yes: "Ja",

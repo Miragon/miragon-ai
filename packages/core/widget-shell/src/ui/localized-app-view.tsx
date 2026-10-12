@@ -1,7 +1,7 @@
 import { useLocale } from "@miragon/mcp-toolkit-ui"
 import { McpAppView, type DescribeViewError, type ViewTitleMode } from "@miragon/mcp-toolkit-ui/app"
 import { useMemo, type ComponentProps } from "react"
-import { describeError } from "./describe-error.js"
+import { classifyError, describeError, type ErrorKind, type ErrorSource } from "./describe-error.js"
 import { useShellHost } from "./shell-host.js"
 
 /**
@@ -23,19 +23,35 @@ export function viewTitleMode(toolName: string | undefined): ViewTitleMode {
 }
 
 /**
+ * Whether a failure's next step needs no Retry button: check the engine or
+ * Prometheus, ask whoever runs the server, ask in the chat. Every other kit
+ * hint says "try again" (or "go back to the list"), which a view can only
+ * keep where it offers Retry. Pinned against the words themselves, in both
+ * languages, next to the describer's test.
+ */
+export function hintNeedsNoRetry(kind: ErrorKind, source: ErrorSource["type"]): boolean {
+  if (kind === "unreachable") return source !== "unknown"
+  return kind === "notOnServer" || kind === "unauthorized" || kind === "forbidden"
+}
+
+/**
  * The view's failed rendering call in the kit's words ({@link describeError}):
- * "Die Engine prod ist nicht erreichbar (HTTP 503)" over "Prüf, ob die Engine
- * läuft …", the raw reason staying under the toolkit's "Details". A reason
- * the kit cannot classify — and a result the chat did not pass on — keeps the
- * toolkit's own words.
+ * "Die Engine prod ist nicht erreichbar (HTTP 503)", the raw reason staying
+ * under the toolkit's "Details". The view offers Retry only where the host
+ * named the originating tool, and its own hint knows which ("Ask in the chat
+ * to open this view again" without): the kit's next step replaces it only
+ * where it promises no retry ("Prüf, ob die Engine läuft …",
+ * {@link hintNeedsNoRetry}). A reason the kit cannot classify — and a result
+ * the chat did not pass on — keeps the toolkit's own words.
  */
 export function viewErrorDescriber(locale: string | undefined): DescribeViewError {
   return (reason, info) => {
     if (info?.kind === "blocked" || !reason) return undefined
     const described = describeError(reason, locale)
-    return described.kind === "unknown"
-      ? undefined
-      : { title: described.title, description: described.hint }
+    if (described.kind === "unknown") return undefined
+    return hintNeedsNoRetry(described.kind, classifyError(reason).source.type)
+      ? { title: described.title, description: described.hint }
+      : { title: described.title }
   }
 }
 

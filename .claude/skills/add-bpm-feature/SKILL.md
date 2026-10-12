@@ -260,8 +260,10 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
 - BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` (the container
   is a forced-light island, `data-theme-mode="light"`, on the paper token) +
   `BpmnZoomControls` (light in every theme, Lucide). The frame height comes from the
-  diagram's aspect ratio (`height` from the hook, 240–560 px): pass no fixed `height` to
-  `BpmnDiagram` unless a layout needs one. Overlay and legend colours are the kit's ONE
+  diagram's size (`height` from the hook: its height at the scale bpmn-js draws it, never
+  past 1:1, 240–560 px, read from the XML's DI before the import, so the frame does not
+  jump): pass no fixed `height` to `BpmnDiagram` or `BpmnHeatmap` unless a layout needs
+  one. Overlay and legend colours are the kit's ONE
   token module (`BPMN_TOKENS`, `widget-shell/src/ui/bpmn-tokens.ts`: incident = danger,
   running/open task = blue on the info tint, counts white on blue or danger; strokes
   ≥ 3:1, badge text ≥ 4.5:1, drift- and contrast-tested) through `HIGHLIGHT_COLORS`

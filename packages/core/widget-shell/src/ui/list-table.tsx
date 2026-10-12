@@ -1,6 +1,25 @@
 import { useId, type ReactNode } from "react"
-import { cn, FOCUS_RING } from "@miragon/mcp-toolkit-ui"
+import { cn } from "@miragon/mcp-toolkit-ui"
 import { Th } from "./table.js"
+
+/**
+ * The scroll region's focus ring, drawn INSIDE its box: the region usually
+ * fills a card or a bordered wrapper edge to edge, often one that clips its
+ * overflow, so the toolkit's outset `FOCUS_RING` (a box-shadow 2 px off the
+ * element) is cut away there and keyboard focus turns invisible (WCAG
+ * 2.4.7). Neither the region's own inset shadow (`FOCUS_RING_INSET`) nor its
+ * own outline would do: the header and row fills paint over the one, and the
+ * pinned action column (a positioned cell) over both. So the ring is a
+ * sibling laid over the region's box, above the pinned column, that shows
+ * while the region (the `peer`) has keyboard focus: same `--focus` role and
+ * 2 px as the kit's ring, an outline pulled inward, which stays visible in
+ * forced-colours mode.
+ */
+export const REGION_FOCUS_RING =
+  "peer-focus-visible:outline-2 peer-focus-visible:outline-solid peer-focus-visible:outline-focus peer-focus-visible:-outline-offset-2"
+
+/** Above the pinned column's `z-index: 1` (see {@link listTableCss}). */
+const RING_LAYER = "pointer-events-none absolute inset-0 z-[2] rounded-sm"
 
 /**
  * Container widths below which a `hideBelow` column is hidden — the region's
@@ -101,32 +120,44 @@ export function ListTable({
   const scope = useId()
   const css = listTableCss(scope, columns)
   return (
-    <div
-      role="region"
-      aria-label={ariaLabel}
-      // A scrollable region must be reachable by keyboard to scroll it.
-      tabIndex={0}
-      data-list-table={scope}
-      className={cn("@container w-full min-w-0 overflow-x-auto rounded-sm", FOCUS_RING)}
-    >
-      {css && <style>{css}</style>}
-      <table className={cn("text-dense w-full border-collapse", className)} aria-label={ariaLabel}>
-        <thead className="bg-muted">
-          <tr>
-            {columns.map((column, index) => (
-              <Th
-                key={index}
-                align={column.align}
-                plain={column.plain}
-                className={column.className}
-              >
-                {column.label}
-              </Th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
+    // The frame does not scroll, so the ring laid over the region stays put
+    // while the table scrolls under it.
+    <div className="relative w-full min-w-0">
+      <div
+        role="region"
+        aria-label={ariaLabel}
+        // A scrollable region must be reachable by keyboard to scroll it.
+        tabIndex={0}
+        data-list-table={scope}
+        className="peer @container w-full min-w-0 overflow-x-auto rounded-sm focus-visible:outline-hidden"
+      >
+        {css && <style>{css}</style>}
+        <table
+          className={cn("text-dense w-full border-collapse", className)}
+          aria-label={ariaLabel}
+        >
+          <thead className="bg-muted">
+            <tr>
+              {columns.map((column, index) => (
+                <Th
+                  key={index}
+                  align={column.align}
+                  plain={column.plain}
+                  className={column.className}
+                >
+                  {column.label}
+                </Th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+      <span
+        aria-hidden="true"
+        data-list-table-ring=""
+        className={cn(RING_LAYER, REGION_FOCUS_RING)}
+      />
     </div>
   )
 }

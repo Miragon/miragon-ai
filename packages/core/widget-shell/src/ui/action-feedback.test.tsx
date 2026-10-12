@@ -50,6 +50,19 @@ describe("useActionFeedback (U9: a write is never silent)", () => {
     expect(toast?.textContent).not.toContain("ProcessEngineException")
   })
 
+  it("carries an engine refusal's reason in the toast itself (U9: no Details there)", () => {
+    const feedback = renderIn("en")
+    act(() =>
+      feedback.failed(
+        "Couldn't retry the job for LEA-1",
+        new Error("[500 ProcessEngineException] Job is already finished (engine prod)"),
+      ),
+    )
+    const toast = toastOf("Couldn't retry the job for LEA-1")
+    expect(toast?.textContent).toContain("“Job is already finished”")
+    expect(toast?.textContent).not.toContain("Details")
+  })
+
   it("announces through the toolkit's polite live region", () => {
     const feedback = renderIn("en")
     act(() => feedback.succeeded("Saved"))
@@ -72,6 +85,58 @@ describe("failureLine", () => {
     )
     expect(failureLine(new Error("odd"), "en")).toBe(
       "Try again. If it fails again, ask in the chat.",
+    )
+  })
+
+  it("quotes an engine refusal's own reason — a toast has no Details to point to", () => {
+    const de = failureLine(
+      new Error("[500 ProcessEngineException] Cannot resolve incident (engine prod)"),
+      "de",
+    )
+    expect(de).toBe(
+      "Die Engine prod meldet einen Fehler (HTTP 500): „Cannot resolve incident“. Versuch es noch mal oder frag im Chat nach.",
+    )
+    const en = failureLine(
+      new Error(
+        "[400 InvalidRequestException] Cannot complete task t-1: variable amount is missing. (engine prod)",
+      ),
+      "en",
+    )
+    expect(en).toBe(
+      "Engine prod reported an error (HTTP 400): “Cannot complete task t-1: variable amount is missing”. Try again, or ask in the chat.",
+    )
+    for (const line of [de, en]) expect(line).not.toMatch(/Details|ProcessEngineException|\[/)
+  })
+
+  it("keeps the next step when the refusal carries no words, and cuts a long one", () => {
+    expect(failureLine(new Error("[500] (engine prod)"), "en")).toBe(
+      "Engine prod reported an error (HTTP 500). Try again, or ask in the chat.",
+    )
+    const long = failureLine(new Error(`[500 X] ${"word ".repeat(80)}`), "en")
+    expect(long).toContain("…”.")
+    expect(long.length).toBeLessThan(300)
+  })
+
+  it("says a write whose answer never came may have gone through — no blind retry", () => {
+    expect(
+      failureLine(
+        new Error(
+          "engine prod did not respond within 30000 ms (timeout) — the POST may still have been applied; check the current state before retrying",
+        ),
+        "de",
+      ),
+    ).toBe(
+      "Die Engine prod antwortet nicht rechtzeitig. Vielleicht hat es trotzdem geklappt. Prüf den aktuellen Stand, bevor du es noch mal versuchst.",
+    )
+    expect(
+      failureLine(
+        new Error(
+          "connection to engine prod failed (UND_ERR_SOCKET) — the PUT may still have been applied; check the current state before retrying",
+        ),
+        "en",
+      ),
+    ).toBe(
+      "Engine prod is unreachable. It may have worked anyway. Check the current state before you try again.",
     )
   })
 })

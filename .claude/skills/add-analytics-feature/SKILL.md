@@ -227,7 +227,9 @@ Rules while building:
   `--cd-blau` (red is for incidents), every element above zero at a visible minimum, a
   legend with the smallest and largest value (`HeatmapLegend` `min`/`max`, formatted),
   the values per element as a table under the diagram (`HeatValuesTable`), the frame
-  height from the diagram's aspect ratio and the paper light in every theme.
+  height from the diagram's size (its height at the scale bpmn-js draws it, 240–560 px)
+  and the paper light in every theme; the legend's ends are exact: the ramp maps the
+  range linearly (`heatIntensity`).
 - Status and comparison colour come from the toolkit's tone model (`ToneVariant`, `TONE_*`
   maps, `resolveTone` for a tone from the wire, CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);

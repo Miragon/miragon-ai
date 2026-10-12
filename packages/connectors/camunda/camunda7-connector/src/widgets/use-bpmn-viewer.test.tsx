@@ -18,6 +18,10 @@ const mock = vi.hoisted(() => {
       return this.level
     }
     addMarker = () => {}
+    resizedCalls = 0
+    resized = () => {
+      this.resizedCalls++
+    }
   }
 
   class MockViewer {
@@ -90,8 +94,10 @@ describe("useBpmnViewer", () => {
     const viewer = mock.MockViewer.instances[0]
     expect(viewer.container).toBe(container.firstElementChild)
     expect(viewer.importedXml).toEqual([XML])
-    // fit-to-viewport followed by the shared 0.95 breathing-room factor.
+    // fit-to-viewport followed by the shared 0.95 breathing-room factor, on
+    // a viewbox diagram-js recomputes first (it caches the container size).
     await waitFor(() => expect(viewer.canvas.zoomCalls).toEqual(["fit-viewport", 0.8 * 0.95]))
+    expect(viewer.canvas.resizedCalls).toBe(1)
     expect(latest.importError).toBeNull()
   })
 

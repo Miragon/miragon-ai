@@ -6,6 +6,7 @@ import {
   drawHeatLayer,
   HEAT_GRADIENT_CSS,
   HEAT_PEAK_ALPHA,
+  weightRange,
   type HeatPoint,
 } from "./bpmn-heatmap/heat-utils.js"
 import { DEFAULT_HEATMAP_LABELS, type BpmnHeatmapLabels } from "./bpmn-heatmap-labels.js"
@@ -25,7 +26,7 @@ export interface BpmnHeatmapProps {
   nodeFrequencies: Record<string, number>
   /** Per-edge value keyed by `${sourceId}->${targetId}`. Metrics carry none → `{}`. */
   edgeFrequencies?: Record<string, number>
-  /** A fixed frame height; default: from the diagram's aspect ratio (240–560 px). */
+  /** A fixed frame height; default: the diagram's own (240–560 px, `diagramHeight`). */
   height?: number
   /** Heat radius in diagram coordinates. Scales with zoom. */
   diagramRadius?: number
@@ -117,7 +118,7 @@ export function BpmnHeatmap({
 
         const { nodeFrequencies: nf, edgeFrequencies: ef, diagramRadius: dr } = dataRef.current
         const heatPoints = buildHeatPoints(elementRegistry.getAll(), nf, ef)
-        const maxWeight = heatPoints.reduce((m, p) => (p.weight > m ? p.weight : m), 0)
+        const range = weightRange(heatPoints.map((p) => p.weight)) ?? { min: 0, max: 0 }
         const vb = canvas.viewbox()
         const scale = vb.scale
         // Project diagram coordinates → screen pixels (CSS px).
@@ -134,7 +135,7 @@ export function BpmnHeatmap({
           heatCanvas.width,
           heatCanvas.height,
           screenPoints,
-          maxWeight,
+          range,
           radiusPx,
           gradientLut,
         )
@@ -216,7 +217,10 @@ export function BpmnHeatmap({
  * The heat ramp's legend: the swatch (on the light paper, at the layer's
  * opacity, so it matches the diagram) between the smallest value above zero
  * and the largest (`min`/`max`, formatted by the caller) — or "Less"/"More"
- * where the values are not at hand. Screen readers hear the range as one
+ * where the values are not at hand. The ends are the values they encode:
+ * the layer maps that range linearly onto the swatch (`heatIntensity`), so
+ * its middle is the middle value. One value for every element paints at the
+ * full end, so it shows once, there. Screen readers hear the range as one
  * sentence ("1 to 1,234").
  */
 export function HeatmapLegend({
@@ -234,14 +238,17 @@ export function HeatmapLegend({
 }) {
   const labels = kitLabels(useLocale())
   const range = min !== undefined && max !== undefined
-  const start = range ? min : lessLabel
+  const single = range && min === max
+  const start = range ? (single ? null : min) : lessLabel
   const end = range ? max : moreLabel
   return (
     <div className="text-small flex items-center gap-2">
-      {range && <span className="sr-only">{labels.heatmapRange({ min, max })}</span>}
-      <span aria-hidden={range || undefined} className="text-muted-foreground tabular-nums">
-        {start}
-      </span>
+      {range && <span className="sr-only">{single ? max : labels.heatmapRange({ min, max })}</span>}
+      {start !== null && (
+        <span aria-hidden={range || undefined} className="text-muted-foreground tabular-nums">
+          {start}
+        </span>
+      )}
       <span
         aria-hidden="true"
         data-theme-mode="light"

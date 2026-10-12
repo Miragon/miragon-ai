@@ -1,6 +1,8 @@
 import { useMemo } from "react"
 import { useLocale, useToast } from "@miragon/mcp-toolkit-ui"
-import { describeError } from "./describe-error.js"
+import { classifyError, describeError } from "./describe-error.js"
+import { ERROR_LABELS } from "./error-labels.js"
+import { supportedLanguage } from "./host-context.js"
 
 /** What a write says when it is done — the toolkit's toasts, never a silent row change. */
 export interface ActionFeedback {
@@ -12,17 +14,36 @@ export interface ActionFeedback {
   /**
    * The write failed: a danger toast (5 s) whose title names the object
    * ("Job für LEA-2026-00424 konnte nicht neu eingeplant werden") and whose
-   * second line says why and what you can do ({@link describeError}), never
-   * the raw engine text.
+   * second line says why and what you can do ({@link failureLine}).
    */
   failed: (title: string, error: unknown) => void
 }
 
-/** The toast's second line for a failed write: the reason in words, then the next step. */
+/**
+ * The toast's second line for a failed write: what happened in words
+ * ({@link describeError}), then the next step. A toast has no "Details", so
+ * the line carries what an `ErrorState` keeps there: an engine refusal quotes
+ * the engine's own reason, without its status code ("Die Engine prod meldet
+ * einen Fehler (HTTP 500): „Cannot resolve incident“."), and a write whose
+ * answer never came says it may have gone through, so you check before you
+ * retry instead of applying it twice.
+ */
 export function failureLine(error: unknown, locale: string | undefined): string {
   const described = describeError(error, locale)
-  return described.kind === "unknown" ? described.hint : `${described.title}. ${described.hint}`
+  const facts = classifyError(error)
+  const toast = ERROR_LABELS[supportedLanguage(locale) ?? "en"].toast
+  const happened = described.kind === "unknown" ? "" : `${described.title}. `
+  if (facts.mayHaveApplied) return `${happened}${toast.mayHaveApplied()}`
+  if (described.kind !== "failed") return `${happened}${described.hint}`
+  if (!facts.reason) return `${happened}${toast.failedHint()}`
+  const reason = clip(facts.reason)
+  return `${toast.reason({ title: described.title, reason })} ${toast.failedHint()}`
 }
+
+/** A toast line stays readable: a long engine text (a stack trace's head) is cut. */
+const MAX_TOAST_REASON = 200
+const clip = (text: string) =>
+  text.length > MAX_TOAST_REASON ? `${text.slice(0, MAX_TOAST_REASON).trimEnd()}…` : text
 
 /**
  * Feedback for a write (CI §9: success and failure each a toast, never only
