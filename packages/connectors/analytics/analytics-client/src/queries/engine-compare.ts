@@ -105,7 +105,7 @@ async function engineKpi(
         ? selector(keyMatcher, `activity_id="${escapeLabelValue(params.activityId)}"`, engine)
         : undefined,
     },
-    `[${range}]`,
+    { range },
   )
   return { engineId, bucket, ...kpis }
 }

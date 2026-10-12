@@ -54,7 +54,7 @@ function recordingClient(): { client: PrometheusClient; queries: string[] } {
 }
 
 describe("analytics_engine_landscape", () => {
-  it("builds the inventory matrix and issues one flat query per metric", async () => {
+  it("builds the inventory matrix and issues one node-folded query per metric", async () => {
     const handlers = captureHandlers(register)
     const { client, queries } = recordingClient()
 
@@ -69,15 +69,19 @@ describe("analytics_engine_landscape", () => {
     // Each engine runs its own definition — nothing to compare like-for-like.
     expect(result.sharedProcessKeys).toEqual([])
     const sel = '{engine_id=~"prod-a|prod-b|prod-c"}'
+    // Every gauge folded over its own labels first: a clustered engine's
+    // nodes report the same engine-wide rows.
+    const byKey = (gauge: string, labels = "process_definition_key, engine_id") =>
+      `sum by (engine_id, process_definition_key)(max by (${labels})(${gauge}${sel}))`
     expect(queries).toEqual([
-      `sum by (engine_id, process_definition_key)(camunda_process_definitions_deployed${sel})`,
-      `sum by (engine_id, process_definition_key)(camunda_process_instances_running${sel})`,
-      `sum by (engine_id, process_definition_key)(camunda_incidents_open${sel})`,
-      `sum by (engine_id, process_definition_key)(camunda_jobs_failed${sel})`,
-      `sum by (engine_id)(camunda_jobs_executable${sel})`,
-      `sum by (engine_id)(camunda_jobs_suspended${sel})`,
-      `sum by (engine_id)(camunda_jobs_due_future${sel})`,
-      `sum by (engine_id)(camunda_external_tasks_open${sel})`,
+      byKey("camunda_process_definitions_deployed"),
+      byKey("camunda_process_instances_running"),
+      byKey("camunda_incidents_open", "process_definition_key, incident_type, engine_id"),
+      byKey("camunda_jobs_failed"),
+      `max by (engine_id)(camunda_jobs_executable${sel})`,
+      `max by (engine_id)(camunda_jobs_suspended${sel})`,
+      `max by (engine_id)(camunda_jobs_due_future${sel})`,
+      `max by (engine_id)(camunda_external_tasks_open${sel})`,
     ])
   })
 

@@ -684,8 +684,18 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   `EngineStateMetrics.kt`) emits Micrometer meters whose dotted names (`otelName` —
   also the OTLP wire name on the push path) surface in Prometheus as `camunda_*`
   series (`promName`, e.g. `camunda.activity.ended` →
-  `camunda_activity_ended_total`; durations carry base unit `seconds`, spelled out
-  so every export path appends the same `_seconds` suffix). Consumers — the TS queries (via `METRIC_NAMES` in
+  `camunda_activity_ended_total`; durations are whole milliseconds with base unit
+  `milliseconds`, spelled out so every export path appends the same `_milliseconds`
+  suffix, and explicit `buckets` from 10 ms to 30 days — Micrometer rounds an observation
+  UP to a whole base unit before bucketing, so seconds emptied every sub-second bucket).
+  History-event meters are recorded only once the engine command COMMITTED (a rolled-back
+  job attempt counts nothing; `CommitBoundaryTest.kt` runs a real in-memory engine).
+  The contract's `$comment` also fixes how every consumer READS a series: a counter or
+  histogram only through the born-series count `increaseIn` (`queries/helpers.ts`;
+  `increase()`/`rate()` never count a series' first sample, so the first incident at an
+  activity would read 0), a gauge only folded over a clustered engine's nodes as
+  `max by (<its contract labels>)` (`engineState`); `promql-reading-rules.test-support.ts`
+  checks every query, alert rule and dashboard panel against both. Consumers — the TS queries (via `METRIC_NAMES` in
   `packages/connectors/analytics/analytics-client/src/metric-names.ts`, never raw strings), the alert rules
   (`playground/docker/prometheus/alerts.yml`), and the Grafana dashboards
   (`playground/docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
@@ -698,7 +708,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   export needs an entry, and new PromQL shapes extend the `*.test-support.ts` checker
   rather than bypass it) and
   `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle — also
-  checks the label keys each instrument attaches). A rename that skips the contract or
+  checks the label keys each instrument attaches and each histogram's bucket bounds). A rename that skips the contract or
   a consumer fails one of them; don't weaken these guards to make a change pass. Only
   attach model-bounded labels (definition key, activity id, engine id …) — never
   instance ids, business keys, or variable values.

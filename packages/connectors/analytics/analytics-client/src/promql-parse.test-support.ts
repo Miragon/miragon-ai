@@ -19,7 +19,11 @@ interface Token {
 }
 
 const LEXEMES: Array<[TokenKind, RegExp]> = [
-  ["duration", /(?:\d+(?:ms|[smhdwy]))+(?![A-Za-z0-9_])/y],
+  // A Grafana interval variable is a duration too (`offset $__range`).
+  [
+    "duration",
+    /(?:\d+(?:ms|[smhdwy]))+(?![A-Za-z0-9_])|\$__(?:rate_interval|interval|range)(?![A-Za-z0-9_])/y,
+  ],
   ["number", /(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/y],
   ["ident", /[A-Za-z_:][A-Za-z0-9_:]*/y],
   ["string", /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`/y],

@@ -23,6 +23,17 @@ helpers from `src/prometheus.ts` — never concatenate label values by hand:
 - `selector(...matchers)` — assembles `{…}`, dropping empties
 - `PERIOD_RANGE` / `PERIODS` / `Period` — the allowed windows (`1d`–`30d`, capped at
   retention); derive anything period-shaped from these — never copy the enum
+- `increaseIn(series, window)` (`src/queries/helpers.ts`) — the ONE way to read a counter
+  or histogram series over a window (contract rule 2): the plugin creates a series on its
+  first event and `increase()`/`rate()` never count a series' first sample, so the first
+  incident of a type at an activity would read 0. It counts a series born inside the window
+  with its whole value, and falls back to plain `increase()` where the hour before the
+  window lies past the retention
+- `engineState(gauge, sel)` — the ONE way to read a gauge (contract rule 3): every node
+  of a clustered engine reports the same engine-wide rows, so they are folded with
+  `max by (<the gauge's contract labels>)` before anything sums them
+- Durations are whole MILLISECONDS on the wire (contract rule 1); the result models stay
+  in seconds (`*_sec`, via `secondsOf`/`secondsOrNull`) or ms (`*Ms`) as they always were
 
 Reference shape (from `elementBottleneck` in `src/queries/element.ts`):
 
@@ -34,10 +45,13 @@ const sel = selector(
   engineMatcher(params.engine),
 )
 
+const inWindow = (series: string) => increaseIn(series, { range })
+
 const [counts, sums] = await Promise.all([
-  ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
-  ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
+  ch.instant(`sum by (activity_id)(${inWindow(`${M.activityEnded}${sel}`)})`),
+  ch.instant(`sum by (activity_id)(${inWindow(`${M.activityDuration}_sum${sel}`)})`),
 ])
+// sums are ms: secondsOf(sum / count) for an `*_sec` field
 ```
 
 **Metric-name contract:** series names come from `METRIC_NAMES`
@@ -49,9 +63,11 @@ change the contract first, then the Kotlin plugin
 (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt` /
 `EngineStateMetrics.kt`), `METRIC_NAMES`, and any alert rules / Grafana dashboards —
 contract tests on both sides enforce consistency: the TS side also checks the Grafana
-dashboards (incl. regex matchers), `sum by (…)` grouping labels, and dead contract
-entries (documented allowlist in the test); the Kotlin side checks the label keys each
-instrument attaches. Don't weaken these guards. Keep labels model-bounded (never
+dashboards (incl. regex matchers), the alert rules' and dashboards' `sum by (…)`
+grouping labels, `GAUGE_LABELS` against the gauges, millisecond `buckets` on every
+histogram, and dead contract entries (documented allowlist in the test); the Kotlin side
+checks the label keys each instrument attaches and the bucket bounds each histogram
+registers. Don't weaken these guards. Keep labels model-bounded (never
 instance ids, business keys, variable values).
 
 **Label contract:** `src/metrics-contract-labels.test.ts` runs every exported query
@@ -63,7 +79,11 @@ honesty guard below), total over the `queries` namespace, so a new export withou
 fails `pnpm typecheck`. Give the entry argument sets that switch on every optional matcher
 (engine filter single and multi, element/incident scope, process scope present and
 absent). A PromQL shape the checker (`src/promql-{parse,labels,sources}.test-support.ts`)
-rejects means extending the checker, never bypassing it.
+rejects means extending the checker, never bypassing it. The same file runs the reading
+rules (`src/promql-reading-rules.test-support.ts`) over every sent query, the alert rules
+and the dashboard panels: a counter or histogram outside the born-series count, or a gauge
+not folded over exactly its contract labels, fails. Alert rules and dashboards spell the
+count out in the exact shape `increaseIn` emits.
 
 **Honesty rules** — `src/query-honesty.test.ts` runs the same scenarios and holds two more
 total maps a new export must fill (`pnpm typecheck` fails otherwise): `NO_DATA` (what the
@@ -77,7 +97,7 @@ result so those entries can hold:
   `reportingEnginesQuery` (`queries/helpers.ts`), never from the gauge's own series.
 - Rates and deltas through `ratePct`/`pctChange`/`ppDelta` — `null` on a zero or unmeasured
   base, never 0 % or −100 %.
-- Explicit time windows through `clampWindow` + `rangeAt` (`queries/windows.ts`): clamped to
+- Explicit time windows through `clampWindow` + `windowAt` (`queries/windows.ts`): clamped to
   `[now − retention, now]`, reported as measured (`partial`), refused when unrepairable; per-day
   rates from the exact `seconds`, never the rounded `daysOf`.
 
@@ -90,7 +110,8 @@ issued query is correctly scoped:
 
 ```ts
 const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
-  if (q.includes("histogram_quantile")) return [{ metric: { activity_id: "A" }, value: 15 }]
+  // durations answer in ms, the histogram's unit
+  if (q.includes("histogram_quantile")) return [{ metric: { activity_id: "A" }, value: 15_000 }]
   return [{ metric: { activity_id: "A" }, value: 10 }]
 })
 const ch: PrometheusClient = { instant }

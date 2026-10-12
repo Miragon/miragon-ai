@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.distribution.HistogramSnapshot
 import io.micrometer.core.instrument.search.RequiredSearch
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.cibseven.bpm.engine.ProcessEngine
@@ -79,12 +80,12 @@ class MetricsContractTest {
 
         for ((name, meters) in emitted) {
             val metric = declared.getValue(name)
-            // The contract declares the OTLP-style unit ("s"); Micrometer
-            // carries the spelled-out base unit ("seconds") that both the
+            // The contract declares the OTLP-style unit ("ms"); Micrometer
+            // carries the spelled-out base unit ("milliseconds") that both the
             // Collector and the Prometheus registry append verbatim.
             val expectedBaseUnit = when (val unit = metric.path("unit").asText()) {
                 "" -> null
-                "s" -> "seconds"
+                "ms" -> "milliseconds"
                 else -> unit
             }
             for (meter in meters) {
@@ -112,7 +113,7 @@ class MetricsContractTest {
         for (metric in contract) {
             val otelName = metric.path("otelName").asText()
             var expected = otelName.replace('.', '_')
-            if (metric.path("unit").asText() == "s") expected += "_seconds"
+            if (metric.path("unit").asText() == "ms") expected += "_milliseconds"
             if (metric.path("type").asText() == "counter") expected += "_total"
             assertEquals(expected, metric.path("promName").asText(), "promName of $otelName")
         }
@@ -131,10 +132,42 @@ class MetricsContractTest {
     }
 
     @Test
-    fun `durations are recorded in seconds`() {
+    fun `durations are recorded in whole milliseconds`() {
         val summary = RequiredSearch.`in`(registry).name("camunda.process.instance.duration").summary()
         assertEquals(1, summary.count(), "one process end event carried a duration")
-        assertEquals(3.0, summary.totalAmount(), "3000 ms must be recorded as 3 s")
+        assertEquals(3000.0, summary.totalAmount(), "3000 ms must be recorded as 3000 ms")
+    }
+
+    @Test
+    fun `every histogram registers exactly the bucket bounds its contract entry declares`() {
+        val histograms = contract.filter { it.path("type").asText() == "histogram" }
+        assertTrue(histograms.isNotEmpty())
+        for (metric in histograms) {
+            val name = metric.path("otelName").asText()
+            val declared = metric.path("buckets").map { it.asDouble() }
+            assertTrue(declared.isNotEmpty(), "$name declares no buckets")
+            val summary = RequiredSearch.`in`(registry).name(name).summary()
+            assertEquals(declared, bucketBounds(summary.takeSnapshot()), "bucket bounds of $name")
+        }
+    }
+
+    @Test
+    fun `quantiles stay inside the right bucket for sub-second and multi-hour durations`() {
+        val quantileRegistry = SimpleMeterRegistry()
+        val handler = MetricsHistoryEventHandler(ENGINE_ID, quantileRegistry)
+        // 90 activities of 120 ms and 10 of 5 h: p50 belongs in (100, 250] ms,
+        // p95 in (4 h, 12 h]. Recorded in seconds, the 120 ms observations
+        // were rounded up into the 1 s bucket and the 5 h ones fell past the
+        // old 1 h top bucket, so p50 read ~0.6 s and p95 was capped at 1 h.
+        repeat(90) { handler.handleEvent(activityEnd(durationMillis = 120)) }
+        repeat(10) { handler.handleEvent(activityEnd(durationMillis = 5 * HOUR_MS)) }
+
+        val snapshot = RequiredSearch.`in`(quantileRegistry).name("camunda.activity.duration").summary().takeSnapshot()
+        val p50 = histogramQuantile(0.5, snapshot)
+        val p95 = histogramQuantile(0.95, snapshot)
+        assertTrue(p50 > 100.0 && p50 <= 250.0, "p50 $p50 ms must lie in (100, 250] ms")
+        assertTrue(p95 > 4.0 * HOUR_MS && p95 <= 12.0 * HOUR_MS, "p95 $p95 ms must lie in (4 h, 12 h]")
+        assertEquals(snapshot.count().toDouble(), snapshot.histogramCounts().last().count(), "no observation above the top bucket")
     }
 
     @Test
@@ -149,6 +182,39 @@ class MetricsContractTest {
             },
         )
         assertTrue(backdatedRegistry.meters.isEmpty(), "backdated (seeded/replayed) events must not be counted")
+    }
+
+    private fun bucketBounds(snapshot: HistogramSnapshot): List<Double> = snapshot.histogramCounts().map { it.bucket() }
+
+    /**
+     * Prometheus' `histogram_quantile` over a cumulative snapshot: find the
+     * first bucket whose count reaches the rank and interpolate linearly
+     * between its lower and upper bound (the first bucket starts at 0).
+     */
+    private fun histogramQuantile(q: Double, snapshot: HistogramSnapshot): Double {
+        val buckets = snapshot.histogramCounts()
+        val rank = q * snapshot.count()
+        var lowerBound = 0.0
+        var lowerCount = 0.0
+        for (bucket in buckets) {
+            if (bucket.count() >= rank) {
+                return lowerBound + (bucket.bucket() - lowerBound) * (rank - lowerCount) / (bucket.count() - lowerCount)
+            }
+            lowerBound = bucket.bucket()
+            lowerCount = bucket.count()
+        }
+        return buckets.last().bucket()
+    }
+
+    private fun activityEnd(durationMillis: Long) = HistoricActivityInstanceEventEntity().apply {
+        val now = Date()
+        eventType = "end"
+        processDefinitionKey = "loan"
+        activityId = "Activity_Check"
+        activityType = "serviceTask"
+        startTime = now
+        endTime = now
+        this.durationInMillis = durationMillis
     }
 
     private fun typeOf(meter: Meter): String = when (meter.id.type) {
@@ -217,6 +283,7 @@ class MetricsContractTest {
             HistoricIncidentEventEntity().apply {
                 eventType = "create"
                 processDefinitionKey = "loan"
+                processDefinitionId = "loan:3:uuid"
                 activityId = "Activity_Approve"
                 incidentType = "failedJob"
                 createTime = now
@@ -226,6 +293,7 @@ class MetricsContractTest {
             HistoricIncidentEventEntity().apply {
                 eventType = "resolve"
                 processDefinitionKey = "loan"
+                processDefinitionId = "loan:3:uuid"
                 activityId = "Activity_Approve"
                 incidentType = "failedJob"
                 createTime = now
@@ -268,6 +336,7 @@ class MetricsContractTest {
 
     private companion object {
         const val ENGINE_ID = "test-engine"
+        const val HOUR_MS = 3_600_000L
         const val CONTRACT_PATH = "packages/connectors/analytics/analytics-client/metrics-contract.json"
 
         /**

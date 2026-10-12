@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
-import type { PrometheusClient } from "@miragon-ai/analytics-client"
+import { increaseIn, type PrometheusClient } from "@miragon-ai/analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import { createEngineScope } from "../engine-ids.js"
 import { registerPerformanceTools } from "./performance.js"
@@ -50,17 +50,20 @@ describe("analytics_analyze_process_performance PromQL", () => {
 
     const sel = '{process_definition_key="order",engine_id="prod-a"}'
     const completedSel = '{process_definition_key="order",engine_id="prod-a",state="COMPLETED"}'
+    const count = (series: string) => increaseIn(series, { range: "7d" })
+    const instance = "camunda_process_instance_duration_milliseconds"
+    const activity = "camunda_activity_duration_milliseconds"
     expect(queries).toEqual([
-      `sum(increase(camunda_process_instance_started_total${sel}[7d]))`,
-      `sum(increase(camunda_process_instance_ended_total${completedSel}[7d]))`,
-      `sum(increase(camunda_incident_created_total${sel}[7d]))`,
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[7d])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[7d]))`,
-      `histogram_quantile(0.5, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[7d])))`,
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[7d])))`,
-      `sum by (activity_id, activity_type)(increase(camunda_activity_ended_total${sel}[7d]))`,
-      `sum by (activity_id)(increase(camunda_activity_duration_seconds_sum${sel}[7d]))`,
-      `histogram_quantile(0.5, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}[7d])))`,
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(camunda_activity_duration_seconds_bucket${sel}[7d])))`,
+      `sum(${count(`camunda_process_instance_started_total${sel}`)})`,
+      `sum(${count(`camunda_process_instance_ended_total${completedSel}`)})`,
+      `sum(${count(`camunda_incident_created_total${sel}`)})`,
+      `sum(${count(`${instance}_sum${sel}`)}) / sum(${count(`${instance}_count${sel}`)})`,
+      `histogram_quantile(0.5, sum by (le)(${count(`${instance}_bucket${sel}`)}))`,
+      `histogram_quantile(0.95, sum by (le)(${count(`${instance}_bucket${sel}`)}))`,
+      `sum by (activity_id, activity_type)(${count(`camunda_activity_ended_total${sel}`)})`,
+      `sum by (activity_id)(${count(`${activity}_sum${sel}`)})`,
+      `histogram_quantile(0.5, sum by (activity_id, le)(${count(`${activity}_bucket${sel}`)}))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(${count(`${activity}_bucket${sel}`)}))`,
     ])
   })
 
@@ -105,19 +108,18 @@ describe("analytics_compare_execution_periods PromQL", () => {
       includeActivityBreakdown: false,
     })
 
-    const windowA = `[86400s] @ ${Date.parse("2026-01-21T00:00:00Z") / 1000}`
-    const windowB = `[172800s] @ ${Date.parse("2026-02-03T00:00:00Z") / 1000}`
+    const atA = Date.parse("2026-01-21T00:00:00Z") / 1000
+    const atB = Date.parse("2026-02-03T00:00:00Z") / 1000
+    const windowA = `[86400s] @ ${atA}`
+    const windowB = `[172800s] @ ${atB}`
     const fleet = 'engine_id=~"prod-a|prod-b"'
     // 6 KPI queries per period, period A first.
     expect(queries).toHaveLength(12)
     expect(queries.slice(0, 6).every((q) => q.includes(windowA))).toBe(true)
     expect(queries.slice(6).every((q) => q.includes(windowB))).toBe(true)
-    expect(queries[0]).toBe(
-      `sum(increase(camunda_process_instance_started_total{process_definition_key="order",${fleet}}${windowA}))`,
-    )
-    expect(queries[6]).toBe(
-      `sum(increase(camunda_process_instance_started_total{process_definition_key="order",${fleet}}${windowB}))`,
-    )
+    const started = `camunda_process_instance_started_total{process_definition_key="order",${fleet}}`
+    expect(queries[0]).toBe(`sum(${increaseIn(started, { range: "86400s", at: atA })})`)
+    expect(queries[6]).toBe(`sum(${increaseIn(started, { range: "172800s", at: atB })})`)
   })
 })
 

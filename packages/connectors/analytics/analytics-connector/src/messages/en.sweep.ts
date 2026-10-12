@@ -234,8 +234,6 @@ export const enSweep: MessageCatalog = {
     "One version returned no figures. Check the version numbers or choose a longer period.",
   "aVersionCompare.emptyNoData":
     "There are no instances of these versions in this period. Check the version numbers or choose a longer period.",
-  "aVersionCompare.incidentKpisUnavailable":
-    "The engine reports incidents without a version, so the incident figures per version are missing. Instance counts and durations are exact.",
   "aVersionCompare.tableLabel": "Metrics of two process versions",
   "aVersionCompare.title": "Version comparison",
   "aVersionCompare.versionsBadge": "v{versionA} → v{versionB}",

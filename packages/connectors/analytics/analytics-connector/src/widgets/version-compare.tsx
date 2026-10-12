@@ -6,8 +6,7 @@ import {
   formatLookback,
   formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
-import { useT, type T } from "../messages/use-t.js"
-import { versionCompareCaveats, type VersionCompareCaveats } from "../version-compare-caveats.js"
+import { useT } from "../messages/use-t.js"
 import {
   ComparisonCard,
   ComparisonEmptyState,
@@ -21,23 +20,10 @@ import { enginesMeta } from "./view-meta.js"
 export type VersionCompareData = VersionCompareResult | null
 
 /**
- * The caveat under the table: why the incident rates read "not measured"
- * (the incident metric carries no version label, so they are unknown —
- * never 0).
+ * Interpret a version comparison. The comparison is process-wide: the tool
+ * takes no element scope (#336).
  */
-export function versionCompareNote(t: T, caveats: VersionCompareCaveats): string | undefined {
-  return caveats.incidentRatesUnavailable ? t("aVersionCompare.incidentKpisUnavailable") : undefined
-}
-
-/**
- * Interpret a version comparison, carrying the on-screen caveat as a fact:
- * the incident rates are not measured per version (unknown, never 0). The
- * comparison is process-wide — the tool takes no element scope (#336).
- */
-export function versionCompareHandOff(
-  data: VersionCompareResult,
-  caveats: VersionCompareCaveats,
-): HandOff {
+export function versionCompareHandOff(data: VersionCompareResult): HandOff {
   return {
     intent: "askAi.versionCompare",
     ids: {
@@ -47,10 +33,7 @@ export function versionCompareHandOff(
       versionB: data.versionB,
       windowDays: data.windowDays,
     },
-    facts: {
-      ...deltaFacts(data.delta, data.suppressed),
-      incidentRatesMeasured: caveats.incidentRatesUnavailable ? false : undefined,
-    },
+    facts: deltaFacts(data.delta, data.suppressed),
     tools: ["analytics_version_compare", "analytics_element_bottleneck"],
   }
 }
@@ -67,7 +50,6 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
   }
 
   const metrics = buildComparisonMetrics(t, a, b, data.delta)
-  const caveats = versionCompareCaveats(data)
 
   return (
     <ComparisonCard
@@ -77,11 +59,10 @@ export function VersionCompareWidget({ data }: { data: VersionCompareData }) {
       afterLabel={`v${data.versionB}`}
       metrics={metrics}
       suppressed={data.suppressed}
-      note={versionCompareNote(t, caveats)}
       actions={
         <HandOffButton
           action="assess"
-          prompt={ask(versionCompareHandOff(data, caveats))}
+          prompt={ask(versionCompareHandOff(data))}
           variant="primary"
         />
       }

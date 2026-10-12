@@ -102,11 +102,9 @@ export function formatDelta(value: number | null, unit: DeltaUnit): string {
 }
 
 /**
- * The compare KPIs the table reads. Every rate and duration is nullable — the
- * version compare cannot measure incidents per version (no version label on
- * the incident metric), a window in which nothing ended has no duration, one
- * in which nothing started no rate — and a null renders "not measured", never
- * "0,0" or "0 ms".
+ * The compare KPIs the table reads. Every rate and duration is nullable — a
+ * window in which nothing ended has no duration, one in which nothing started
+ * no rate — and a null renders "not measured", never "0,0" or "0 ms".
  */
 type ComparableKpis = Pick<CompareKpis, "instance_count"> & {
   incident_rate_pct: number | null

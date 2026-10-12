@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
-import { VERSION_INCIDENT_KPIS_NOTE, versionCompare } from "./version-compare.js"
+import { versionCompare } from "./version-compare.js"
+import { increaseIn } from "./helpers.js"
 import type { PrometheusClient, PromSample } from "../prometheus.js"
 
 const v = (value: number): PromSample => ({ metric: {}, value })
 
-type Canned = { started: number; completed: number; avg: number; p95: number }
+/** Canned KPIs per version; durations in ms, the histogram's unit. */
+type Canned = { started: number; completed: number; incidents: number; avg: number; p95: number }
 
 /** Mock Prometheus client with distinct canned KPIs per process_definition_version. */
 function mockClient(byVersion: Record<string, Canned>) {
@@ -13,7 +15,8 @@ function mockClient(byVersion: Record<string, Canned>) {
     const kpi = byVersion[version]
     if (!kpi) return []
     if (q.includes("histogram_quantile")) return [v(kpi.p95)]
-    if (q.includes("duration_seconds_sum")) return [v(kpi.avg)]
+    if (q.includes("duration_milliseconds_sum")) return [v(kpi.avg)]
+    if (q.includes("incident_created")) return [v(kpi.incidents)]
     if (q.includes('state="COMPLETED"')) return [v(kpi.completed)]
     return [v(kpi.started)]
   }
@@ -31,29 +34,31 @@ const base = {
 }
 
 const versions = {
-  "1": { started: 99.6, completed: 80.4, avg: 10.04, p95: 20 },
-  "2": { started: 50, completed: 40, avg: 12.06, p95: 30 },
+  "1": { started: 99.6, completed: 80.4, incidents: 5, avg: 10_040, p95: 20_000 },
+  "2": { started: 50, completed: 40, incidents: 4, avg: 12_060, p95: 30_000 },
 }
 
 describe("versionCompare", () => {
-  it("partitions the process-instance series by version and sends no incident query", async () => {
+  it("partitions the process-instance and incident series by version", async () => {
     const { ch, sent } = mockClient(versions)
     await versionCompare(ch, { ...base, engine: "prod-a" })
 
     const sel = (ver: number, extra = "") =>
       `{process_definition_key="order",process_definition_version="${ver}"${extra},engine_id="prod-a"}`
+    const w = { range: "14d" }
+    const count = (series: string) => increaseIn(series, w)
+    const duration = "camunda_process_instance_duration_milliseconds"
     const queries = (ver: number) => [
-      `sum(increase(camunda_process_instance_started_total${sel(ver)}[14d]))`,
-      `sum(increase(camunda_process_instance_ended_total${sel(ver, ',state="COMPLETED"')}[14d]))`,
-      `sum(increase(camunda_process_instance_duration_seconds_sum${sel(ver)}[14d])) / sum(increase(camunda_process_instance_duration_seconds_count${sel(ver)}[14d]))`,
-      `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel(ver)}[14d])))`,
+      `sum(${count(`camunda_process_instance_started_total${sel(ver)}`)})`,
+      `sum(${count(`camunda_process_instance_ended_total${sel(ver, ',state="COMPLETED"')}`)})`,
+      `sum(${count(`camunda_incident_created_total${sel(ver)}`)})`,
+      `sum(${count(`${duration}_sum${sel(ver)}`)}) / sum(${count(`${duration}_count${sel(ver)}`)})`,
+      `histogram_quantile(0.95, sum by (le)(${count(`${duration}_bucket${sel(ver)}`)}))`,
     ]
-    // The incident counter has no version label — querying it would match
-    // nothing and read as 0 (#327).
     expect(sent()).toEqual([...queries(1), ...queries(2)])
   })
 
-  it("reports instance, completion and duration KPIs and nulls the incident family", async () => {
+  it("reports instance, completion, incident and duration KPIs per version", async () => {
     const { ch } = mockClient(versions)
     const res = await versionCompare(ch, base)
 
@@ -63,8 +68,8 @@ describe("versionCompare", () => {
         bucket: "versionA",
         instance_count: 100,
         completed_count: 80,
-        incident_count: null,
-        incident_rate_pct: null,
+        incident_count: 5,
+        incident_rate_pct: 5,
         element_incident_count: null,
         element_incident_rate_pct: null,
         avg_duration_sec: 10,
@@ -75,8 +80,8 @@ describe("versionCompare", () => {
         bucket: "versionB",
         instance_count: 50,
         completed_count: 40,
-        incident_count: null,
-        incident_rate_pct: null,
+        incident_count: 4,
+        incident_rate_pct: 8,
         element_incident_count: null,
         element_incident_rate_pct: null,
         avg_duration_sec: 12.1,
@@ -85,24 +90,14 @@ describe("versionCompare", () => {
     ])
     expect(res.delta).toEqual({
       started_per_day_delta_pct: -50,
-      incident_rate_delta_pp: null,
+      incident_rate_delta_pp: 3,
       element_incident_rate_delta_pp: null,
       avg_duration_delta_pct: 21,
       p95_duration_delta_pct: 50,
     })
-    expect(res.notes).toEqual([VERSION_INCIDENT_KPIS_NOTE])
-    // The note is what a model reads next to the nulls: it must name every
-    // nulled field and say why, and that they are unknown rather than zero.
-    expect(VERSION_INCIDENT_KPIS_NOTE).toContain(
-      "incident_count, incident_rate_pct and the incident-rate deltas are null",
-    )
-    expect(VERSION_INCIDENT_KPIS_NOTE).toContain("NOT zero")
-    expect(VERSION_INCIDENT_KPIS_NOTE).toContain("no process_definition_version label")
-    expect(VERSION_INCIDENT_KPIS_NOTE).toContain("cannot be attributed to a version")
-    expect(VERSION_INCIDENT_KPIS_NOTE).toContain("per process definition key only")
   })
 
-  it("echoes the request and has no element scope (an element only ever narrowed incidents)", async () => {
+  it("echoes the request and has no element scope", async () => {
     const { ch } = mockClient(versions)
     const res = await versionCompare(ch, base)
 
@@ -134,7 +129,13 @@ describe("versionCompare", () => {
     [{ "1": 49, "2": 50 }, 50, true],
     [{ "1": 50, "2": 49 }, 50, true],
   ])("suppresses below minBucketSize per version (%j, min %i)", async (counts, min, expected) => {
-    const canned = (started: number) => ({ started, completed: started, avg: 1, p95: 1 })
+    const canned = (started: number) => ({
+      started,
+      completed: started,
+      incidents: 0,
+      avg: 1,
+      p95: 1,
+    })
     const { ch } = mockClient({ "1": canned(counts["1"]), "2": canned(counts["2"]) })
     const res = await versionCompare(ch, { ...base, minBucketSize: min })
     expect(res.suppressed).toBe(expected)
@@ -166,7 +167,7 @@ describe("versionCompare", () => {
       engine: ["prod-a", "prod-b"],
     })
 
-    expect(sent()).toHaveLength(8)
+    expect(sent()).toHaveLength(10)
     expect(sent().every((q) => q.includes('process_definition_key="my\\"key"'))).toBe(true)
     expect(sent().every((q) => q.includes('engine_id=~"prod-a|prod-b"'))).toBe(true)
   })

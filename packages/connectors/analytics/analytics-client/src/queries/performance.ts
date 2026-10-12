@@ -12,11 +12,13 @@ import {
   byLabel,
   first,
   firstOrNull,
+  increaseIn,
   kpiQueries,
   parseIsoSeconds,
   ratePct,
   round1,
-  round1OrNull,
+  secondsOf,
+  secondsOrNull,
 } from "./helpers.js"
 import {
   clampWindow,
@@ -24,8 +26,9 @@ import {
   daysOf,
   isoOf,
   nowSeconds,
-  rangeAt,
+  windowAt,
   type ClampedWindow,
+  type CountWindow,
 } from "./windows.js"
 
 export interface PerformanceKPI {
@@ -119,7 +122,7 @@ function pdkSelector(
 /**
  * Process performance KPIs over a rolling window, from OTEL metrics.
  *
- * Counts come from `increase()` over the period; durations from the histogram
+ * Counts come from {@link increaseIn} over the period; durations from the histogram
  * (`histogram_quantile` for p50/p95, sum/count for the mean) and cover the
  * instances that ENDED in the window — `null` when none did. `incident_count`
  * counts incidents created (metrics carry no per-instance terminal-failure
@@ -140,7 +143,7 @@ export async function analyzePerformance(
       sel: pdkSelector(params.processDefinitionKey, params.engine),
       completedSel: pdkSelector(params.processDefinitionKey, params.engine, 'state="COMPLETED"'),
     },
-    `[${range}]`,
+    { range },
   )
 
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
@@ -155,8 +158,8 @@ export async function analyzePerformance(
   const totalInstances = Math.round(first(total))
   const completedCount = Math.round(first(completed))
   const incidentCount = Math.round(first(incidents))
-  const avgSec = firstOrNull(avg)
-  const observed = totalInstances > 0 || completedCount > 0 || incidentCount > 0 || avgSec !== null
+  const avgMs = firstOrNull(avg)
+  const observed = totalInstances > 0 || completedCount > 0 || incidentCount > 0 || avgMs !== null
   const kpi: PerformanceKPI | null = observed
     ? {
         process_definition_key: params.processDefinitionKey,
@@ -164,9 +167,9 @@ export async function analyzePerformance(
         completed: completedCount,
         incident_count: incidentCount,
         incident_rate_pct: ratePct(incidentCount, totalInstances),
-        avg_duration_sec: round1OrNull(avgSec),
-        median_duration_sec: round1OrNull(firstOrNull(median)),
-        p95_duration_sec: round1OrNull(firstOrNull(p95)),
+        avg_duration_sec: secondsOrNull(avgMs),
+        median_duration_sec: secondsOrNull(firstOrNull(median)),
+        p95_duration_sec: secondsOrNull(firstOrNull(p95)),
       }
     : null
 
@@ -175,7 +178,7 @@ export async function analyzePerformance(
     activityBreakdown = await activityBreakdownRows(
       ch,
       params.processDefinitionKey,
-      `[${range}]`,
+      { range },
       params.engine,
     )
   }
@@ -186,21 +189,19 @@ export async function analyzePerformance(
 async function activityBreakdownRows(
   ch: PrometheusClient,
   key: string,
-  rangeExpr: string,
+  w: CountWindow,
   engineId: EngineFilterInput,
 ): Promise<ActivityBreakdownRow[]> {
   const sel = pdkSelector(key, engineId)
-  // By-clauses stay literal: the contract test attributes each one to its series.
+  const inWindow = (series: string) => increaseIn(series, w)
   const [counts, sums, median, p95] = await Promise.all([
+    ch.instant(`sum by (activity_id, activity_type)(${inWindow(`${M.activityEnded}${sel}`)})`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.activityDuration}_sum${sel}`)})`),
     ch.instant(
-      `sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}${rangeExpr}))`,
-    ),
-    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${rangeExpr}))`),
-    ch.instant(
-      `histogram_quantile(0.5, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${rangeExpr})))`,
+      `histogram_quantile(0.5, sum by (activity_id, le)(${inWindow(`${M.activityDuration}_bucket${sel}`)}))`,
     ),
     ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${rangeExpr})))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(${inWindow(`${M.activityDuration}_bucket${sel}`)}))`,
     ),
   ])
   const sumBy = byLabel(sums, "activity_id")
@@ -209,17 +210,16 @@ async function activityBreakdownRows(
   const rows: ActivityBreakdownRow[] = counts.map((c) => {
     const id = c.metric.activity_id ?? ""
     const count = Math.round(c.value)
-    const sumSec = sumBy[id]
-    const totalSec = sumSec ?? 0
+    const sumMs = sumBy[id]
     return {
       activity_id: id,
       activity_name: null,
       activity_type: c.metric.activity_type ?? "",
       execution_count: count,
-      avg_duration_sec: sumSec !== undefined && count > 0 ? round1(sumSec / count) : null,
-      median_duration_sec: round1OrNull(medianBy[id] ?? null),
-      p95_duration_sec: round1OrNull(p95By[id] ?? null),
-      total_time_sec: round1(totalSec),
+      avg_duration_sec: sumMs !== undefined && count > 0 ? secondsOf(sumMs / count) : null,
+      median_duration_sec: secondsOrNull(medianBy[id] ?? null),
+      p95_duration_sec: secondsOrNull(p95By[id] ?? null),
+      total_time_sec: secondsOf(sumMs ?? 0),
     }
   })
   return rows.sort((a, b) => b.total_time_sec - a.total_time_sec).slice(0, 20)
@@ -295,7 +295,7 @@ async function periodKpi(
       sel: pdkSelector(key, engineId),
       completedSel: pdkSelector(key, engineId, 'state="COMPLETED"'),
     },
-    rangeAt(w),
+    windowAt(w),
   )
   const [total, completed, incidents, avg, median, p95] = await Promise.all([
     ch.instant(q.started),
@@ -320,9 +320,9 @@ async function periodKpi(
     completed: Math.round(first(completed)),
     incident_count: incidentCount,
     incident_rate_pct: ratePct(incidentCount, totalInstances),
-    avg_duration_sec: round1OrNull(firstOrNull(avg)),
-    median_sec: round1OrNull(firstOrNull(median)),
-    p95_sec: round1OrNull(firstOrNull(p95)),
+    avg_duration_sec: secondsOrNull(firstOrNull(avg)),
+    median_sec: secondsOrNull(firstOrNull(median)),
+    p95_sec: secondsOrNull(firstOrNull(p95)),
   }
 }
 
@@ -334,12 +334,12 @@ async function periodActivities(
   engineId: EngineFilterInput,
 ): Promise<PeriodActivityComparisonRow[]> {
   const sel = pdkSelector(key, engineId)
-  const r = rangeAt(w)
+  const inWindow = (series: string) => increaseIn(series, windowAt(w))
   const [counts, sums, p95] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}${r}))`),
-    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.activityEnded}${sel}`)})`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.activityDuration}_sum${sel}`)})`),
     ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}${r})))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(${inWindow(`${M.activityDuration}_bucket${sel}`)}))`,
     ),
   ])
   const sumBy = byLabel(sums, "activity_id")
@@ -347,14 +347,14 @@ async function periodActivities(
   return counts.map((c) => {
     const id = c.metric.activity_id ?? ""
     const executions = Math.round(c.value)
-    const sumSec = sumBy[id]
+    const sumMs = sumBy[id]
     return {
       activity_id: id,
       activity_name: null,
       period: label,
       executions,
-      avg_sec: sumSec !== undefined && executions > 0 ? round1(sumSec / executions) : null,
-      p95_sec: round1OrNull(p95By[id] ?? null),
+      avg_sec: sumMs !== undefined && executions > 0 ? secondsOf(sumMs / executions) : null,
+      p95_sec: secondsOrNull(p95By[id] ?? null),
     }
   })
 }

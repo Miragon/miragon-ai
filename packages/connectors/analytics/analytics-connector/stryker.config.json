@@ -19,8 +19,7 @@
     "src/tools/engine-landscape.ts",
     "src/tools/health.ts",
     "src/tools/performance.ts",
-    "src/tools/version-compare.ts",
-    "src/version-compare-caveats.ts"
+    "src/tools/version-compare.ts"
   ],
   "inPlace": true,
   "incremental": true,

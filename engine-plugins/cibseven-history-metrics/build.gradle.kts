@@ -19,6 +19,9 @@ dependencies {
     compileOnly(libs.cibseven.engine)
     testImplementation(libs.cibseven.engine)
 
+    // CommitBoundaryTest boots a real in-memory engine to prove that rolled-back
+    // work is never counted.
+    testImplementation(libs.h2)
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.jackson.databind)
     testImplementation(project(":konsist"))

@@ -25,6 +25,11 @@ import java.util.concurrent.TimeUnit
  * for vanished definition keys are removed rather than frozen at their last
  * value.
  *
+ * Every gauge is an engine-wide figure (a query over the engine's database), so
+ * each node of a clustered engine reports the same rows. Consumers therefore
+ * read a gauge as `max by (<its contract labels>)` before aggregating further,
+ * never as a sum over nodes (rule 3 of `metrics-contract.json`).
+ *
  * Cost note: each tick issues a handful of engine queries — fine for typical
  * deployments; widen the `state-interval` property if the definition count is
  * very large.

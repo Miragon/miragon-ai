@@ -10,7 +10,6 @@ import { queries, schemas, withCallerSignal } from "@miragon-ai/analytics-client
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { localizeViewFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"
-import { versionCompareCaveats } from "../version-compare-caveats.js"
 import { isFleetRequest, withEngineScope } from "../engine-ids.js"
 import { namedLandscape } from "../named-views.js"
 import { NO_NAMES } from "../bpmn-name-lookup.js"
@@ -103,9 +102,6 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
         ...withEngineScope(engineScope, args),
         minBucketSize,
       })
-      // Null incident KPIs (no version label on the incident metric) must not
-      // read as "incident rate 0pp" — say why they are missing instead.
-      const { incidentRatesUnavailable } = versionCompareCaveats(data)
       return buildSingleWidgetView({
         widget: "analytics:version-compare",
         app: "analytics",
@@ -119,7 +115,6 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
           windowDays: data.windowDays,
           engines: engineScopeSummary(t, data.engines, isFleetRequest(args.engine)),
           delta: compareDeltaSummary(data.delta),
-          incidents: incidentRatesUnavailable ? t("aSum.versionIncidentsUnavailable") : "",
           suppressed: suppressedNote(data.suppressed),
         }),
       })

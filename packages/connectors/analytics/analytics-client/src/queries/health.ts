@@ -7,7 +7,7 @@ import {
   type PromSample,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { reportingEnginesQuery } from "./helpers.js"
+import { engineState, reportingEnginesQuery } from "./helpers.js"
 
 export interface HealthCount {
   label: string
@@ -141,20 +141,22 @@ export async function engineHealth(
     firing,
     pending,
   ] = await Promise.all([
-    ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
-    ch.instant(`sum by (incident_type)(${M.incidentsOpen}${sel})`),
-    ch.instant(`sum(${M.jobsFailed}${sel})`),
+    ch.instant(`sum by (process_definition_key)(${engineState(M.processInstancesRunning, sel)})`),
+    ch.instant(`sum by (incident_type)(${engineState(M.incidentsOpen, sel)})`),
+    ch.instant(`sum(${engineState(M.jobsFailed, sel)})`),
     ch.instant(reportingEnginesQuery(sel)),
-    ch.instant(`sum(${M.jobsSuspended}${sel})`),
+    ch.instant(`sum(${engineState(M.jobsSuspended, sel)})`),
     ch.instant(
-      `sum(${M.userTasksOpen}${selector(`status="total"`, engineMatcher(params.engine))})`,
+      `sum(${engineState(M.userTasksOpen, selector(`status="total"`, engineMatcher(params.engine)))})`,
     ),
     ch.instant(
-      `sum(${M.userTasksOpen}${selector(`status="unassigned"`, engineMatcher(params.engine))})`,
+      `sum(${engineState(M.userTasksOpen, selector(`status="unassigned"`, engineMatcher(params.engine)))})`,
     ),
-    ch.instant(`sum by (engine_id)(${M.externalTasksOpen}${sel})`),
+    ch.instant(engineState(M.externalTasksOpen, sel)),
     // Distinct keys, not series: a key deployed on two engines counts once.
-    ch.instant(`count(count by (process_definition_key)(${M.processDefinitionsDeployed}${sel}))`),
+    ch.instant(
+      `count(count by (process_definition_key)(${engineState(M.processDefinitionsDeployed, sel)}))`,
+    ),
     ch.instant(alertsQuery("firing", params.engine, fleet)),
     ch.instant(alertsQuery("pending", params.engine, fleet)),
   ])

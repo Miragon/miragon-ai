@@ -12,14 +12,16 @@ import { METRIC_NAMES as M } from "../metric-names.js"
 import {
   asOfNow,
   byLabel,
+  engineState,
   first,
   firstOrNull,
+  increaseIn,
   kpiQueries,
   ratePct,
   reportingEngineIds,
   reportingEnginesQuery,
 } from "./helpers.js"
-import { clampWindow, DAY_SECONDS, nowSeconds, rangeAt } from "./windows.js"
+import { clampWindow, DAY_SECONDS, nowSeconds, windowAt, type CountWindow } from "./windows.js"
 import type {
   ActivityBreakdownItem,
   AnalyticsDashboardData,
@@ -44,9 +46,9 @@ export const ACTIVITY_BREAKDOWN_LIMIT = 20
  */
 const DEFAULT_MIN_BUCKET_SIZE = 10
 
-/** Seconds -> integer milliseconds (preserves the sub-100ms precision the dashboard formats). */
-const ms = (sec: number) => Math.round(sec * 1000)
-const msOrNull = (sec: number | null) => (sec === null ? null : ms(sec))
+/** Whole milliseconds, the histograms' unit and the dashboard's. */
+const ms = (value: number) => Math.round(value)
+const msOrNull = (value: number | null) => (value === null ? null : ms(value))
 
 /**
  * Aggregated dashboard KPIs + activity / definition breakdowns, from the
@@ -54,8 +56,8 @@ const msOrNull = (sec: number | null) => (sec === null ? null : ms(sec))
  * `analytics_show_dashboard` widget tool. Two kinds of figures, never mixed:
  *
  * - FLOWS within the window (`period`): starts, completions, incidents created
- *   and resolved, and the durations of the instances that ended — `increase()`
- *   over the range. Durations are null when nothing ended; `incidentRatePct` is null
+ *   and resolved, and the durations of the instances that ended — counted over
+ *   the range with {@link increaseIn}. Durations are null when nothing ended; `incidentRatePct` is null
  *   when nothing started.
  * - LIVE STATE right now: `runningNow` / `openIncidentsNow` from the state
  *   gauges (`camunda_process_instances_running`, `camunda_incidents_open`) —
@@ -95,12 +97,12 @@ export async function dashboardData(
     : undefined
   const sel = selector(keyMatcher, engine)
   const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
-  const r = `[${range}]`
-  const q = kpiQueries({ sel, completedSel }, r)
+  const w: CountWindow = { range }
+  const q = kpiQueries({ sel, completedSel }, w)
   const before = previousWindow(params.period)
-  const prev = before ? kpiQueries({ sel, completedSel }, rangeAt(before)) : null
+  const prev = before ? kpiQueries({ sel, completedSel }, windowAt(before)) : null
+  const inWindow = (series: string) => increaseIn(series, w)
 
-  // By-clauses stay literal: the contract test attributes each one to its series.
   const [
     started,
     completed,
@@ -127,33 +129,33 @@ export async function dashboardData(
     ch.instant(q.started),
     ch.instant(q.completed),
     ch.instant(q.incidents),
-    ch.instant(`sum(increase(${M.incidentResolved}${sel}${r}))`),
+    ch.instant(`sum(${inWindow(`${M.incidentResolved}${sel}`)})`),
     ch.instant(q.avgDuration),
     ch.instant(q.medianDuration),
     ch.instant(q.p95Duration),
-    ch.instant(`sum(${M.processInstancesRunning}${sel})`),
-    ch.instant(`sum(${M.incidentsOpen}${sel})`),
+    ch.instant(`sum(${engineState(M.processInstancesRunning, sel)})`),
+    ch.instant(`sum(${engineState(M.incidentsOpen, sel)})`),
     ch.instant(
-      `sum by (process_definition_key, activity_id, activity_type)(increase(${M.activityEnded}${sel}${r}))`,
+      `sum by (process_definition_key, activity_id, activity_type)(${inWindow(`${M.activityEnded}${sel}`)})`,
     ),
     ch.instant(
-      `sum by (process_definition_key, activity_id)(increase(${M.activityDuration}_sum${sel}${r}))`,
+      `sum by (process_definition_key, activity_id)(${inWindow(`${M.activityDuration}_sum${sel}`)})`,
     ),
     ch.instant(
-      `histogram_quantile(0.95, sum by (process_definition_key, activity_id, le)(increase(${M.activityDuration}_bucket${sel}${r})))`,
+      `histogram_quantile(0.95, sum by (process_definition_key, activity_id, le)(${inWindow(`${M.activityDuration}_bucket${sel}`)}))`,
     ),
-    ch.instant(`sum by (process_definition_key)(increase(${M.processInstanceStarted}${sel}${r}))`),
+    ch.instant(`sum by (process_definition_key)(${inWindow(`${M.processInstanceStarted}${sel}`)})`),
     ch.instant(
-      `sum by (process_definition_key)(increase(${M.processInstanceEnded}${completedSel}${r}))`,
+      `sum by (process_definition_key)(${inWindow(`${M.processInstanceEnded}${completedSel}`)})`,
     ),
-    ch.instant(`sum by (process_definition_key)(increase(${M.incidentCreated}${sel}${r}))`),
+    ch.instant(`sum by (process_definition_key)(${inWindow(`${M.incidentCreated}${sel}`)})`),
     ch.instant(
-      `sum by (process_definition_key)(increase(${M.processInstanceDuration}_sum${sel}${r}))`,
+      `sum by (process_definition_key)(${inWindow(`${M.processInstanceDuration}_sum${sel}`)})`,
     ),
     ch.instant(
-      `sum by (process_definition_key)(increase(${M.processInstanceDuration}_count${sel}${r}))`,
+      `sum by (process_definition_key)(${inWindow(`${M.processInstanceDuration}_count${sel}`)})`,
     ),
-    ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
+    ch.instant(`sum by (process_definition_key)(${engineState(M.processInstancesRunning, sel)})`),
     ch.instant(reportingEnginesQuery(selector(engine))),
     prev ? ch.instant(prev.started) : null,
     prev ? ch.instant(prev.incidents) : null,
@@ -276,17 +278,16 @@ function buildActivityBreakdown(
   return [...rows.entries()]
     .map(([k, row]) => {
       const count = Math.round(row.count)
-      const sumSec = sumBy.get(k)
-      const totalSec = sumSec ?? 0
-      const p95Sec = p95By.get(k)
+      const sumMs = sumBy.get(k)
+      const p95Ms = p95By.get(k)
       return {
         processDefinitionKey: row.key,
         activityId: row.id,
         activityType: row.type,
         executionCount: count,
-        avgDurationMs: sumSec !== undefined && count > 0 ? ms(sumSec / count) : null,
-        p95DurationMs: p95Sec === undefined ? null : ms(p95Sec),
-        totalTimeMs: ms(totalSec),
+        avgDurationMs: sumMs !== undefined && count > 0 ? ms(sumMs / count) : null,
+        p95DurationMs: p95Ms === undefined ? null : ms(p95Ms),
+        totalTimeMs: ms(sumMs ?? 0),
       }
     })
     .sort((a, b) => b.totalTimeMs - a.totalTimeMs)
@@ -357,10 +358,12 @@ export async function failureDashboardData(
   const sel = selector(engineMatcher(params.engine))
 
   const [patterns, runningByKey, incidentsByKey, deadJobsByKey] = await Promise.all([
-    ch.instant(`sum by (process_definition_key, incident_type)(${M.incidentsOpen}${sel})`),
-    ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
-    ch.instant(`sum by (process_definition_key)(${M.incidentsOpen}${sel})`),
-    ch.instant(`sum by (process_definition_key)(${M.jobsFailed}${sel})`),
+    ch.instant(
+      `sum by (process_definition_key, incident_type)(${engineState(M.incidentsOpen, sel)})`,
+    ),
+    ch.instant(`sum by (process_definition_key)(${engineState(M.processInstancesRunning, sel)})`),
+    ch.instant(`sum by (process_definition_key)(${engineState(M.incidentsOpen, sel)})`),
+    ch.instant(`sum by (process_definition_key)(${engineState(M.jobsFailed, sel)})`),
   ])
 
   // Totals are computed over ALL patterns; only the list itself is capped at

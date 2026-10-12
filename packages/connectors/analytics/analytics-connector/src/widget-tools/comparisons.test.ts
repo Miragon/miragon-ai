@@ -36,21 +36,16 @@ const dataOf = <T>(result: ToolResult) => result.structuredContent.context.stepD
 const ch: PrometheusClient = { instant: () => Promise.resolve([{ metric: {}, value: 20 }]) }
 
 describe("analytics_show_version_compare", () => {
-  it("never summarises the unmeasured incident rate as 0pp (#327)", async () => {
+  it("summarises the measured incident-rate delta per version (#337)", async () => {
     const show = handlers(ch).get("analytics_show_version_compare")!
     const result = await show(
       { processDefinitionKey: "order", versionA: 1, versionB: 2, windowDays: 14 },
       {},
     )
 
-    const summary = result.content[0].text
-    expect(summary).toContain("incident rate n/a")
-    expect(summary).toContain("unavailable per version")
-    expect(summary).not.toMatch(/0pp/)
-
+    expect(result.content[0].text).toContain("incident rate 0pp")
     const data = dataOf<VersionCompareResult>(result)
-    expect(data.kpis.map((k) => k.incident_rate_pct)).toEqual([null, null])
-    expect(data.notes.length).toBeGreaterThan(0)
+    expect(data.kpis.map((k) => k.incident_rate_pct)).toEqual([100, 100])
   })
 
   it("names the engines a fleet comparison aggregates (K33)", async () => {
@@ -141,10 +136,14 @@ describe("view titles (U3): the toolbar speaks the caller's language", () => {
     (result.structuredContent as unknown as { title?: string }).title
 
   const CALLS: Array<[string, Record<string, unknown>]> = [
-    ["analytics_show_version_compare", { processDefinitionKey: "o", versionA: 1, versionB: 2 }],
+    // Handlers called directly get no schema defaults: pass the window.
+    [
+      "analytics_show_version_compare",
+      { processDefinitionKey: "o", versionA: 1, versionB: 2, windowDays: 14 },
+    ],
     [
       "analytics_show_engine_compare",
-      { processDefinitionKey: "o", engineA: "prod-a", engineB: "prod-b" },
+      { processDefinitionKey: "o", engineA: "prod-a", engineB: "prod-b", windowDays: 14 },
     ],
     ["analytics_show_engine_landscape", {}],
   ]

@@ -9,7 +9,10 @@ import {
   type SeriesCatalog,
 } from "./promql-labels.test-support.js"
 import { alertExpressions, dashboardQueries } from "./promql-sources.test-support.js"
+import { readingRuleViolations } from "./promql-reading-rules.test-support.js"
+import { RETENTION_DAYS } from "./prometheus.js"
 import { ENGINE_ALERT_NAME_PATTERN } from "./queries/health.js"
+import { DAY_SECONDS, nowSeconds, rangeSeconds } from "./queries/windows.js"
 import {
   SCENARIOS,
   exportedQueryFunctions,
@@ -141,3 +144,69 @@ describe("metrics contract — labels in alert rules and dashboards", () => {
     expect(violations).toEqual([])
   })
 })
+
+/**
+ * Contract rules 2 and 3 over every consumer: a counter or histogram is read
+ * only through the born-series count, a gauge only folded over its nodes.
+ * Queries may read plain `increase()` where the hour before their window lies
+ * past the retention (`increaseIn` falls back there); the alert rules and
+ * dashboards never.
+ */
+describe("metrics contract — reading rules", () => {
+  const plainIncreaseAllowed = (range: string, at: number | undefined) => {
+    const now = nowSeconds()
+    return (at ?? now) - rangeSeconds(range) - 3600 < now - RETENTION_DAYS * DAY_SECONDS
+  }
+
+  it.each(Object.entries(SCENARIOS))(
+    "%s reads counters and gauges by the rules",
+    async (name, scenarios) => {
+      const violations: string[] = []
+      for (const run of scenarios) {
+        const { ch, sent } = recordingClient()
+        await run(ch)
+        for (const promql of sent) {
+          violations.push(
+            ...readingRuleViolations(promql, contract.metrics, { plainIncreaseAllowed }).map(
+              (v) => `${name}: ${v}\n    ${promql}`,
+            ),
+          )
+        }
+      }
+      expect(violations).toEqual([])
+    },
+  )
+
+  it("alert rules read counters and gauges by the rules", () => {
+    const violations = alertRules.flatMap((expr) =>
+      readingRuleViolations(expr, contract.metrics).map((v) => `alerts.yml: ${v}\n    ${expr}`),
+    )
+    expect(violations).toEqual([])
+  })
+
+  it("Grafana panels read counters and gauges by the rules", () => {
+    const violations: string[] = []
+    for (const file of readdirSync(dashboardsDir).filter((f) => f.endsWith(".json"))) {
+      const dashboard = JSON.parse(readFileSync(join(dashboardsDir, file), "utf8")) as unknown
+      // Panel expressions only: a templating `label_values(…)` lists label
+      // values, it reads no counter or gauge value.
+      for (const promql of panelExpressions(dashboard)) {
+        violations.push(
+          ...readingRuleViolations(promql, contract.metrics).map(
+            (v) => `dashboards/${file}: ${v}\n    ${promql}`,
+          ),
+        )
+      }
+    }
+    expect(violations).toEqual([])
+  })
+})
+
+/** Every panel `expr` of a dashboard. */
+function panelExpressions(node: unknown): string[] {
+  if (Array.isArray(node)) return node.flatMap(panelExpressions)
+  if (node === null || typeof node !== "object") return []
+  return Object.entries(node as Record<string, unknown>).flatMap(([key, value]) =>
+    key === "expr" && typeof value === "string" ? [value] : panelExpressions(value),
+  )
+}

@@ -41,30 +41,31 @@ describe("analytics_version_compare", () => {
     config = captureConfig()
   })
 
-  it("reports the incident family as null with a note — never as 0 (#327)", async () => {
+  it("reads incidents per version, on the version label (#337)", async () => {
     const { client, queries } = recordingClient()
     const res = (await config.handler(client, { ...args })) as VersionCompareResult
 
-    // The incident counter has no version label: no query may filter it on one.
-    expect(queries.some((q) => q.includes("incident"))).toBe(false)
+    const incidentQueries = queries.filter((q) => q.includes("camunda_incident_created_total"))
+    expect(incidentQueries).toHaveLength(2)
+    expect(incidentQueries.map((q) => /process_definition_version="(\d+)"/.exec(q)?.[1])).toEqual([
+      "1",
+      "2",
+    ])
     for (const kpi of res.kpis) {
       expect(kpi).toMatchObject({
         instance_count: 20,
-        incident_count: null,
-        incident_rate_pct: null,
+        incident_count: 20,
+        incident_rate_pct: 100,
         element_incident_count: null,
         element_incident_rate_pct: null,
       })
     }
-    expect(res.delta.incident_rate_delta_pp).toBeNull()
-    expect(res.delta.element_incident_rate_delta_pp).toBeNull()
-    expect(res.notes.join(" ")).toContain("NOT zero")
+    expect(res.delta.incident_rate_delta_pp).toBe(0)
   })
 
-  it("tells the model the incident KPIs are null, not zero, and where to look instead", () => {
-    expect(config.description).toContain("NOT zero")
-    expect(config.description).toContain("no version label")
-    expect(config.description).toContain("analytics_analyze_process_performance")
+  it("tells the model the incident figures are per version and the comparison process-wide", () => {
+    expect(config.description).toContain("process-instance and incident series")
+    expect(config.description).toContain("element_incident_* fields stay null")
   })
 
   it("accepts the version-compare input plus the optional minBucketSize override", () => {

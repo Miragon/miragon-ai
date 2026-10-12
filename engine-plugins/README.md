@@ -17,6 +17,26 @@ The metric names and labels it emits are governed by the
 [metrics contract](../packages/connectors/analytics/analytics-client/metrics-contract.json) — change a metric there first;
 `MetricsContractTest.kt` verifies this side against it.
 
+## What it records
+
+- **Counters and duration histograms** from the history-event stream, recorded only once the
+  engine command's transaction committed: a job attempt that fails and rolls back counts
+  nothing, the attempt that succeeds counts once (`CommitBoundaryTest` runs a real in-memory
+  engine against this). Incidents carry the definition version, like the process series.
+- **Durations in whole milliseconds** (`*_duration_milliseconds`), with explicit buckets from
+  10 ms to 30 days (user tasks from 10 s): Micrometer rounds an observation up to a whole base
+  unit before bucketing, so seconds emptied every sub-second bucket. The bounds are part of the
+  contract.
+- **Engine-state gauges** (running instances, open incidents, job and task backlog) from engine
+  queries every `state-interval` (default 15 s).
+
+On a **clustered engine** every node reports the same engine-wide gauges and counts its own
+events. Consumers fold the gauges with `max` over their labels (the contract's reading rules), and
+the counters stay correct only while every node exports as its own series: on the OTLP path give
+each node a unique `service.instance.id`, e.g.
+`OTEL_RESOURCE_ATTRIBUTES=service.instance.id=<pod name>`; an Actuator scrape keys series by the
+target's `instance` label already.
+
 ## Consume it
 
 Available from Maven Central — no credentials or extra repository needed:
