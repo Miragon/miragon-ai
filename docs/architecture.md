@@ -33,13 +33,13 @@ flowchart LR
 
 ## Modules
 
-| Module                                                               | Role                                                                                                                                                                                                                                        |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **MCP Server** (`apps/mcp-server-camunda7/`)                         | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves the Vite-built React widget bundle (see **widgets**).                                                                                          |
-| **camunda7** (`packages/connectors/camunda/camunda7-connector/`)     | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets.                                                                                      |
-| **analytics** (`packages/connectors/analytics/analytics-connector/`) | Queries Prometheus via PromQL for performance, failure, bottleneck, version/cluster comparison, and the cross-engine landscape. Tools + widgets.                                                                                            |
-| **engine-plugins** (`engine-plugins/`)                               | Kotlin Micrometer plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                                                                                                           |
-| **widgets** (`apps/mcp-server-camunda7/dist/mcp-app.js` + `.css`)    | One Vite-built ES module + stylesheet containing React, Tailwind, and every widget. mcp-use serves it behind one `ui://views/<tool>.html` resource per widget tool; the host renders the bound view when a tool returns `{ widget, data }`. |
+| Module                                                               | Role                                                                                                                                                                                                                        |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MCP Server** (`apps/mcp-server-camunda7/`)                         | Hosts the HTTP transport on port `8400`, loads modules from `MCP_ACTIVE_MODULES`, and serves the Vite-built React widget bundle (see **widgets**).                                                                          |
+| **camunda7** (`packages/connectors/camunda/camunda7-connector/`)     | Wraps the Camunda 7 / CIB Seven REST API via an OpenAPI-generated client. Exposes process, task, incident, deployment, and history tools plus widgets.                                                                      |
+| **analytics** (`packages/connectors/analytics/analytics-connector/`) | Queries Prometheus via PromQL for performance, failure, bottleneck, version/cluster comparison, and the cross-engine landscape. Tools + widgets.                                                                            |
+| **engine-plugins** (`engine-plugins/`)                               | Kotlin Micrometer plugins for CIB Seven: a process-metrics emitter. Independent build (Java 21, Gradle). No engine-side database.                                                                                           |
+| **widgets** (`apps/mcp-server-camunda7/dist/mcp-app.js` + `.css`)    | One Vite-built ES module + stylesheet containing React, Tailwind, and every widget. mcp-use serves it behind one `ui://views/<tool>.html` resource per widget tool, which declares that view on itself (`showToolBinding`). |
 
 ## Composition rules
 
@@ -54,14 +54,14 @@ second engine dialect cheap:
   branding, client hook) — never separate apps. A different
   dialect (e.g. Flowable, with its own REST API) would be its own module,
   client, and app.
-- **Modules are peers.** `mcp-*` packages never import each other. Cross-module
+- **Modules are peers.** Connector packages (`*-connector`) never import each other. Cross-module
   capabilities are injected by the app — e.g. the camunda7 module's BPMN-XML
   lookup feeding the analytics heatmap and the names in its views
   (`SharedResources.fetchBpmnXml`) and its
   configured engine ids, the only engines analytics reads (`engineIds`).
 - **Modules are self-contained.** Each exports a module definition — config
   schema, env mapping, known env vars, toolset vocabulary, boot warnings,
-  plugin factory (`packages/*/src/module.ts`). The app only selects modules
+  plugin factory (`packages/connectors/<family>/<name>-connector/src/module.ts`). The app only selects modules
   (`MCP_ACTIVE_MODULES`) and wires shared resources against its own port
   (`apps/mcp-server-camunda7/src/module-contract.ts`); the shared composition
   resolves one fail-closed toolset per module per boot (read-only unless
@@ -122,9 +122,11 @@ contributes its section by that convention alone.
 1. The MCP host calls a tool on the server (e.g. `analytics_element_bottleneck`).
 2. The server delegates to the matching module's plugin.
 3. The plugin calls the relevant system (REST for the engine, PromQL for
-   Prometheus) and returns structured content.
-4. Widget tools also return a `widget` key — the host renders the corresponding
-   React component from the shared bundle and feeds it the `data`.
+   Prometheus) and returns JSON for the model.
+4. A widget tool (`show_*`) returns a short summary for the model plus a
+   `structuredContent` layout; the host renders it in the view the tool
+   declares, from the shared bundle. Inside the view, app-only `*_data` feeds
+   refresh and page it without a model turn.
 
 Process metrics originate in the engine: the Kotlin plugin maps history events
 to Micrometer counters/histograms (100 % coverage, model-bounded labels), the

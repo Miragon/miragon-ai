@@ -1,6 +1,6 @@
 ---
 name: add-analytics-feature
-description: Step-by-step house pattern for adding a new analytics capability — a PromQL query function in `packages/connectors/analytics/analytics-client`, a tool in `packages/connectors/analytics/analytics-connector`, and optionally a dashboard widget. Use whenever adding or changing process analytics ("add a query for X", "new KPI/metric analysis", "extend the analytics dashboard"), PromQL queries, Prometheus-backed tools, or analytics widgets. Takes precedence over the generic mcp-apps-builder skill.
+description: Step-by-step house pattern for adding a new analytics capability — a PromQL query function in `packages/connectors/analytics/analytics-client`, a tool in `packages/connectors/analytics/analytics-connector`, and optionally a dashboard widget. Use whenever adding or changing process analytics ("add a query for X", "new KPI/metric analysis", "extend the analytics dashboard"), PromQL queries, Prometheus-backed tools, or analytics widgets. Takes precedence over generic mcp-use examples.
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 ---
 
@@ -133,6 +133,14 @@ export it from `src/schemas/index.ts`. Reuse `engineFilterShape` from
 `src/schemas/shared.ts` for the optional `engine` filter and `periodField` for the
 `period` input (derived from `PERIODS` — never redeclare the period enum), and
 `.describe()` every field (see `elementBottleneckInput` in `src/schemas/path.ts`).
+
+**No zod default on an input a user setting supplies.** `periodField` defaults to `7d`
+for the query's own callers; at the TOOL boundary a default would fill an omitted
+`period` before the handler sees it, and the user's saved look-back
+(`profile.modules.analytics.defaultPeriod`) would never apply. The tool therefore
+overrides `period` and `minBucketSize` with `optionalPeriod` / `optionalMinBucketSize`
+from `analytics-connector/src/settings.ts` and falls back through `settingsFor` (Step 4).
+The same holds for any new setting: optional at the boundary, defaulted in the handler.
 
 ## Step 4 — tool in analytics-connector
 

@@ -11,9 +11,12 @@ import type { ReadinessCheck } from "./health.js"
  */
 
 /**
- * Connections are lazy (opened on first query), so booting with an unreachable
- * database only fails once something actually touches a store — and reconnects
- * after a scale-to-zero wake need no extra handling.
+ * Connections are lazy (opened on first query), but a root that persists to
+ * Postgres runs `runMigrations` before it listens (the app's `initRuntime`),
+ * so an unreachable database fails the
+ * boot once the 10 s `connect_timeout` runs out (under a restart policy: a
+ * restart loop until the database answers). After boot, reconnects after a
+ * scale-to-zero wake need no extra handling.
  *
  * The driver is loaded through a DYNAMIC import and every other reference in
  * this package is `import type` — deliberately, and the reason this function
@@ -38,8 +41,8 @@ export async function createSql(databaseUrl: string): Promise<postgres.Sql> {
 
 /**
  * The `/health/ready` check for a postgres.js client: one `SELECT 1` round
- * trip through the pool. Connections are lazy, so this is also what first
- * surfaces an unreachable database after boot. Lives next to `createSql` so
+ * trip through the pool, so a database that goes away after boot turns the
+ * server not ready instead of failing the next save. Lives next to `createSql` so
  * every composition root that persists to Postgres wires the same probe.
  */
 export function postgresReadinessCheck(sql: postgres.Sql): ReadinessCheck {

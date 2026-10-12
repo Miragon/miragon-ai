@@ -40,6 +40,8 @@ comments. If you genuinely need a fifth page, ask the user first.
 | `usage.md`        | ≤ 150 lines |
 
 When a page approaches the limit, condense — don't extend.
+`apps/mcp-server-camunda7/test/docs-refs.test.ts` reads this table and fails a page over
+its budget; it also checks every backticked tool name and repo path on the pages.
 
 ## Stack
 
