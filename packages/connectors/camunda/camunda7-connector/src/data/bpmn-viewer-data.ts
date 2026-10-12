@@ -13,7 +13,7 @@ import {
   collectIncidentActivityIds,
   countActivityInstances,
 } from "../lib/activity-tree.js"
-import { extractActivityNames } from "../lib/bpmn-parse.js"
+import { parseBpmnNames } from "@miragon-ai/widget-shell/server"
 import { definitionKeyInId, fetchDefinitionXml, findLatestDefinition } from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 
@@ -62,16 +62,16 @@ export async function buildBpmnViewerData(
       : definitionOverlays(client, definitionId),
   ])
 
-  // Names before ids (#322 U13): the process element of the diagram names
-  // the view (no extra read); its key is the target's, or the id's segment.
+  // Names before ids (#322 U13): the diagram names the view (no extra read),
+  // by the one rule every module reads a model by: the process's own name,
+  // else its pool's; its key is the target's, or the id's segment.
   const processKey = target.processDefinitionKey ?? definitionKeyInId(definitionId)
   return {
     bpmnXml,
     processInstanceId,
     businessKey,
     processDefinitionId: definitionId,
-    processDefinitionName:
-      (bpmnXml && processKey ? extractActivityNames(bpmnXml)[processKey] : null) ?? null,
+    processDefinitionName: bpmnXml && processKey ? parseBpmnNames(bpmnXml, processKey).name : null,
     ...overlays,
     engineId,
   }

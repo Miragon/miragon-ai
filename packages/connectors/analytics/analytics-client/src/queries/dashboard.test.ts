@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest"
-import { dashboardData, failureDashboardData } from "./dashboard.js"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { ACTIVITY_BREAKDOWN_LIMIT, dashboardData, failureDashboardData } from "./dashboard.js"
 import type { PrometheusClient, PromSample } from "../prometheus.js"
 
 const v = (value: number): PromSample => ({ metric: {}, value })
@@ -284,6 +284,92 @@ describe("dashboardData", () => {
     ])
     const flows = queries.filter((q) => q.includes("increase("))
     expect(flows.every((q) => q.includes("[30d]"))).toBe(true)
+  })
+})
+
+describe("dashboardData — the top list and the previous period", () => {
+  const NOW = Date.parse("2026-10-09T12:00:00Z")
+  const NOW_SECONDS = NOW / 1000
+  const WEEK = 7 * 86_400
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** Starts and incidents per window: the period (`[7d]`) and the one before it (`@`). */
+  function windowClient(current: [number, number], previous: [number, number]) {
+    return vi.fn((q: string): Promise<PromSample[]> => {
+      const [started, incidents] = q.includes(" @ ") ? previous : current
+      if (q.includes("by (")) return Promise.resolve([])
+      if (q.includes("incident_created")) return Promise.resolve([v(incidents)])
+      if (q.includes("started_total")) return Promise.resolve([v(started)])
+      return Promise.resolve([])
+    })
+  }
+
+  it("reads the same flows over the window right before the period", async () => {
+    const instant = windowClient([200, 8], [180, 3])
+    const res = await dashboardData({ instant }, { period: "7d" })
+
+    expect(res.incidentRatePct).toBe(4)
+    expect(res.previous).toEqual({
+      totalCount: 180,
+      incidentsCreated: 3,
+      incidentRatePct: 1.7,
+      partial: false,
+      suppressed: false,
+    })
+    // The previous window ends where the period starts and is just as long.
+    const previous = instant.mock.calls.map((c) => c[0]).filter((q) => q.includes(" @ "))
+    expect(previous).toHaveLength(2)
+    for (const q of previous) {
+      expect(q).toContain(`[${WEEK}s] @ ${NOW_SECONDS - WEEK}`)
+    }
+  })
+
+  it("does not judge a rate over fewer starts than the comparison floor", async () => {
+    const res = await dashboardData(
+      { instant: windowClient([200, 8], [9, 3]) },
+      { period: "7d", minBucketSize: 10 },
+    )
+    expect(res.previous).toMatchObject({ totalCount: 9, suppressed: true })
+
+    const floor = await dashboardData(
+      { instant: windowClient([200, 8], [9, 3]) },
+      { period: "7d", minBucketSize: 5 },
+    )
+    expect(floor.previous?.suppressed).toBe(false)
+  })
+
+  it("reads no previous window that lies wholly before the retention", async () => {
+    // 14 days back from 14 days ago: still inside the 30-day retention.
+    const inside = await dashboardData({ instant: windowClient([1, 0], [1, 0]) }, { period: "14d" })
+    expect(inside.previous?.partial).toBe(false)
+    // 30 days back from 30 days ago: wholly before the retention, no figures exist.
+    const instant = windowClient([1, 0], [1, 0])
+    const outside = await dashboardData({ instant }, { period: "30d" })
+    expect(outside.previous).toBeNull()
+    expect(instant.mock.calls.some((c) => c[0].includes(" @ "))).toBe(false)
+  })
+
+  it("keeps the top 20 activities by total time and says how many there were", async () => {
+    const rows = Array.from({ length: 23 }, (_, i) => act("order", `Task_${i}`, 1, "serviceTask"))
+    const sums = rows.map((r, i) => ({ ...r, value: i + 1 }))
+    const instant = vi.fn((q: string): Promise<PromSample[]> => {
+      if (q.includes("camunda_activity_ended_total")) return Promise.resolve(rows)
+      if (q.includes("camunda_activity_duration_seconds_sum")) return Promise.resolve(sums)
+      return Promise.resolve([])
+    })
+    const res = await dashboardData({ instant }, { period: "7d" })
+
+    expect(ACTIVITY_BREAKDOWN_LIMIT).toBe(20)
+    expect(res.activityCount).toBe(23)
+    expect(res.activityBreakdown).toHaveLength(20)
+    expect(res.activityBreakdown[0]).toMatchObject({ activityId: "Task_22", totalTimeMs: 23_000 })
+    expect(res.activityBreakdown[19]).toMatchObject({ activityId: "Task_3" })
   })
 })
 

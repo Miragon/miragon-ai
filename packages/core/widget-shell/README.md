@@ -16,6 +16,10 @@ package customers build their own connectors and composed servers on (see the
 - **View builders** (`./server`) — `buildSingleWidgetView`, `buildComposedView` and
   `buildDataFeedResult` (the single implementation of the app-only `*_data` feed result), the
   server-side helpers that assemble a widget tool's `{ widget, data }` result and `_meta.ui` wiring.
+- **BPMN names** (`./server`): `readBpmnNames` / `parseBpmnNames`: the one rule every module
+  reads a model's names by, without a DOM (a process's own name, else its Modeler pool's;
+  character references such as `&#10;` and `&#38;` decoded, space folded), so two modules never
+  name the same process or activity differently.
 - **The `shell:*` catalogue** (`./server`) — `shellDefinition` + `createShellPlugin` register the
   always-on generic `shell:kpi-grid` / `shell:data-table` widgets (components in `./widgets`), the
   standard `render-view`/builder composition targets fed via `props.dataKey`. Apps own no domain UI,
@@ -24,8 +28,11 @@ package customers build their own connectors and composed servers on (see the
   (`WidgetShell`, tables, `ListTable` + `PagedRows`, the dual-mode data hooks, formatters,
   hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages.
   Layout, states and feedback: `ListTable` scrolls inside a named, keyboard-reachable region
-  (column priorities via `hideBelow`, the row actions pinned with `sticky`), `IdCell`/`IdText`
-  show an id shortened in Geist Mono with a copy button, `describeError` turns an engine or
+  (column priorities via `hideBelow`, the row actions pinned with `sticky`, the sorted
+  column marked with `sort`, heads over adjacent columns with `groups`), `IdCell`/`IdText`
+  show an id shortened in Geist Mono with a copy button, `NamedId` shows a process or an
+  element by its name with the id quiet in mono below, `countTone`/`severityTone` are the one
+  severity ladder for incident and job counts, `describeError` turns an engine or
   transport failure into what happened and what you can do (the toolkit's `ErrorState` in
   `ViewDataState`, `QueryFallback`, `useDetailView`, raw text under "Details", retry
   required), `useActionFeedback` raises the toolkit's toasts after a write (an engine

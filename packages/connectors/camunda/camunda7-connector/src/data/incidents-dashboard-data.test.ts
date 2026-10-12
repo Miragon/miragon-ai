@@ -237,3 +237,30 @@ describe("buildIncidentsDashboardData — exact cards beyond the scan (#335 N61)
     })
   })
 })
+
+// One rule with analytics (#322 U13, widget-shell `readBpmnNames`): a card
+// whose process the engine knows by no name takes its Modeler pool's name.
+describe("buildIncidentsDashboardData — names", () => {
+  it("names a card's unnamed process by its Modeler pool, reading only that diagram", async () => {
+    const pooled = `<definitions><collaboration id="C"><participant id="Pool" name="Miravelo - Bike Leasing" processRef="quiet"/></collaboration><process id="quiet"/></definitions>`
+    const base = routes([], { total: 257, last24h: 0 })
+    const { data, requests } = await build({
+      ...base,
+      "GET /process-definition/statistics": {
+        body: [
+          stats("burst", 1, 10, 100),
+          { ...stats("quiet", 1, 5, 7), definition: { id: "quiet:1:d", key: "quiet", version: 1 } },
+        ],
+      },
+      "GET /process-definition/quiet:1:d/xml": { body: { bpmn20Xml: pooled } },
+    })
+
+    expect(data.processes.map((p) => [p.processDefinitionKey, p.processDefinitionName])).toEqual([
+      ["burst", "BURST"],
+      ["quiet", "Miravelo - Bike Leasing"],
+    ])
+    expect(requests.filter((r) => r.path.endsWith("/xml")).map((r) => r.path)).toEqual([
+      "/process-definition/quiet:1:d/xml",
+    ])
+  })
+})

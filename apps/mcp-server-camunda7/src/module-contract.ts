@@ -32,9 +32,10 @@ export interface SharedResources {
    */
   profileStore: ProfileStore
   /**
-   * Engine-agnostic BPMN-XML lookup (from the camunda7 module's primary
-   * engine) consumed by the analytics heatmap. Absent when the camunda7
-   * module is inactive — consumers degrade gracefully.
+   * Engine-agnostic BPMN-XML lookup (on any of the camunda7 module's
+   * engines, its first one by default) consumed by the analytics heatmap and
+   * the process and activity names in the analytics views. Absent when the
+   * camunda7 module is inactive — consumers degrade gracefully.
    */
   fetchBpmnXml?: FetchBpmnXml
   /**

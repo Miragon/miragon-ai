@@ -7,11 +7,12 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { KpiGrid, KpiGridSkeleton, WidgetHeader } from "@miragon/mcp-toolkit-ui"
-import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
+import { useDashboardSelfFetch, type DashboardScopeProps, type DashboardView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { enginesMeta } from "../view-meta.js"
+import { processNameOf } from "../../bpmn-names.js"
 
 /**
  * Assess the dashboard on screen — its echoed scope (process, period,
@@ -48,7 +49,7 @@ export function ExecutionSummaryKpi({
   processDefinitionKey,
   period,
   engine,
-}: { data: AnalyticsDashboardData | null } & DashboardScopeProps) {
+}: { data: DashboardView | null } & DashboardScopeProps) {
   const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period, engine })
   const t = useT()
   const { ask } = useHandOff()
@@ -66,7 +67,11 @@ export function ExecutionSummaryKpi({
             title={t("aExecSummary.title")}
             sub={
               <ViewMeta
-                subject={data.processDefinitionKey}
+                subject={
+                  data.processDefinitionKey &&
+                  (processNameOf(data.names, data.processDefinitionKey) ??
+                    data.processDefinitionKey)
+                }
                 period={formatLookback(data.period)}
                 engines={enginesMeta(data.engines, data.reportingEngines)}
                 asOf={data.asOf}
@@ -80,6 +85,10 @@ export function ExecutionSummaryKpi({
               />
             }
           />
+          {/* Counts of what happened stay neutral (CI §3.3, U14): starts,
+              completions, new incidents and what runs now are volumes. The
+              one state is an incident open right now, its danger dot next to
+              the label; the digit itself is never coloured. */}
           <KpiGrid
             boxed
             header={{ label: t("aExecSummary.headerExecutionSummary") }}
@@ -88,19 +97,16 @@ export function ExecutionSummaryKpi({
               {
                 label: t("aExecSummary.cellCompleted"),
                 value: formatNumber(data.completedCount),
-                tone: data.completedCount > 0 ? "success" : undefined,
               },
               {
                 label: t("aExecSummary.cellIncidentsCreated"),
                 value: formatNumber(data.incidentsCreated),
-                tone: data.incidentsCreated > 0 ? "warning" : undefined,
               },
               {
                 // A live gauge without a series is "not reported": formatNumber
                 // renders it as an em-dash, never as a plausible 0.
                 label: t("aExecSummary.cellRunningNow"),
                 value: formatNumber(data.runningNow),
-                tone: (data.runningNow ?? 0) > 0 ? "info" : undefined,
               },
               {
                 label: t("aExecSummary.cellOpenIncidentsNow"),

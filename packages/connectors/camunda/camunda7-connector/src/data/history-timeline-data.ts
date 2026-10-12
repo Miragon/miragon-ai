@@ -9,6 +9,7 @@ import {
 import { collectIncidentActivityIds } from "../lib/activity-tree.js"
 import type { HistoryTimelineData } from "../view-models.js"
 import type { PagingArgs } from "../feed-contracts.js"
+import { nameUnnamedDefinitions } from "./definition-info.js"
 import { countOf, optional, rowsOf } from "./engine-reads.js"
 
 /** How many of the instance's open incidents mark the timeline (one per failing step). */
@@ -50,10 +51,35 @@ export async function buildHistoryTimelineData(
     ),
   ])
   return {
-    processInstance: instances[0] ?? null,
+    processInstance: await namedInstance(client, instances[0] ?? null),
     activities,
     totalActivities,
     incidentActivityIds: incidents ? collectIncidentActivityIds(incidents) : null,
     engineId,
   }
+}
+
+type HistoricInstance = NonNullable<HistoryTimelineData["processInstance"]>
+
+/**
+ * The instance with its process named: the engine's name, else (a Modeler
+ * pool around an unnamed process) its diagram's, by the rule analytics names
+ * the same process by ({@link nameUnnamedDefinitions}; enrichment, a named
+ * process costs no read).
+ */
+async function namedInstance(
+  client: Client,
+  instance: HistoricInstance | null,
+): Promise<HistoricInstance | null> {
+  if (!instance || instance.processDefinitionName) return instance
+  // The engine's row carries the version id the view model leaves out.
+  const { processDefinitionId } = instance as { processDefinitionId?: string | null }
+  const [definition] = await nameUnnamedDefinitions(client, [
+    {
+      id: processDefinitionId,
+      key: instance.processDefinitionKey,
+      name: instance.processDefinitionName,
+    },
+  ])
+  return { ...instance, processDefinitionName: definition.name ?? null }
 }

@@ -16,6 +16,7 @@ import {
   IdText,
   ListTable,
   LogText,
+  NamedId,
   TableEmptyState,
   Td,
   ViewDataState,
@@ -28,7 +29,6 @@ import { Check } from "lucide-react"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { useEngineAction, type EngineAction } from "./lib/engine-action.js"
 import { EngineMeta } from "./lib/engine-context.js"
-import { NamedId } from "./lib/identity.js"
 import { MoreActions } from "./lib/more-actions.js"
 import { instanceName, writeFeedback } from "./lib/write-feedback.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"

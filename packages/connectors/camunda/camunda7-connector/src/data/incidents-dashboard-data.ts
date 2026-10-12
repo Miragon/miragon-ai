@@ -11,6 +11,7 @@ import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
 import {
   definitionKeyResolver,
   fetchStatsByKey,
+  nameUnnamedDefinitions,
   unknownKeyError,
   type KeyStats,
 } from "./definition-info.js"
@@ -68,12 +69,17 @@ export async function buildIncidentsDashboardData(
   const keyOf = definitionKeyResolver(statsByKey)
   // A row whose key resolves to nothing ("") joins no card.
   const scannedByKey = groupBy(scan.rows, (r) => keyOf(r.processDefinitionId) ?? "")
-  const processes = [...statsByKey.entries()]
+  const shown = [...statsByKey.entries()]
     .filter(([key, stats]) => stats.incidentCount > 0 && matchesKey(key, options))
     .sort((a, b) => b[1].incidentCount - a[1].incidentCount)
-    .map(([key, stats]) =>
-      toProcess(key, stats, scannedByKey.get(key) ?? [], { scan, cutoffMs, options }),
-    )
+  // A Modeler pool around an unnamed process names its card, as analytics names it.
+  await nameUnnamedDefinitions(
+    client,
+    shown.map(([, stats]) => stats.latest),
+  )
+  const processes = shown.map(([key, stats]) =>
+    toProcess(key, stats, scannedByKey.get(key) ?? [], { scan, cutoffMs, options }),
+  )
 
   return {
     totalCount,

@@ -182,3 +182,28 @@ describe("buildIncidentDetailData — the definition's real key", () => {
     expect(engine.requests.some((r) => r.path.startsWith("/process-definition"))).toBe(false)
   })
 })
+
+// One rule with analytics (#322 U13, widget-shell `readBpmnNames`): the
+// Modeler names the pool of a collaboration and writes a line break as
+// `&#10;`, `&` as `&#38;`; the incident head showed "Rechnung&#10;prüfen".
+describe("buildIncidentDetailData — names from a Modeler diagram", () => {
+  it("names the activity with its references decoded and the process by its pool", async () => {
+    const xml = `<definitions>
+  <collaboration id="C"><participant id="Pool" name="Miravelo - Bike Leasing" processRef="order"/></collaboration>
+  <process id="order"><serviceTask id="charge" name="Rechnung&#10;prüfen &#38; buchen"/></process>
+</definitions>`
+    const { data } = await build({
+      "GET /incident/inc-1": { body: incident({ processDefinitionId: "order:2:d2" }) },
+      "GET /job": { body: [] },
+      "GET /process-definition/order:2:d2": {
+        body: { id: "order:2:d2", key: "order", name: null, version: 2 },
+      },
+      "GET /process-definition/order:2:d2/xml": { body: { bpmn20Xml: xml } },
+    })
+
+    expect(data).toMatchObject({
+      activityName: "Rechnung prüfen & buchen",
+      processDefinitionName: "Miravelo - Bike Leasing",
+    })
+  })
+})

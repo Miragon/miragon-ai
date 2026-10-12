@@ -6,8 +6,9 @@
  *
  * - `no-camunda7`: the server got no BPMN lookup. Analytics loads diagrams
  *   only through the camunda7 module, which is not active.
- * - `not-loaded`: the lookup ran and returned nothing. camunda7 reads the
- *   diagram from its FIRST configured engine (`createBpmnXmlFetcher`), which
- *   was unreachable, or the process is not deployed there.
+ * - `not-loaded`: the lookup ran and returned nothing. It asks the engines of
+ *   the view in configuration order (`createBpmnXmlFetcher` reads each one),
+ *   and none of them answered with the model: unreachable, or the process is
+ *   not deployed on them.
  */
 export type BpmnMissingReason = "no-camunda7" | "not-loaded"

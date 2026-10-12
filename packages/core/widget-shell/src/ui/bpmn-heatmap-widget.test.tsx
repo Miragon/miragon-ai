@@ -62,6 +62,32 @@ const DATA: BpmnHeatmapData = {
 describe("BpmnHeatmapWidget (U16)", () => {
   beforeEach(() => setFormatLocale({ language: "en", locale: "en-US" }))
 
+  it("names the process by its model's name, the key quiet beside it (U13)", () => {
+    const named = XML.replace('<bpmn:process id="order">', '<bpmn:process id="order" name="Order">')
+    render(<BpmnHeatmapWidget data={{ ...DATA, bpmnXml: named }} />)
+    const heading = screen.getByRole("heading", { level: 2 })
+    expect(heading.textContent).toMatch(/Orderorder$/)
+    expect(screen.getByText("order").className).toContain("font-mono")
+    cleanup()
+    // Without a name the key is the badge, in mono.
+    render(<BpmnHeatmapWidget data={DATA} />)
+    const badge = screen.getByText("order")
+    expect(badge.className).toContain("font-mono")
+    expect(badge.getAttribute("data-slot")).toBe("badge")
+  })
+
+  // The Camunda Modeler names a collaboration's pool and leaves its process
+  // unnamed: the dashboards show the pool's name, so the heatmap does too.
+  it("names a process without a name of its own by its pool, like the other views", () => {
+    const pooled = XML.replace(
+      "<bpmn:process",
+      '<bpmn:collaboration id="c"><bpmn:participant id="Pool" name="Order handling" processRef="order"/></bpmn:collaboration><bpmn:process',
+    )
+    render(<BpmnHeatmapWidget data={{ ...DATA, bpmnXml: pooled }} />)
+    const heading = screen.getByRole("heading", { level: 2 })
+    expect(heading.textContent).toMatch(/Order handlingorder$/)
+  })
+
   it("says what the colours mean: the legend runs from the smallest value to the largest", () => {
     render(<BpmnHeatmapWidget data={DATA} />)
     expect(screen.getByText("3 to 1,234").className).toContain("sr-only")

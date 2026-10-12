@@ -145,6 +145,31 @@ describe("buildBpmnViewerData — instance-scoped overlays (#335 N66)", () => {
     expect([data.processDefinitionName, data.businessKey]).toEqual([null, null])
   })
 
+  // One rule with analytics (widget-shell `parseBpmnNames`): a Modeler
+  // collaboration names the pool, not the process, and writes a line break
+  // or an ampersand as a character reference.
+  it("names a Modeler collaboration's process by its pool, references decoded", async () => {
+    const xml = `<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Pool" name="Miravelo - Bike&#10;Leasing &#38; Co" processRef="order" />
+  </bpmn:collaboration>
+  <bpmn:process id="order" isExecutable="true" />
+</bpmn:definitions>`
+    const pooled = await startFakeEngine(
+      {
+        ...ROUTES,
+        "GET /process-instance/pi-1": { body: { id: "pi-1", definitionId: DEF } },
+        [`GET /process-definition/${DEF}/xml`]: { body: { id: DEF, bpmn20Xml: xml } },
+      },
+      { body: [] },
+    )
+    engines.push(pooled)
+
+    const view = await buildBpmnViewerData(clientFor(pooled), "fake", { processInstanceId: "pi-1" })
+
+    expect(view.processDefinitionName).toBe("Miravelo - Bike Leasing & Co")
+  })
+
   it("returns the explicit empty shape for a key with no such version", async () => {
     const engine = await startFakeEngine({}, { body: [] })
     engines.push(engine)

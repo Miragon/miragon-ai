@@ -13,6 +13,7 @@ import {
 import {
   HandOffButton,
   Icon,
+  NamedId,
   ViewDataState,
   WidgetShell,
   formatNumber,
@@ -29,7 +30,6 @@ import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { healthVerdictLine } from "./lib/health-verdict.js"
 import { EngineMeta, useEngineInChrome } from "./lib/engine-context.js"
-import { NamedId } from "./lib/identity.js"
 import { useT } from "../messages/use-t.js"
 
 const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; labelKey: string }> = {

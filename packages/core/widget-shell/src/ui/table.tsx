@@ -1,6 +1,10 @@
 import type { ReactNode } from "react"
 import { cn, EmptyState, MICRO_LABEL, type StateHeadingLevel } from "@miragon/mcp-toolkit-ui"
-import { CircleCheck, Inbox } from "lucide-react"
+import { ArrowDown, ArrowUp, CircleCheck, Inbox } from "lucide-react"
+import { Icon } from "./icon.js"
+
+/** The order a column sorts its rows in (`aria-sort` on its head). */
+export type ColumnSort = "ascending" | "descending"
 
 /**
  * Cockpit table primitives — the `th`/`td` class strings and the bordered
@@ -14,12 +18,18 @@ const TH_LABEL = `border-border text-muted-foreground border-y px-4 py-2.5 ${MIC
 export function Th({
   align = "left",
   plain = false,
+  sort,
   className,
   children,
 }: {
   align?: "left" | "right"
   /** Bare header cell (e.g. the empty action column) — border/padding only. */
   plain?: boolean
+  /**
+   * The rows are sorted by this column: `aria-sort` for screen readers and a
+   * direction arrow next to the label, so the order is never a guess.
+   */
+  sort?: ColumnSort
   className?: string
   children?: ReactNode
 }) {
@@ -27,8 +37,20 @@ export function Th({
     ? "border-border border-y px-4 py-2.5"
     : `${TH_LABEL} ${align === "right" ? "text-right" : "text-left"}`
   return (
-    <th scope="col" className={cn(base, className)}>
-      {children}
+    <th scope="col" aria-sort={sort} className={cn(base, className)}>
+      {sort ? (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 whitespace-nowrap",
+            align === "right" && "flex-row-reverse",
+          )}
+        >
+          {children}
+          <Icon icon={sort === "descending" ? ArrowDown : ArrowUp} dense />
+        </span>
+      ) : (
+        children
+      )}
     </th>
   )
 }

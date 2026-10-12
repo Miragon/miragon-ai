@@ -1,13 +1,15 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   Alert,
   AlertDescription,
-  Badge,
   Button,
+  ErrorState,
+  Skeleton,
   useToolMutation,
   useToolQuery,
 } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
+import { Lock } from "lucide-react"
 import {
   NativeSelect,
   QueryFallback,
@@ -16,7 +18,6 @@ import {
   SettingsInput,
   WidgetShell,
   formatPeriod,
-  formatTime,
   modelContextText,
   useActionFeedback,
   useResetOnChange,
@@ -71,7 +72,7 @@ export function AnalyticsSettingsWidget({
           error={query.error}
           errorTitle={t("aSettings.loadError")}
           onRetry={() => void query.refetch()}
-          skeleton={<div className="bg-muted/50 h-24 animate-pulse rounded-md" aria-hidden />}
+          skeleton={<Skeleton className="h-24 w-full rounded-md" />}
         />
       </WidgetShell>
     )
@@ -84,10 +85,40 @@ export function AnalyticsSettingsWidget({
   )
 }
 
-/** Raw form state — free typing, clamped/parsed only on save. */
+/** Raw form state — free typing, checked as you type and once more on save. */
 interface FormState {
   defaultPeriod: Period
   minBucketSize: string
+}
+
+/**
+ * The minimum size as the save tool takes it — a whole number of 1 or more —
+ * or null for anything else ("abc", "0", "2.5", ""). Never clamped: an entry
+ * that is not a valid size is said to be wrong, not silently turned into 1.
+ */
+export function parseMinBucketSize(raw: string): number | null {
+  const text = raw.trim()
+  if (!/^\d+$/.test(text)) return null
+  const value = Number(text)
+  return Number.isSafeInteger(value) && value >= 1 ? value : null
+}
+
+/**
+ * Why the section cannot save, above everything else (U25): the reader meets
+ * the reason before the fields it disables, and the way to change them.
+ */
+function ReadOnlyNotice() {
+  const t = useT()
+  return (
+    <ErrorState
+      variant="inline"
+      tone="info"
+      role="none"
+      icon={Lock}
+      title={t("aSettings.readOnlyTitle")}
+      description={t("aSettings.readOnly")}
+    />
+  )
 }
 
 function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
@@ -101,10 +132,11 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
     defaultPeriod: view.settings.defaultPeriod,
     minBucketSize: String(view.settings.minBucketSize),
   })
-  const [savedAt, setSavedAt] = useState<string | null>(null)
+  const bucketRef = useRef<HTMLInputElement>(null)
   // The save confirms in a toast (the toolkit's polite live region), a
   // failure says why there too — and stays in the panel next to the entries.
   const feedback = useActionFeedback()
+  const minBucketSize = parseMinBucketSize(form.minBucketSize)
 
   // Re-sync the baseline when server truth changes (feed refetch after save,
   // refreshCockpitData from the camunda7 panel, another session's write) —
@@ -119,16 +151,16 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
   )
 
   function handleSave() {
+    // An entry that is no valid size is never saved, and never corrected
+    // behind your back: the field says what is wrong, the focus goes there.
+    if (minBucketSize === null) {
+      bucketRef.current?.focus()
+      return
+    }
     save.mutate(
+      { defaultPeriod: form.defaultPeriod, minBucketSize },
       {
-        defaultPeriod: form.defaultPeriod,
-        minBucketSize: Math.max(1, Number.parseInt(form.minBucketSize, 10) || 1),
-      },
-      {
-        onSuccess: () => {
-          setSavedAt(formatTime(new Date().toISOString()))
-          feedback.succeeded(t("aSettings.savedToast"))
-        },
+        onSuccess: () => feedback.succeeded(t("aSettings.savedToast")),
         onError: (error) => feedback.failed(t("aSettings.saveFailedToast"), error),
       },
     )
@@ -139,34 +171,33 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
        widget without pipeline data, and only the mounted component knows the
        self-fetched view. HostModelContext renders its children unchanged. */
     <HostModelContext content={modelContextText(describeAnalyticsSettings(view))}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">{t("aSettings.heading")}</h2>
-          <p className="text-muted-foreground mt-1 text-sm">{t("aSettings.subtitle")}</p>
-        </div>
-        {view.canSave && (
-          <div className="flex items-center gap-2">
-            {savedAt && !save.isPending && (
-              <Badge variant="secondary">{t("aSettings.saved", { time: savedAt })}</Badge>
-            )}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-section">{t("aSettings.heading")}</h2>
+            <p className="text-muted-foreground text-small mt-1">{t("aSettings.subtitle")}</p>
+          </div>
+          {view.canSave && (
             <Button size="sm" onClick={handleSave} disabled={save.isPending}>
               {save.isPending ? t("aSettings.saving") : t("aSettings.save")}
             </Button>
-          </div>
+          )}
+        </div>
+
+        {!view.canSave && <ReadOnlyNotice />}
+
+        {save.isError && (
+          <Alert variant="danger">
+            <AlertDescription>
+              {save.error?.message
+                ? t("aSettings.saveFailed", { reason: save.error.message })
+                : t("aSettings.saveError")}
+            </AlertDescription>
+          </Alert>
         )}
       </div>
 
-      {save.isError && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {save.error?.message
-              ? t("aSettings.saveFailed", { reason: save.error.message })
-              : t("aSettings.saveError")}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SettingsCard title={t("aSettings.section")}>
           <SettingsField label={t("aSettings.period")} help={t("aSettings.period.help")}>
             <NativeSelect
@@ -188,18 +219,22 @@ function SettingsPanel({ view }: { view: AnalyticsSettingsViewData }) {
               ))}
             </NativeSelect>
           </SettingsField>
-          <SettingsField label={t("aSettings.minBucket")} help={t("aSettings.minBucket.help")}>
+          <SettingsField
+            label={t("aSettings.minBucket")}
+            help={t("aSettings.minBucket.help")}
+            error={minBucketSize === null ? t("aSettings.minBucket.invalid") : undefined}
+          >
+            {/* Text, not `type="number"`: a browser empties a number field on a
+                letter, and the entry you typed must stay to be corrected. */}
             <SettingsInput
-              type="number"
-              min={1}
+              ref={bucketRef}
+              type="text"
+              inputMode="numeric"
               disabled={!view.canSave}
               value={form.minBucketSize}
               onChange={(e) => setForm((f) => ({ ...f, minBucketSize: e.target.value }))}
             />
           </SettingsField>
-          {!view.canSave && (
-            <span className="text-muted-foreground text-xs">{t("aSettings.readOnly")}</span>
-          )}
         </SettingsCard>
       </div>
     </HostModelContext>

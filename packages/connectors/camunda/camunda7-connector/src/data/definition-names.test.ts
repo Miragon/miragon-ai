@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { clientFor, startFakeEngine, type FakeEngine } from "../tools/test-support/fake-engine.js"
 import {
+  elementNameIn,
   fetchDefinitionsById,
   fetchNamesByDefinition,
+  nameUnnamedDefinitions,
   NAMED_DEFINITIONS_LIMIT,
+  processNameIn,
 } from "./definition-info.js"
 
 /**
@@ -36,8 +39,8 @@ describe("fetchNamesByDefinition", () => {
 
     const names = await fetchNamesByDefinition(clientFor(engine), [...ids, ids[0], null, undefined])
 
-    // The process element is named too: the process's name comes free.
-    expect(names.get("p0:1:d")).toEqual({ p0: "p0 & co", t: "Check" })
+    // The process is named too: the process's name comes free.
+    expect(names.get("p0:1:d")).toEqual({ processes: { p0: "p0 & co" }, elements: { t: "Check" } })
     // Failed and empty diagrams: no entry, so the names behind them are null.
     expect(names.has("p1:1:d")).toBe(false)
     expect(names.has("p2:1:d")).toBe(false)
@@ -51,6 +54,92 @@ describe("fetchNamesByDefinition", () => {
     const engine = await startFakeEngine({})
     engines.push(engine)
     expect((await fetchNamesByDefinition(clientFor(engine), [null])).size).toBe(0)
+    expect(engine.requests).toEqual([])
+  })
+})
+
+/**
+ * What the Camunda Modeler writes (#322 U13, one rule with analytics): a named
+ * pool around an unnamed process, a line break as `&#10;`, `&` as `&#38;`.
+ * camunda7 used to show these as `miraveloLeasing` and "Rechnung&#10;prüfen"
+ * where analytics showed "Miravelo - Bike Leasing" and "Rechnung prüfen".
+ */
+const MODELER_XML = `<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Pool" name="Miravelo - Bike Leasing" processRef="miraveloLeasing" />
+  </bpmn:collaboration>
+  <bpmn:process id="miraveloLeasing" isExecutable="true">
+    <bpmn:serviceTask id="Activity_Check" name="Rechnung&#10;prüfen" />
+    <bpmn:userTask id="Activity_Approve" name="Prüfen &#38; Freigeben" />
+  </bpmn:process>
+</bpmn:definitions>`
+const LEASING_V1 = "miraveloLeasing:1:d"
+
+describe("names from a Modeler diagram", () => {
+  it("names the process by its pool and decodes the references in activity names", async () => {
+    const engine = await startFakeEngine({
+      [`GET /process-definition/${LEASING_V1}/xml`]: { body: { bpmn20Xml: MODELER_XML } },
+    })
+    engines.push(engine)
+
+    const names = await fetchNamesByDefinition(clientFor(engine), [LEASING_V1])
+
+    expect(processNameIn(names, LEASING_V1, "miraveloLeasing")).toBe("Miravelo - Bike Leasing")
+    expect(elementNameIn(names, LEASING_V1, "Activity_Check")).toBe("Rechnung prüfen")
+    expect(elementNameIn(names, LEASING_V1, "Activity_Approve")).toBe("Prüfen & Freigeben")
+    // Unknown version, process, element or a missing id: null, the id stands in.
+    expect(processNameIn(names, "other:1:d", "miraveloLeasing")).toBeNull()
+    expect(processNameIn(names, LEASING_V1, "other")).toBeNull()
+    expect(processNameIn(names, LEASING_V1, null)).toBeNull()
+    expect(elementNameIn(names, LEASING_V1, "constructor")).toBeNull()
+    expect(elementNameIn(names, null, "Activity_Check")).toBeNull()
+    expect(elementNameIn(names, LEASING_V1, undefined)).toBeNull()
+  })
+})
+
+describe("nameUnnamedDefinitions", () => {
+  it("names a definition the engine knows by no name from its diagram's pool, in place", async () => {
+    const engine = await startFakeEngine({
+      [`GET /process-definition/${LEASING_V1}/xml`]: { body: { bpmn20Xml: MODELER_XML } },
+      "GET /process-definition/plain:1:d/xml": {
+        body: { bpmn20Xml: '<definitions><process id="plain"/></definitions>' },
+      },
+      "GET /process-definition/broken:1:d/xml": { status: 500, body: { message: "boom" } },
+    })
+    engines.push(engine)
+    const rows = [
+      { id: "order:2:d", key: "order", name: "Order" },
+      { id: LEASING_V1, key: "miraveloLeasing", name: null },
+      { id: "plain:1:d", key: "plain", name: null },
+      { id: "broken:1:d", key: "broken", name: null },
+      { id: null, key: "bare", name: null },
+    ]
+
+    const named = await nameUnnamedDefinitions(clientFor(engine), rows)
+
+    expect(named).toBe(rows)
+    expect(rows.map((r) => r.name)).toEqual([
+      "Order",
+      "Miravelo - Bike Leasing",
+      // Named nowhere in its diagram, unreadable, or without a version id: still null.
+      null,
+      null,
+      null,
+    ])
+    // A named definition costs no read; each unnamed one with an id costs one.
+    expect(engine.requests.map((r) => r.path).sort()).toEqual([
+      "/process-definition/broken:1:d/xml",
+      `/process-definition/${LEASING_V1}/xml`,
+      "/process-definition/plain:1:d/xml",
+    ])
+  })
+
+  it("reads nothing while every definition is named", async () => {
+    const engine = await startFakeEngine({})
+    engines.push(engine)
+    const rows = [{ id: "order:2:d", key: "order", name: "Order" }]
+    expect(await nameUnnamedDefinitions(clientFor(engine), rows)).toBe(rows)
+    expect(await nameUnnamedDefinitions(clientFor(engine), [])).toEqual([])
     expect(engine.requests).toEqual([])
   })
 })

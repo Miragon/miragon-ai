@@ -3,6 +3,7 @@ import {
   HandOffButton,
   Icon,
   ListTable,
+  NamedId,
   PagedRows,
   QueryFallback,
   TableEmptyState,
@@ -31,7 +32,7 @@ import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { InstancesHeader } from "./list-header.js"
 import { useHandOff } from "../lib/hand-off.js"
 import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
-import { InstanceLabel, NamedId } from "../lib/identity.js"
+import { InstanceLabel } from "../lib/identity.js"
 import { instanceName } from "../lib/write-feedback.js"
 import { useT } from "../../messages/use-t.js"
 

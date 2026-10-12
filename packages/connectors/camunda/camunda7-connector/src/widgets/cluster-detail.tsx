@@ -2,6 +2,7 @@ import {
   HandOffButton,
   ListTable,
   LogText,
+  NamedId,
   PagedRows,
   TableEmptyState,
   Td,
@@ -33,7 +34,7 @@ import {
 import { useHandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { EngineMeta } from "./lib/engine-context.js"
-import { InstanceLabel, NamedId } from "./lib/identity.js"
+import { InstanceLabel } from "./lib/identity.js"
 import { instanceName } from "./lib/write-feedback.js"
 import { useT } from "../messages/use-t.js"
 

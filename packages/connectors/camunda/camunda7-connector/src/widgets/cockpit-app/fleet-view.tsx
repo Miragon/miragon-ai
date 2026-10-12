@@ -1,5 +1,5 @@
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import { HandOffButton, Icon, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, Icon, countTone, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { ArrowRight } from "lucide-react"
 import { CountPill, FOCUS_RING, SectionHeading, TONE_DOT, cn } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
@@ -38,15 +38,13 @@ function FleetEngineKpis({
       <div>
         <div className="text-muted-foreground text-small">{t("fleet.incidents")}</div>
         <div>
-          <CountPill tone={incidents > 0 ? "danger" : "neutral"}>
-            {formatNumber(incidents)}
-          </CountPill>
+          <CountPill tone={countTone(incidents)}>{formatNumber(incidents)}</CountPill>
         </div>
       </div>
       <div>
         <div className="text-muted-foreground text-small">{t("fleet.failedJobs")}</div>
         <div>
-          <CountPill tone={failed > 0 ? "danger" : "neutral"}>{formatNumber(failed)}</CountPill>
+          <CountPill tone={countTone(failed)}>{formatNumber(failed)}</CountPill>
         </div>
       </div>
     </div>

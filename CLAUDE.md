@@ -259,10 +259,22 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    above the pinned column, `REGION_FOCUS_RING`, since it fills clipping cards edge to
    edge); `hideBelow: "sm" | "md" | "lg"` hides a column (header and every row's cell
    in that position, rows one cell per column) while the REGION is narrower than
-   640/768/1024 px; `sticky: true` on the last column pins the row actions; `IdCell` /
+   640/768/1024 px; `sticky: true` on the last column pins the row actions; `sort` on the
+   column the rows are ordered by sets `aria-sort` and a direction arrow; `groups` heads
+   adjacent columns in a row above theirs (`scope="col"` + `colSpan`, never `colgroup`
+   without a `<colgroup>` to anchor it; a column under a group of
+   several never hides, `listTableCss` throws on it); `IdCell` /
    `IdText` show an id in Geist Mono, shortened ("5f0ce78e…", whole for screen readers and
    in `title`), with a copy button and its toast (a failed copy leaves the whole id selected
-   in a read-only field, to copy by hand). `WidgetShell` pads 24 px (16 px below
+   in a read-only field, to copy by hand); `NamedId` shows a process or an element by its
+   name first (dense, 600) and its id as a quiet Geist Mono line under it (`detail` appends
+   its type or process, `lead` a state dot): ONE look in every module, never a connector's
+   own copy. Those names come from ONE reader: `readBpmnNames` / `parseBpmnNames`
+   (`@miragon-ai/widget-shell/server`, server and browser alike: a process's own name, else
+   its Modeler pool's; `&#10;` and every other character reference decoded, space folded), so
+   camunda7, analytics and the heatmap never name the same process or activity two ways; a
+   view that shows the engine's definition name names an unnamed one from its diagram
+   (camunda7's `nameUnnamedDefinitions`). `WidgetShell` pads 24 px (16 px below
    640 px) and lets its children shrink (`min-w-0`). **Type on the scale**: kit components
    sit on the toolkit's `TYPE_SCALE`: a widget's page title 28/700 (`WidgetHeader`, an h2
    inside a view), a section `text-section` (21/600), running text `text-body` (16), dense
@@ -288,7 +300,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    out when unknown;
    `Section`, `Th`/`Td`/`TableEmptyState`, the toolkit's `WidgetHeader` + `VersionChip`, its
    `KpiGrid`, `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
-   settings sections (form controls on the `--input` edge, `FIELD_CONTROL`); `useBpmnViewer`
+   settings sections (form controls on the `--input` edge, `FIELD_CONTROL`; an entry that is
+   not valid is said to be wrong inline, `SettingsField`'s `error`: a danger-ink line under
+   the control, `aria-invalid` and `aria-describedby`, never a silent clamp; a section that
+   cannot save says why ABOVE its disabled fields); `useBpmnViewer`
    (it owns the fixed light canvas: the container is a forced-light island,
    `data-theme-mode="light"`, on the paper token; its `height` is the diagram's height at
    the scale bpmn-js draws it, never past 1:1, 240–560 px, known on the first paint from the
@@ -329,6 +344,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    "Design-System"): `ToneVariant` is `danger | warning | success | info | neutral`. There is
    no `critical` (a retired name from the wire resolves through `resolveTone`): an open incident or a failed job without retries is `danger`, a failed job
    with retries left or a degraded engine is `warning`, a count without a state is `neutral`.
+   The ladder for incident and job counts is the kit's, ONE for every module (`countTone` /
+   `severityTone`, `@miragon-ai/widget-shell/widgets`): camunda7's engine tiles and the
+   analytics landscape they embed edge the same "jobs without retries" alike.
    Each tone has three roles, theme variables of the toolkit's Miragon theme
    (`@miragon/mcp-toolkit-ui/theme.css`, light + dark): `--<tone>` is the fill, dot, edge or icon
    (`TONE_DOT`, `TONE_BORDER`, `TONE_ICON`), `--<tone>-soft` the tint (`TONE_TINT`, or
@@ -540,7 +558,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
    app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
-   `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap — and
+   `fetchBpmnXml`, the camunda7 BPMN-XML lookup injected into the analytics heatmap and
+   the names in its views, per engine id: `null` means not deployed there, a failed read
+   rejects; and
    `engineIds`, camunda7's configured engines: the ONLY engines analytics reads, else
    `ANALYTICS_ENGINE_IDS`, else every analytics tool refuses; analytics has NO
    engine-SDK dependency). Apps own no domain UI: widget catalogues and

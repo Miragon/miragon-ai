@@ -2,6 +2,8 @@ import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { queries } from "@miragon-ai/analytics-client"
 import { ENGINE_KEY_DECLARATION, stepEngines, type AnalyticsAppConfig } from "./app-config.js"
 import { builderText } from "../builder-texts.js"
+import { NO_NAMES } from "../bpmn-name-lookup.js"
+import { namedFailureDashboard } from "../named-views.js"
 
 /**
  * Loads current failure / incident state from Prometheus for the
@@ -19,9 +21,12 @@ export const loadFailureDashboardStep: PipelineStepDefinition<AnalyticsAppConfig
   optionalKeys: [ENGINE_KEY_DECLARATION],
   produces: ["analytics:failureDashboardData"],
   execute: async (context, appConfig) => {
-    const data = await queries.failureDashboardData(appConfig.client, {
-      engine: stepEngines(context.keys, appConfig.engineScope),
-    })
+    const data = await namedFailureDashboard(
+      await queries.failureDashboardData(appConfig.client, {
+        engine: stepEngines(context.keys, appConfig.engineScope),
+      }),
+      appConfig.namesFor ?? NO_NAMES,
+    )
 
     return {
       data,

@@ -37,7 +37,8 @@ kit neither forks nor re-exports them:
   (title/sub/badge, no icon tile, `as` for the heading level) from the toolkit
 - Tables: `ListTable` (the frame: a named, keyboard-reachable scroll region so
   a wide table never widens the view; `hideBelow` on a column a narrow view
-  can do without; `sticky` on the last column, the row actions) with
+  can do without; `sticky` on the last column, the row actions; `sort` on the
+  column the rows are ordered by; `groups` to head adjacent columns) with
   hand-composed `<tr>` + `Td` rows; `IdCell` for an id column (Geist Mono,
   shortened, a copy button); `TableEmptyState` instead of an empty frame
   (`variant="done"` for "nothing left to do"); KPI strips: the toolkit's

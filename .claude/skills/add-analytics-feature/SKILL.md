@@ -218,11 +218,40 @@ Rules while building:
 - Tables: the kit's `ListTable` (a named, keyboard-reachable scroll region with a
   required `ariaLabel`, so a wide breakdown never widens the document at 760 px;
   `hideBelow: "sm" | "md" | "lg"` on a column a narrow view can do without, by the
-  region's width; `sticky: true` on the last column when it holds row actions; rows stay
-  `<tr>` + `Td`, one cell per column, numbers `tabular-nums` right-aligned). Nothing to
+  region's width; `sticky: true` on the last column when it holds row actions; `sort` on
+  the column the rows are ordered by; `groups` to head adjacent columns, like the
+  landscape's "Load" and "Job backlog"; rows stay `<tr>` + `Td`, one cell per column,
+  numbers `tabular-nums` right-aligned). Order columns by priority: the identifying
+  column, then the sort key, then what can give way (`hideBelow`); the host simulation
+  (`apps/mcp-server-camunda7/test-host/analytics.spec.ts`, against `stub-prometheus.ts`)
+  checks at 760 px that the promised columns show inside their region. Nothing to
   show: `TableEmptyState` (`variant="done"` for "nothing failing", the quiet default for
-  no data). Type on the toolkit's scale: `text-section` for a card heading, `text-dense`
-  for table text, `text-small` (13 px, the floor) for captions, never `text-xs`.
+  no data, the next step as `description`). Type on the toolkit's scale: `text-section`
+  for a card heading, `text-dense` for table text, `text-small` (13 px, the floor) for
+  captions, never `text-xs` (`scanTypeScale` in `src/brand-gates.test.ts`).
+- Names before ids (U13): metrics carry ids only; a view that lists processes or
+  activities passes its payload through `src/named-views.ts` in the show tool, its feed
+  AND its step (one function each), which adds `names` from the injected BPMN lookup
+  (`createNameLookup` in `src/bpmn-name-lookup.ts`, reading each diagram through the kit's
+  `parseBpmnNames`, the rule camunda7 names the same model by). Each model is read on the engines
+  the view's rows come from (`engines`, or `enginesByKey` per process), in order, until
+  one has it, so a process that runs only on a later engine is named too. An engine's
+  answer is kept five minutes PER CALLER (`callerCacheKey` from widget-shell: under
+  passthrough auth the engine answers with the caller's own permissions, so one caller's names never reach
+  another); `null` from the injected `FetchBpmnXml` means "not deployed there" and is
+  kept, a failed read REJECTS and is never kept. A view waits 2 s at most and reads up
+  to 40 keys, named by priority (the dashboard: its scope, then the activities'
+  processes, then the breakdown's). The widget shows the kit's `NamedId`
+  (`@miragon-ai/widget-shell/widgets`: the name first, the id quiet in mono below, the id
+  alone in mono without a name; one look with camunda7) and an activity's type in words
+  (`activityTypeLabel`, `src/widgets/names.ts`).
+- A count nobody measured is `null` and renders "—" through `Figure`
+  (`src/widgets/figure.tsx`: the reason is read out in its place and is its tooltip),
+  one meaning everywhere, and the table puts `FigureLegend` under it (the reasons that
+  occur, one line each), so keyboard and touch readers get the meaning too; a silent
+  engine's counts are null, never 0. A known "none" is words, never "—" ("Kein
+  Prozess"). A different state (a process not deployed on an engine) gets its own sign
+  and a legend line.
 - The heatmap is the kit's `BpmnHeatmapWidget`: ONE hue from `--cd-info-soft` to
   `--cd-blau` (red is for incidents), every element above zero at a visible minimum, a
   legend with the smallest and largest value (`HeatmapLegend` `min`/`max`, formatted),
@@ -234,7 +263,18 @@ Rules while building:
   maps, `resolveTone` for a tone from the wire, CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
   volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
-  incidents/failures. No palette classes or raw colours.
+  incidents/failures. A count of what happened (new incidents included) carries no tone;
+  the open incident and the job without retries (dead jobs, an engine's failed jobs) are the
+  states: a danger dot on its KPI, `StateCount` in a table (`src/widgets/figure.tsx`: a danger
+  `CountPill` while there is any, by the kit's `countTone`, the ladder camunda7 edges the same
+  counts by; none is a plain number). A rate is judged only against a reference, never on its own: the dashboard's
+  incident rate against the period before (`previous` in `dashboardData`, the trend of its
+  `KpiCell`, `deltaVerdict` with the comparisons' threshold, "not reliable" under the
+  saved `minBucketSize`), and only with the process held fixed: over several processes
+  the rate is a total over their mix and moves with it, so the trend names the previous
+  rate without a verdict, direction or colour (`incidentRateTrend`). A bar scales to the largest value in its table, never to 100, and is a magnitude
+  in the data-viz blue (`TONE_DOT.info`), never a state colour.
+  No palette classes or raw colours.
 - Icons are Lucide via `Icon` (devDependency `lucide-react` `0.562.0`, see invariant 6), never
   glyphs or emoji, at 16 px (`dense` in rows and chips; no `size` other than 16 or 24). A chat
   hand-off is the kit's `<HandOffButton action="findCause" prompt={ask(…)} />`: the product's

@@ -5,6 +5,10 @@ import type {
   Period,
 } from "@miragon-ai/analytics-client"
 import { ANALYTICS_DASHBOARD_DATA } from "../../tool-names.js"
+import type { Named } from "../../bpmn-names.js"
+
+/** The dashboard payload the widgets read: the figures plus the names behind their ids. */
+export type DashboardView = Named<AnalyticsDashboardData>
 
 /** The cell props every split dashboard widget takes — the scope its self-fetch reads. */
 export interface DashboardScopeProps {
@@ -22,7 +26,7 @@ export interface DashboardScopeProps {
 // host-defined behavior (hosts honoring resultCanProduceWidget may render a
 // second widget per refresh).
 export function useDashboardSelfFetch(
-  initialData: AnalyticsDashboardData | null,
+  initialData: DashboardView | null,
   props: DashboardScopeProps,
 ) {
   const { processDefinitionKey, period, engine } = props
@@ -30,7 +34,7 @@ export function useDashboardSelfFetch(
   if (processDefinitionKey) queryArgs.processDefinitionKey = processDefinitionKey
   if (period) queryArgs.period = period
   if (engine !== undefined) queryArgs.engine = engine
-  return useToolQuery<AnalyticsDashboardData>(
+  return useToolQuery<DashboardView>(
     ["analytics:dashboard", processDefinitionKey ?? null, period ?? null, engine ?? null],
     ANALYTICS_DASHBOARD_DATA,
     queryArgs,

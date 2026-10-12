@@ -1,15 +1,15 @@
 import type { ReactNode } from "react"
 import {
   ListTable,
+  NamedId,
   TableEmptyState,
   Td,
+  countTone,
   formatNumber,
   type ListTableColumn,
 } from "@miragon-ai/widget-shell/widgets"
 import { CountPill, TONE_DOT, cn, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 import { useT } from "../messages/use-t.js"
-import { countTone } from "./cockpit-dashboard/lib.js"
-import { NamedId } from "./lib/identity.js"
 
 /**
  * Row model of the canonical process-definitions table — a superset both

@@ -22,9 +22,12 @@ import {
 } from "./cluster-scan.js"
 import {
   definitionKeyResolver,
+  elementNameIn,
   fetchNamesByDefinition,
   fetchStatsByKey,
+  processNameIn,
   type KeyStats,
+  type NamesByDefinition,
 } from "./definition-info.js"
 import { countOf, DAY_MS, rowsOf } from "./engine-reads.js"
 
@@ -179,14 +182,15 @@ function clusterIncidents(
  * the 24h count when it reaches back past the cutoff — null otherwise. The
  * names are display enrichment: the activity's from the diagram of the
  * sample incident's version (`names`, one read per version), the process's
- * from the statistics the verdict already read — null when unknown, the id
+ * from the statistics the verdict already read, else (a Modeler pool around
+ * an unnamed process) from that same diagram — null when unknown, the id
  * then stands in.
  */
 function toClusterList(
   ranked: ClusterAcc[],
   coverage: ScanCoverage,
   cutoffMs: number,
-  display: { names: Map<string, Record<string, string>>; statsByKey: Map<string, KeyStats> },
+  display: { names: NamesByDefinition; statsByKey: Map<string, KeyStats> },
 ): EngineHealthCluster[] {
   return ranked.map((c) => {
     const keys = [...c.keys.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k)
@@ -194,9 +198,7 @@ function toClusterList(
     return {
       id: `${c.activityId}::${c.incidentType}::${c.signature}`,
       activityId: c.activityId,
-      activityName:
-        (c.sampleDefinitionId ? display.names.get(c.sampleDefinitionId)?.[c.activityId] : null) ??
-        null,
+      activityName: elementNameIn(display.names, c.sampleDefinitionId, c.activityId),
       incidentType: c.incidentType,
       messageSignature: c.signature,
       incidentCount: coverage.complete ? c.count : null,
@@ -204,7 +206,8 @@ function toClusterList(
       last24hCount: coverage.covers(cutoffMs) ? c.last24h : null,
       processDefinitionKeys: keys,
       processDefinitionName:
-        (primaryKey ? display.statsByKey.get(primaryKey)?.latest.name : null) ?? null,
+        (primaryKey ? display.statsByKey.get(primaryKey)?.latest.name : null) ??
+        processNameIn(display.names, c.sampleDefinitionId, primaryKey),
       representativeMessage: c.sampleMessage,
       representativeIncidentId: c.sampleIncidentId,
       latestIncident: c.latest,

@@ -5,6 +5,7 @@ import {
   scanColors,
   scanGlyphs,
   scanIconSizes,
+  scanTypeScale,
 } from "@miragon-ai/widget-shell/testing"
 import { deAskAi } from "./messages/de.ask-ai.js"
 import { deBuilder } from "./messages/de.builder.js"
@@ -56,5 +57,13 @@ describe("analytics widgets draw icons at the CI sizes", () => {
 describe("analytics widgets colour through role names only", () => {
   it("src/widgets has no palette class or raw colour", () => {
     expect(scanColors(dir("./widgets"))).toEqual([])
+  })
+})
+
+describe("analytics widgets set their text on the CI type scale", () => {
+  // Both rules: no Tailwind size (text-sm, text-xl …) and nothing below the
+  // 13 px floor (text-xs); the steps say what the text is (CI §4).
+  it("src/widgets uses only the type-scale steps", () => {
+    expect(scanTypeScale(dir("./widgets"))).toEqual([])
   })
 })

@@ -4,7 +4,8 @@ import { installMcpRequestContext } from "@miragon-ai/widget-shell/server"
 import { createPrometheusClient, type PrometheusConfig } from "@miragon-ai/analytics-client"
 import { registerTools } from "./tools/index.js"
 import { registerSettingsTools } from "./settings-tools.js"
-import { registerWidgetTools, type FetchBpmnXml } from "./widget-tools.js"
+import { registerWidgetTools } from "./widget-tools.js"
+import { createNameLookup, type FetchBpmnXml } from "./bpmn-name-lookup.js"
 import { definition } from "./definition.js"
 import type { ProfileSource } from "./server-locale.js"
 import { analyticsToolsets } from "./toolsets.js"
@@ -19,10 +20,11 @@ import type { AnalyticsAppConfig } from "./steps/app-config.js"
 export interface AnalyticsPluginConfig extends PrometheusConfig {
   /**
    * Optional BPMN-XML lookup used by widget tools that enrich metric data with
-   * engine lookups — currently the BPMN heatmap, which fetches the diagram XML.
-   * Injected by the host app (which owns the engine client) so this module
-   * stays free of engine SDKs. When absent, those widgets degrade to a
-   * non-diagram fallback.
+   * engine lookups — the BPMN heatmap's diagram, and the process and activity
+   * names the dashboards, the failure dashboard and the landscape show in
+   * place of ids. Injected by the host app (which owns the engine client) so
+   * this module stays free of engine SDKs. When absent, the heatmap degrades
+   * to a non-diagram fallback and the views show ids.
    */
   fetchBpmnXml?: FetchBpmnXml
   /**
@@ -58,12 +60,15 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
     timeoutMs: config.timeoutMs,
   })
   const engineScope = createEngineScope(config.engineIds)
+  // ONE name lookup (and its per-caller cache) for the tools, the feeds and the steps.
+  const namesFor = createNameLookup(config.fetchBpmnXml)
   // The steps get the profile store too: a step's omitted period resolves to
   // the caller's saved default, like every tool's.
   const appConfig = {
     client,
     engineScope,
     profileStore: config.profileStore,
+    namesFor,
   } satisfies AnalyticsAppConfig
   return {
     definition,
@@ -79,6 +84,7 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
     registerWidgetTools: (server) => {
       registerWidgetTools(server, client, {
         fetchBpmnXml: config.fetchBpmnXml,
+        namesFor,
         profileStore: config.profileStore,
         engineScope,
       })

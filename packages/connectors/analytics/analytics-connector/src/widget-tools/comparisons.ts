@@ -12,6 +12,8 @@ import { localizeViewFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"
 import { versionCompareCaveats } from "../version-compare-caveats.js"
 import { isFleetRequest, withEngineScope } from "../engine-ids.js"
+import { namedLandscape } from "../named-views.js"
+import { NO_NAMES } from "../bpmn-name-lookup.js"
 import {
   compareDeltaSummary,
   engineScopeSummary,
@@ -31,6 +33,7 @@ import {
  */
 export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) {
   const { server, ch, engineScope, profileStore } = ctx
+  const namesFor = ctx.namesFor ?? NO_NAMES
 
   // --- Cluster Compare (Pre/Post deployment diff) ---
   server.tool(
@@ -178,9 +181,12 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
     },
     withToolErrors(async (args, toolCtx) => {
       const { t, title } = await localizeViewFor(profileStore, toolCtx)
-      const data = await queries.engineLandscape(
-        withCallerSignal(ch, toolCtx.signal),
-        withEngineScope(engineScope, args),
+      const data = await namedLandscape(
+        await queries.engineLandscape(
+          withCallerSignal(ch, toolCtx.signal),
+          withEngineScope(engineScope, args),
+        ),
+        namesFor,
       )
       return buildSingleWidgetView({
         widget: "analytics:engine-landscape",
@@ -193,8 +199,9 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
           reportingEngineCount: data.totals.reportingEngineCount,
           processKeyCount: data.totals.processKeyCount,
           sharedProcessKeyCount: data.totals.sharedProcessKeyCount,
-          runningInstances: data.totals.runningInstances,
-          openIncidents: data.totals.openIncidents,
+          // Unknown while no engine reports: "n/a", never a plausible 0.
+          runningInstances: data.totals.runningInstances ?? "n/a",
+          openIncidents: data.totals.openIncidents ?? "n/a",
           shared: data.sharedProcessKeys.length
             ? t("aSum.sharedKeys", { keys: data.sharedProcessKeys.join(", ") })
             : "",
@@ -214,9 +221,12 @@ export function registerComparisonWidgetTools(ctx: AnalyticsWidgetToolsContext) 
       ...appOnly,
     },
     withToolErrors(async (args, toolCtx) => {
-      const data = await queries.engineLandscape(
-        withCallerSignal(ch, toolCtx.signal),
-        withEngineScope(engineScope, args),
+      const data = await namedLandscape(
+        await queries.engineLandscape(
+          withCallerSignal(ch, toolCtx.signal),
+          withEngineScope(engineScope, args),
+        ),
+        namesFor,
       )
       return buildDataFeedResult({ ...data })
     }),

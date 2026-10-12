@@ -238,19 +238,24 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   `<EngineMeta engineId={…} asOf={…} />` (`widgets/lib/engine-context.tsx`: the
   environment as a text chip, "PROD", and the engine through the kit's `ViewMeta`; inside
   the cockpit, whose head names the engine, only the time); a write confirmation adds
-  `engineTargetLines(t, engineId, useEngineEnvironment(engineId))`. Names before ids
-  (`widgets/lib/identity.tsx`): `NamedId` (an activity's or process's name, the id a quiet
-  mono line), `InstanceLabel` (the business key, the UUID a copyable `IdText` chip; the
+  `engineTargetLines(t, engineId, useEngineEnvironment(engineId))`. Names before ids: the
+  kit's `NamedId` (`@miragon-ai/widget-shell/widgets`: an activity's or process's name, the
+  id a quiet mono line; the same look analytics uses), `InstanceLabel`
+  (`widgets/lib/identity.tsx`: the business key, the UUID a copyable `IdText` chip; the
   words of `instanceName`); a drill passes the target's `label` so its breadcrumb reads
-  the name. The builder reads names as enrichment (`fetchNamesByDefinition`,
-  `fetchDefinitionsById`, `fetchBusinessKeys`). A row keeps ONE deterministic action;
+  the name. The builder reads names as enrichment (`fetchNamesByDefinition` with
+  `processNameIn`/`elementNameIn`, `fetchDefinitionsById`, `fetchBusinessKeys`), every
+  diagram name through the kit's `readBpmnNames`/`parseBpmnNames` (never a regex of your
+  own: analytics reads the same diagrams), and a view that shows the engine's definition
+  name passes its rows through `nameUnnamedDefinitions` (a Modeler pool around an unnamed
+  process names it, as analytics does). A row keeps ONE deterministic action;
   its vendor link and chat hand-offs sit behind `MoreActions`, as `variant="menuitem"`
   entries (`HandOffButton`, `OpenInCockpitLink`); a confirmation names an instance with
   `instanceTargetLines` (business key, then short id)
 - Status: a `ToneVariant` (`danger`/`warning`/`success`/`info`/`neutral`; open incident or
-  failed job without retries = `danger` — `severityTone`/`countTone` in
-  `widgets/cockpit-dashboard/lib.ts` is the one ladder for incident and job counts, a count
-  without a state stays neutral —, retries left or degraded = `warning`) shown via
+  failed job without retries = `danger` — `severityTone`/`countTone` from
+  `@miragon-ai/widget-shell/widgets` is the one ladder for incident and job counts in every
+  module, a count without a state stays neutral —, retries left or degraded = `warning`) shown via
   the toolkit's `StatusBadge` (tone and words required)/`CountPill`/`KpiCell.tone` or its
   `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/`TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps (a tone
   from the wire through `resolveTone`), next to readable words; never a coloured

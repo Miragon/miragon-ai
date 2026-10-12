@@ -1,49 +1,56 @@
 import {
-  Card,
-  CardContent,
-  Badge,
-  Alert,
-  AlertDescription,
-  Skeleton,
-} from "@miragon/mcp-toolkit-ui"
-import {
+  ListTable,
+  NamedId,
   Section,
+  TableEmptyState,
+  TableSkeleton,
+  Td,
   WidgetShell,
   formatDuration,
   formatNumber,
+  type ListTableColumn,
 } from "@miragon-ai/widget-shell/widgets"
-import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
-import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
+import { useDashboardSelfFetch, type DashboardScopeProps, type DashboardView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
-import { useT } from "../../messages/use-t.js"
+import { useT, type T } from "../../messages/use-t.js"
+import { processNameOf } from "../../bpmn-names.js"
+import { Figure, FigureLegend } from "../figure.js"
+
+/**
+ * The figures side by side (U17): one row per process, the counts in
+ * right-aligned tabular columns, so the processes compare at a glance. The
+ * average duration gives way below 640 px. Every count here is a volume of
+ * the period or a live count without a state, new incidents included, so
+ * none carries a tone (U14): the summary above shows them the same way.
+ */
+function columns(t: T): ListTableColumn[] {
+  return [
+    { label: t("aDefBreakdown.colProcess") },
+    { label: t("aDefBreakdown.colStarted"), align: "right" },
+    { label: t("aDefBreakdown.colCompleted"), align: "right" },
+    { label: t("aDefBreakdown.colRunningNow"), align: "right" },
+    { label: t("aDefBreakdown.colIncidents"), align: "right" },
+    { label: t("aDefBreakdown.colAvgDuration"), align: "right", hideBelow: "sm" },
+  ]
+}
 
 export function ProcessDefinitionBreakdown({
   data: initialData,
   processDefinitionKey,
   period,
   engine,
-}: { data: AnalyticsDashboardData | null } & DashboardScopeProps) {
+}: { data: DashboardView | null } & DashboardScopeProps) {
   const t = useT()
   const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period, engine })
 
   return (
-    <QueryGate
-      initialData={initialData}
-      query={fallbackQuery}
-      skeleton={
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-lg" />
-          ))}
-        </div>
-      }
-    >
+    <QueryGate initialData={initialData} query={fallbackQuery} skeleton={<TableSkeleton />}>
       {(data) =>
         data.definitionBreakdown.length === 0 ? (
           <WidgetShell>
-            <Alert>
-              <AlertDescription>{t("aDefBreakdown.emptyState")}</AlertDescription>
-            </Alert>
+            <TableEmptyState description={t("aDefBreakdown.emptyHint")}>
+              {t("aDefBreakdown.emptyState")}
+            </TableEmptyState>
           </WidgetShell>
         ) : (
           <WidgetShell>
@@ -52,49 +59,46 @@ export function ProcessDefinitionBreakdown({
               count={data.definitionBreakdown.length}
               defaultOpen
             >
-              <div className="flex flex-col gap-2">
+              <ListTable ariaLabel={t("aDefBreakdown.tableLabel")} columns={columns(t)}>
                 {data.definitionBreakdown.map((def) => (
-                  <Card key={def.processDefinitionKey} className="gap-0 py-0 shadow-none">
-                    <CardContent className="flex items-center justify-between p-3">
-                      <span className="font-mono text-sm font-medium">
-                        {def.processDefinitionKey}
-                      </span>
-                      <div className="text-muted-foreground flex items-center gap-4 text-sm">
-                        <span>
-                          {t("aDefBreakdown.totalInstances", {
-                            count: formatNumber(def.totalInstances),
-                          })}
-                        </span>
-                        {/* Counts stay neutral (CI §3.3): the words say what they count. */}
-                        <span>
-                          {t("aDefBreakdown.completedCount", {
-                            count: formatNumber(def.completed),
-                          })}
-                        </span>
-                        {def.runningNow !== null && (
-                          <span>
-                            {t("aDefBreakdown.runningNowCount", {
-                              count: formatNumber(def.runningNow),
-                            })}
-                          </span>
-                        )}
-                        {def.incidentsCreated > 0 && (
-                          <Badge variant="destructive">
-                            {t("aDefBreakdown.incidentsCreatedCount", {
-                              count: formatNumber(def.incidentsCreated),
-                            })}
-                          </Badge>
-                        )}
-                        <span>
-                          {t("aDefBreakdown.avgDuration", {
-                            duration: formatDuration(def.avgDurationMs),
-                          })}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <tr key={def.processDefinitionKey}>
+                    <Td>
+                      <NamedId
+                        name={processNameOf(data.names, def.processDefinitionKey)}
+                        id={def.processDefinitionKey}
+                      />
+                    </Td>
+                    <Td align="right" className="tabular-nums">
+                      {formatNumber(def.totalInstances)}
+                    </Td>
+                    <Td align="right" className="tabular-nums">
+                      {formatNumber(def.completed)}
+                    </Td>
+                    {/* Not reported (no engine in scope sends its gauges): "—", never 0. */}
+                    <Td align="right" className="tabular-nums">
+                      <Figure value={def.runningNow} why={t("aFigure.notReported")} />
+                    </Td>
+                    <Td align="right" className="tabular-nums">
+                      {formatNumber(def.incidentsCreated)}
+                    </Td>
+                    <Td align="right" className="whitespace-nowrap tabular-nums">
+                      <Figure
+                        value={def.avgDurationMs}
+                        format={formatDuration}
+                        why={t("aFigure.nothingEnded")}
+                      />
+                    </Td>
+                  </tr>
                 ))}
-              </div>
+              </ListTable>
+              <FigureLegend
+                reasons={[
+                  data.definitionBreakdown.some((d) => d.runningNow === null) &&
+                    t("aFigure.notReported"),
+                  data.definitionBreakdown.some((d) => d.avgDurationMs === null) &&
+                    t("aFigure.nothingEnded"),
+                ]}
+              />
             </Section>
           </WidgetShell>
         )

@@ -4,7 +4,7 @@ import type { MCPServer } from "mcp-use"
 import { createPlugin } from "./plugin.js"
 import { analyticsToolsets } from "./toolsets.js"
 import { analyticsInstructions } from "./instructions.js"
-import type { FetchBpmnXml } from "./widget-tools.js"
+import type { FetchBpmnXml } from "./bpmn-name-lookup.js"
 import type { ProfileSource } from "./server-locale.js"
 import { NO_ENGINE_SCOPE_MESSAGE } from "./engine-ids.js"
 

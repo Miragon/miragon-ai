@@ -113,7 +113,16 @@ const NO_DATA: { [K in keyof typeof queries]: (result: Result<K>) => void } = {
   },
   engineLandscape: (r) => {
     expect(r.engines.every((e) => !e.reporting)).toBe(true)
-    expect(r.totals).toMatchObject({ reportingEngineCount: 0, runningInstances: 0 })
+    // A silent engine's counts are unknown, never a row of plausible zeros.
+    for (const e of r.engines) {
+      expect(e).toMatchObject({ runningInstances: null, openIncidents: null, executableJobs: null })
+    }
+    expect(r.totals).toMatchObject({
+      reportingEngineCount: 0,
+      runningInstances: null,
+      openIncidents: null,
+      failedJobs: null,
+    })
   },
   dashboardData: (r) => {
     expect(r).toMatchObject({
@@ -126,8 +135,11 @@ const NO_DATA: { [K in keyof typeof queries]: (result: Result<K>) => void } = {
       runningNow: null,
       openIncidentsNow: null,
       activityBreakdown: [],
+      activityCount: 0,
       definitionBreakdown: [],
     })
+    // Nothing started before either: no rate to judge against, and no verdict.
+    expect(r.previous).toMatchObject({ totalCount: 0, incidentRatePct: null, suppressed: true })
   },
   failureDashboardData: (r) => {
     expect(r).toMatchObject({ totalIncidents: 0, mostAffectedProcess: null, errorPatterns: [] })
