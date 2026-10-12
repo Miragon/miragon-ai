@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  callerCacheKey,
   getMcpRequestInfo,
   installMcpRequestContext,
   runWithMcpRequestInfo,
@@ -40,6 +41,41 @@ describe("runWithMcpRequestInfo / getMcpRequestInfo", () => {
     const inside = runWithMcpRequestInfo({ anonymousCaller: true }, () => getMcpRequestInfo())
     expect(inside).toEqual({ anonymousCaller: true })
     expect(getMcpRequestInfo()).toBeUndefined()
+  })
+})
+
+/**
+ * The key a per-caller cache partitions by (analytics' BPMN names under
+ * passthrough auth): who calls AND with which credential, never the
+ * credential itself.
+ */
+describe("callerCacheKey", () => {
+  const ALICE = { authUserId: "alice", authorization: "Bearer token-alice" }
+
+  it("is empty outside a request and for a request without a caller or a credential", () => {
+    expect(callerCacheKey()).toBe("")
+    expect(runWithMcpRequestInfo({ anonymousCaller: true }, callerCacheKey)).toBe("")
+  })
+
+  it("is stable for one caller and credential, and keeps no credential", () => {
+    const key = runWithMcpRequestInfo(ALICE, callerCacheKey)
+    expect(key).toMatch(/^[\w-]{43}$/)
+    expect(key).not.toContain("token-alice")
+    expect(runWithMcpRequestInfo({ ...ALICE }, callerCacheKey)).toBe(key)
+  })
+
+  it("tells callers and credentials apart, each on its own", () => {
+    const keys = [
+      ALICE,
+      { ...ALICE, authorization: "Bearer token-alice-2" },
+      { ...ALICE, authUserId: "bob" },
+      { authUserId: "alice" },
+      { authorization: "Bearer token-alice" },
+      // The two parts never run into each other.
+      { authUserId: "alice\nBearer", authorization: "token-alice" },
+    ].map((info) => runWithMcpRequestInfo(info, callerCacheKey))
+    expect(new Set(keys).size).toBe(keys.length)
+    expect(keys).not.toContain("")
   })
 })
 

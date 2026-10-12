@@ -38,16 +38,29 @@ export function failureSummaryHandOff(data: FailureDashboardData): HandOff {
 
 /**
  * The most affected process as a figure: its name (the key below it, quiet),
- * or the key alone in mono when the model's name is unknown; "—" without one.
+ * or the key alone in mono when the model's name is unknown. With no open
+ * incident no process is affected, and the cell says so in quiet words: "—"
+ * means a figure nobody measured (U17), and this one is known.
  */
 function mostAffectedCell(t: T, data: FailureView): KpiCell {
+  const label = t("aFailureSummary.mostAffected")
   const key = data.mostAffectedProcess
-  const name = key ? processNameOf(data.names, key) : null
+  if (!key) {
+    return {
+      label,
+      value: (
+        <span className="text-section text-muted-foreground block">
+          {t("aFailureSummary.mostAffectedNone")}
+        </span>
+      ),
+    }
+  }
+  const name = processNameOf(data.names, key)
   return {
-    label: t("aFailureSummary.mostAffected"),
+    label,
     value: (
-      <span className={cn("text-section block break-words", !name && key && "font-mono")}>
-        {name ?? key ?? "—"}
+      <span className={cn("text-section block break-words", !name && "font-mono")}>
+        {name ?? key}
       </span>
     ),
     trend: name ? <span className="font-mono break-all">{key}</span> : undefined,

@@ -4,6 +4,7 @@ import type { PrometheusClient } from "@miragon-ai/analytics-client"
 import { registerWidgetTools } from "./widget-tools.js"
 import { createEngineScope } from "./engine-ids.js"
 import type { ProfileSource } from "./server-locale.js"
+import type { FetchBpmnXml, NameRequest } from "./bpmn-name-lookup.js"
 
 type Cell = { widget: string; props?: Record<string, unknown> }
 type ShowResult = { structuredContent: { layout: Array<{ row: Cell[] }> } }
@@ -125,11 +126,10 @@ describe("view titles (U3) and the heatmap's as-of stamp (U7)", () => {
  * nothing. The widget picks its text from that and never guesses.
  */
 describe("the heatmap's missing-diagram cause", () => {
-  type FetchBpmnXml = (key: string) => Promise<string | null>
   type HeatmapPayload = { bpmnXml: string | null; bpmnMissing?: string }
 
   /** The diagram fields of the show tool's payload and of the feed's. */
-  async function payloads(fetchBpmnXml?: FetchBpmnXml) {
+  async function payloads(fetchBpmnXml?: FetchBpmnXml, engines = ["prod-a"]) {
     const byName = new Map<string, Handler>()
     const server = {
       tool: (definition: { name: string }, handler: Handler) => {
@@ -137,7 +137,7 @@ describe("the heatmap's missing-diagram cause", () => {
       },
     } as unknown as MCPServer
     registerWidgetTools(server, recordingClient().client, {
-      engineScope: createEngineScope(["prod-a"]),
+      engineScope: createEngineScope(engines),
       fetchBpmnXml,
     })
     const args = { processDefinitionKey: "order" }
@@ -173,6 +173,26 @@ describe("the heatmap's missing-diagram cause", () => {
     for (const payload of await payloads(() => Promise.resolve(xml))) {
       expect(payload).toEqual({ bpmnXml: xml, bpmnMissing: undefined })
     }
+  })
+
+  // The process may run on a later engine only: the first engine of the
+  // scope (configuration order) that has the model draws it.
+  it("reads the diagram from the engines of its scope in order", async () => {
+    const xml = '<?xml version="1.0"?><definitions />'
+    const asked: Array<[string, string | undefined]> = []
+    const fetcher: FetchBpmnXml = (key, engine) => {
+      asked.push([key, engine])
+      if (engine === "prod-a") return Promise.reject(new Error("503"))
+      return Promise.resolve(engine === "prod-c" ? xml : null)
+    }
+    for (const payload of await payloads(fetcher, ["prod-a", "prod-b", "prod-c"])) {
+      expect(payload).toEqual({ bpmnXml: xml, bpmnMissing: undefined })
+    }
+    expect(asked.slice(0, 3)).toEqual([
+      ["order", "prod-a"],
+      ["order", "prod-b"],
+      ["order", "prod-c"],
+    ])
   })
 })
 
@@ -217,15 +237,15 @@ describe("the names behind the ids", () => {
         byName.set(definition.name, handler)
       },
     } as unknown as MCPServer
-    const calls: Array<[string[], unknown]> = []
+    const calls: Array<[string[], NameRequest | undefined]> = []
     const profileStore: ProfileSource = {
       get: () => Promise.resolve({ modules: { analytics: { minBucketSize: 3 } } }),
     }
     registerWidgetTools(server, client, {
       engineScope: createEngineScope(["prod-a"]),
       profileStore,
-      namesFor: (keys, elementIds) => {
-        calls.push([[...keys], elementIds])
+      namesFor: (keys, request) => {
+        calls.push([[...keys], request])
         return Promise.resolve(NAMES)
       },
     })
@@ -257,9 +277,18 @@ describe("the names behind the ids", () => {
 
   it("asks for the elements of the activity breakdown only", async () => {
     const { calls } = await run("analytics_dashboard_data")
-    expect(calls[0][1]).toEqual({ order: ["Task_A"] })
+    expect(calls[0][1]?.elementIds).toEqual({ order: ["Task_A"] })
     const failures = await run("analytics_failure_dashboard_data")
-    expect(failures.calls[0][1]).toEqual({ order: [] })
+    expect(failures.calls[0][1]?.elementIds).toEqual({ order: [] })
+  })
+
+  // A process that runs only on a later engine is named too: each view says
+  // which engines its rows come from, the landscape per process.
+  it("reads the models on the engines the rows come from", async () => {
+    const failures = await run("analytics_failure_dashboard_data")
+    expect(failures.calls[0][1]?.engines).toEqual(["prod-a"])
+    const landscape = await run("analytics_engine_landscape_data")
+    expect(landscape.calls[0][1]?.enginesByKey).toEqual({ order: ["prod-a"] })
   })
 
   it("judges the dashboard's rate against the caller's saved comparison floor", async () => {

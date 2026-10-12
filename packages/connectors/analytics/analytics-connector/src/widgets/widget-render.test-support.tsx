@@ -61,10 +61,40 @@ export const kpiTone = (label: string) =>
 
 /**
  * The column heads, the ones a narrow region hides included: happy-dom has no
- * layout, so every `hideBelow` container query reads as "too narrow".
+ * layout, so every `hideBelow` container query reads as "too narrow". The
+ * heads of a column GROUP (the row above, `data-list-table-groups`) are not
+ * column heads.
  */
 export const headers = (table: HTMLElement) =>
   within(table)
     .getAllByRole("columnheader", { hidden: true })
-    .filter((th) => th.getAttribute("scope") === "col")
+    .filter((th) => th.getAttribute("scope") === "col" && !inGroupRow(th))
     .map((th) => plain(th.textContent)?.trim())
+
+const inGroupRow = (th: HTMLElement) => th.closest("tr")?.hasAttribute("data-list-table-groups")
+
+/** The heads of the column groups: their text and how many columns each spans. */
+export const groupHeads = (table: HTMLElement) =>
+  within(table)
+    .getAllByRole("columnheader", { hidden: true })
+    .filter(inGroupRow)
+    .map((th) => [plain(th.textContent)?.trim(), th.getAttribute("colspan")])
+
+/**
+ * Each "—" for a missing figure (`Figure`) as each reader gets it: the sign
+ * on screen (hidden from assistive tech), the reason a screen reader reads in
+ * its place, and the tooltip.
+ */
+export const missingFigures = (root: ParentNode) =>
+  [...root.querySelectorAll<HTMLElement>("[data-figure='missing']")].map((el) => ({
+    shown: el.querySelector("[aria-hidden='true']")?.textContent,
+    read: el.querySelector(".sr-only")?.textContent,
+    title: el.getAttribute("title"),
+  }))
+
+/** One missing figure as {@link missingFigures} reports it: "—", its reason read out and as the tooltip. */
+export const missing = (why: string) => ({ shown: "—", read: why, title: why })
+
+/** The notes under the tables (`Legend`), as text. */
+export const legendLines = () =>
+  [...document.querySelectorAll("[data-legend]")].map((p) => plain(p.textContent)?.trim())

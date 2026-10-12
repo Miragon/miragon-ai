@@ -14,7 +14,7 @@ import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { processNameOf } from "../../bpmn-names.js"
 import { NamedId } from "../names.js"
-import { Figure } from "../figure.js"
+import { Figure, FigureLegend } from "../figure.js"
 
 /**
  * The figures side by side (U17): one row per process, the counts in
@@ -91,6 +91,14 @@ export function ProcessDefinitionBreakdown({
                   </tr>
                 ))}
               </ListTable>
+              <FigureLegend
+                reasons={[
+                  data.definitionBreakdown.some((d) => d.runningNow === null) &&
+                    t("aFigure.notReported"),
+                  data.definitionBreakdown.some((d) => d.avgDurationMs === null) &&
+                    t("aFigure.nothingEnded"),
+                ]}
+              />
             </Section>
           </WidgetShell>
         )

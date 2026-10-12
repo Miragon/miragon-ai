@@ -101,16 +101,24 @@ export function registerWidgetTools(
 
   /**
    * Fetches the latest deployed version's BPMN XML for the heatmap overlay via
-   * the injected lookup. Without a lookup, or when it fails or finds nothing,
-   * the XML is `null` and `bpmnMissing` says which of the two happened, so the
-   * widget's fallback names the known cause (`heatmap-data.ts`).
+   * the injected lookup, from the engines whose heat it shows, in
+   * configuration order: the first that has the model draws it, so a process
+   * that runs only on a later engine still gets its diagram. Without a
+   * lookup, or when every engine fails or finds nothing, the XML is `null`
+   * and `bpmnMissing` says which of the two happened, so the widget's
+   * fallback names the known cause (`heatmap-data.ts`).
    */
   async function loadBpmn(
     processDefinitionKey: string,
+    engines: readonly string[],
   ): Promise<{ bpmnXml: string | null; bpmnMissing?: BpmnMissingReason }> {
-    if (!options.fetchBpmnXml) return { bpmnXml: null, bpmnMissing: "no-camunda7" }
-    const bpmnXml = (await options.fetchBpmnXml(processDefinitionKey).catch(() => null)) ?? null
-    return bpmnXml ? { bpmnXml } : { bpmnXml: null, bpmnMissing: "not-loaded" }
+    const fetchBpmnXml = options.fetchBpmnXml
+    if (!fetchBpmnXml) return { bpmnXml: null, bpmnMissing: "no-camunda7" }
+    for (const engine of engines.length > 0 ? engines : [undefined]) {
+      const bpmnXml = await fetchBpmnXml(processDefinitionKey, engine).catch(() => null)
+      if (bpmnXml) return { bpmnXml }
+    }
+    return { bpmnXml: null, bpmnMissing: "not-loaded" }
   }
 
   // --- Process Analytics Dashboard ---
@@ -227,7 +235,7 @@ export function registerWidgetTools(
         ...scoped,
         period,
       })
-      const bpmn = await loadBpmn(args.processDefinitionKey)
+      const bpmn = await loadBpmn(args.processDefinitionKey, scoped.engine)
       // Model summary only — the bpmnXml must never reach the text channel;
       // the widget renders the diagram from structuredContent.
       return buildSingleWidgetView({
@@ -274,7 +282,7 @@ export function registerWidgetTools(
         ...scoped,
         period,
       })
-      const bpmn = await loadBpmn(args.processDefinitionKey)
+      const bpmn = await loadBpmn(args.processDefinitionKey, scoped.engine)
       const data = {
         processDefinitionKey: args.processDefinitionKey,
         period,

@@ -134,6 +134,7 @@ export const deSweep: MessageCatalog = {
   "aFailureRate.heading": "Offene Incidents nach Prozess",
   "aFailureRate.tableLabel": "Offene Incidents je 100 laufende Instanzen nach Prozessdefinition",
   "aFailureSummary.mostAffected": "Am stärksten betroffen",
+  "aFailureSummary.mostAffectedNone": "Kein Prozess",
   "aFailureSummary.summaryAriaLabel": "Zusammenfassung der Fehleranalyse",
   "aFailureSummary.title": "Fehleranalyse",
   "aFailureSummary.totalIncidents": "Offene Incidents",
@@ -144,7 +145,7 @@ export const deSweep: MessageCatalog = {
   "aHeatmap.bpmnNoCamunda7":
     "Das Diagramm ist hier nicht verfügbar: Ohne das camunda7-Modul kann Analytics keine BPMN-Dateien laden. Frag im Chat stattdessen nach den Kennzahlen je Aktivität.",
   "aHeatmap.bpmnNotLoaded":
-    "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht bereitgestellt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
+    "Das Diagramm konnte nicht geladen werden: Keine Engine dieser Ansicht hat es geliefert. Prüf, ob die Engines erreichbar sind und der Prozess bereitgestellt ist, oder frag im Chat nach den Kennzahlen je Aktivität.",
   "aHeatmap.bpmnUnavailable":
     "Das Diagramm konnte nicht geladen werden. Frag im Chat stattdessen nach den Kennzahlen je Aktivität.",
   "aHeatmap.diagramAria": "BPMN-Diagramm mit der Ausführungshäufigkeit je Element als Heatmap",
@@ -193,7 +194,6 @@ export const deSweep: MessageCatalog = {
   "aLandscape.kpiRunning": "Laufende Instanzen",
   "aLandscape.legendNotDeployed":
     "Eine leere Zelle heißt: Der Prozess ist auf dieser Engine nicht bereitgestellt.",
-  "aLandscape.legendUnknown": "steht für eine Engine ohne Metriken: Der Wert ist unbekannt.",
   "aLandscape.matrix.hint": "laufende Instanzen je Engine",
   "aLandscape.matrix.tableLabel": "Prozessdefinitionen nach Engine",
   "aLandscape.matrix.title": "Was wo läuft",
@@ -202,7 +202,11 @@ export const deSweep: MessageCatalog = {
   "aLandscape.noMetrics": "keine Metriken",
   "aLandscape.notDeployed": "auf dieser Engine nicht bereitgestellt",
   "aLandscape.sharedBadge": plural("count", "auf 1 Engine", "auf {count} Engines"),
-  "aLandscape.silentNote": "Nicht in der Tabelle, weil sie keine Metriken melden: {engines}.",
+  "aLandscape.silentNote": plural(
+    "count",
+    "Keine Spalte für {engines}: Diese Engine meldet keine Metriken.",
+    "Keine Spalten für {engines}: Diese Engines melden keine Metriken.",
+  ),
   "aLandscape.unknown": "Keine Metriken von dieser Engine: Wert unbekannt",
   "aSettings.heading": "Analyse-Einstellungen",
   "aSettings.loadError": "Die Einstellungen konnten nicht geladen werden.",

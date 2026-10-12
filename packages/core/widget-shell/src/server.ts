@@ -30,6 +30,7 @@ export {
   type ProfileSource,
 } from "./profile.js"
 export {
+  callerCacheKey,
   getMcpRequestInfo,
   installMcpRequestContext,
   runWithMcpRequestInfo,

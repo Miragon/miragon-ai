@@ -261,7 +261,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    in that position, rows one cell per column) while the REGION is narrower than
    640/768/1024 px; `sticky: true` on the last column pins the row actions; `sort` on the
    column the rows are ordered by sets `aria-sort` and a direction arrow; `groups` heads
-   adjacent columns in a row above theirs (`scope="colgroup"`; a column under a group of
+   adjacent columns in a row above theirs (`scope="col"` + `colSpan`, never `colgroup`
+   without a `<colgroup>` to anchor it; a column under a group of
    several never hides, `listTableCss` throws on it); `IdCell` /
    `IdText` show an id in Geist Mono, shortened ("5f0ce78e…", whole for screen readers and
    in `title`), with a copy button and its toast (a failed copy leaves the whole id selected
@@ -546,7 +547,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
    app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
-   `fetchBpmnXml` — the camunda7 BPMN-XML lookup injected into the analytics heatmap — and
+   `fetchBpmnXml`, the camunda7 BPMN-XML lookup injected into the analytics heatmap and
+   the names in its views, per engine id: `null` means not deployed there, a failed read
+   rejects; and
    `engineIds`, camunda7's configured engines: the ONLY engines analytics reads, else
    `ANALYTICS_ENGINE_IDS`, else every analytics tool refuses; analytics has NO
    engine-SDK dependency). Apps own no domain UI: widget catalogues and

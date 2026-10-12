@@ -2,6 +2,7 @@ import fs from "node:fs"
 import { z } from "zod"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
+import type { Client } from "@miragon-ai/camunda7-client"
 import { createPlugin, type Camunda7SharedResources } from "./plugin.js"
 import { providerForEntry } from "./providers/index.js"
 import { allowsProfileSave, camunda7Toolsets } from "./lib/toolsets.js"
@@ -395,30 +396,47 @@ export const camunda7Module = {
 
 /**
  * Builds an engine-agnostic BPMN-XML lookup from this module's raw config —
- * the piece other modules (analytics' heatmap) consume via injection instead
- * of depending on the engine SDK. Uses the FIRST configured engine with the
- * same per-engine-auth-wins precedence as the plugin's registry clients; when
- * a process definition exists on more than one engine the XML is assumed to
- * match across engines. The diagram is the definition view's: the key's
- * latest version over every tenant, read by id (`fetchLatestDefinitionXml`).
- * Fetch errors resolve to `null` (consumer degrades).
+ * the piece other modules (analytics' heatmap and the names in its views)
+ * consume via injection instead of depending on the engine SDK. Reads on the
+ * configured engine `engineId` names (omitted: the FIRST configured engine),
+ * with the same per-engine-auth-wins precedence as the plugin's registry
+ * clients (one client per engine, made on its first read; under passthrough
+ * auth each read carries the current caller's token). The diagram is the
+ * definition view's: the key's latest version over every tenant, read by id
+ * (`fetchLatestDefinitionXml`). Resolves `null` when that engine has no such
+ * definition; a failed read (unreachable, timed out, refused) and an engine
+ * id that is not configured REJECT, so the consumer never mistakes a failure
+ * for "not deployed" (it degrades on its own: the heatmap draws no diagram,
+ * the views show ids).
  */
 export function createBpmnXmlFetcher(
   config: Record<string, unknown>,
-): ((processDefinitionKey: string) => Promise<string | null>) | undefined {
+): ((processDefinitionKey: string, engineId?: string) => Promise<string | null>) | undefined {
   const parsed = camunda7ConfigSchema.parse(config)
-  const primary = parsed.engines[0]
-  const auth = primary.auth ?? {
-    type: parsed.authType,
-    username: parsed.username,
-    password: parsed.password,
-    token: parsed.token,
+  const clients = new Map<string, Client>()
+
+  function clientFor(entry: (typeof parsed.engines)[number]): Client {
+    const known = clients.get(entry.id)
+    if (known) return known
+    const auth = entry.auth ?? {
+      type: parsed.authType,
+      username: parsed.username,
+      password: parsed.password,
+      token: parsed.token,
+    }
+    // Same client construction (incl. passthrough semantics) as the plugin's
+    // registry clients — via the entry's vendor provider.
+    const client = providerForEntry(entry).createClient(entry, auth, {
+      timeoutMs: parsed.requestTimeoutMs,
+    })
+    clients.set(entry.id, client)
+    return client
   }
-  // Same client construction (incl. passthrough semantics) as the plugin's
-  // registry clients — via the entry's vendor provider.
-  const client = providerForEntry(primary).createClient(primary, auth, {
-    timeoutMs: parsed.requestTimeoutMs,
-  })
-  return (processDefinitionKey) =>
-    fetchLatestDefinitionXml(client, processDefinitionKey).catch(() => null)
+
+  return async (processDefinitionKey, engineId) => {
+    const entry =
+      engineId === undefined ? parsed.engines[0] : parsed.engines.find((e) => e.id === engineId)
+    if (!entry) throw new Error(`No engine "${engineId}" is configured.`)
+    return fetchLatestDefinitionXml(clientFor(entry), processDefinitionKey)
+  }
 }

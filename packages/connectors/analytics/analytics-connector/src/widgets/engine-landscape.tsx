@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import {
   Badge,
   CountPill,
@@ -29,7 +28,7 @@ import { useT, type T } from "../messages/use-t.js"
 import { useHandOff, type HandOff } from "./hand-off.js"
 import { processNameOf, type Named } from "../bpmn-names.js"
 import { NamedId } from "./names.js"
-import { Figure } from "./figure.js"
+import { Figure, FigureLegend, Legend } from "./figure.js"
 
 /** The landscape payload: the figures plus the process names behind the matrix's keys. */
 export type EngineLandscapeView = Named<EngineLandscapeResult>
@@ -188,7 +187,13 @@ function EngineRow({ engine: e, t }: { engine: EngineLandscapeEngine; t: T }) {
       <Td>
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-mono font-medium">{e.engineId}</span>
-          {!e.reporting && <StatusBadge tone="warning">{t("aLandscape.noMetrics")}</StatusBadge>}
+          {/* The badge may go under the id in a narrow column, but never
+              breaks inside itself ("no / metrics"): a pill is one line. */}
+          {!e.reporting && (
+            <StatusBadge tone="warning" className="whitespace-nowrap">
+              {t("aLandscape.noMetrics")}
+            </StatusBadge>
+          )}
         </span>
       </Td>
       <CountCell value={e.runningInstances} t={t} />
@@ -212,16 +217,10 @@ function EngineRow({ engine: e, t }: { engine: EngineLandscapeEngine; t: T }) {
   )
 }
 
-/** A quiet note under a table: what a sign in it means. */
-function Legend({ children }: { children: ReactNode }) {
-  return <p className="text-muted-foreground text-small mt-2">{children}</p>
-}
-
 function EngineTable({ data, t }: { data: EngineLandscapeView; t: T }) {
   if (data.engines.length === 0) {
     return <TableEmptyState>{t("aLandscape.emptyEngines")}</TableEmptyState>
   }
-  const silent = data.engines.some((e) => !e.reporting)
   return (
     <section>
       <SectionHeading title={t("aLandscape.engines.title")} hint={t("aLandscape.engines.hint")} />
@@ -237,12 +236,7 @@ function EngineTable({ data, t }: { data: EngineLandscapeView; t: T }) {
           <EngineRow key={e.engineId} engine={e} t={t} />
         ))}
       </ListTable>
-      {silent && (
-        <Legend>
-          <span className="text-foreground font-medium">{formatNumber(null)}</span>{" "}
-          {t("aLandscape.legendUnknown")}
-        </Legend>
-      )}
+      <FigureLegend reasons={[data.engines.some((e) => !e.reporting) && t("aLandscape.unknown")]} />
     </section>
   )
 }
@@ -324,7 +318,12 @@ function ProcessMatrix({ data, t }: { data: EngineLandscapeView; t: T }) {
       </ListTable>
       <Legend>{t("aLandscape.legendNotDeployed")}</Legend>
       {silent.length > 0 && (
-        <Legend>{t("aLandscape.silentNote", { engines: silent.join(", ") })}</Legend>
+        <Legend>
+          {t("aLandscape.silentNote", {
+            count: formatNumber(silent.length),
+            engines: silent.join(", "),
+          })}
+        </Legend>
       )}
     </section>
   )

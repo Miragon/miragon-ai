@@ -13,7 +13,10 @@ import {
   headers,
   iconOf,
   kpiTone,
+  legendLines,
   metaLine,
+  missing,
+  missingFigures,
   plain,
   renderIn,
   withWidgetClock,
@@ -147,7 +150,9 @@ describe("the analytics dashboard in German", () => {
       partial: false,
       suppressed: false,
     }
-    renderIn("de", ExecutionPerformanceKpi, { ...DASHBOARD, previous })
+    // The process held fixed: the only scope a change of the rate says something about.
+    const scoped = { ...DASHBOARD, processDefinitionKey: "miraveloLeasing" }
+    renderIn("de", ExecutionPerformanceKpi, { ...scoped, previous })
     const worse = screen.getByText("Vorperiode: 1,3, schlechter")
     expect(iconOf(worse.parentElement!)).toContain("lucide-trending-up")
     expect(iconOf(worse.parentElement!)).toContain("text-danger")
@@ -157,7 +162,7 @@ describe("the analytics dashboard in German", () => {
 
     // Below the threshold of 1 per 100 starts: the number, no verdict.
     renderIn("de", ExecutionPerformanceKpi, {
-      ...DASHBOARD,
+      ...scoped,
       previous: { ...previous, incidentRatePct: 3 },
     })
     const flat = screen.getByText("Vorperiode: 3")
@@ -167,7 +172,7 @@ describe("the analytics dashboard in German", () => {
 
     // Over too few starts: shown, not judged.
     renderIn("en", ExecutionPerformanceKpi, {
-      ...DASHBOARD,
+      ...scoped,
       previous: { ...previous, suppressed: true },
     })
     const noisy = screen.getByText("Previous period: 1.3, not reliable")
@@ -175,10 +180,29 @@ describe("the analytics dashboard in German", () => {
     cleanup()
 
     renderIn("en", ExecutionPerformanceKpi, {
-      ...DASHBOARD,
+      ...scoped,
       previous: { ...previous, totalCount: 0, incidentsCreated: 0, incidentRatePct: null },
     })
     expect(screen.getByText("Previous period: no starts")).toBeTruthy()
+  })
+
+  // Simpson's paradox: over several processes the rate moves with their mix,
+  // even while no process changed, so its change is no verdict.
+  it("names the previous rate of a dashboard over several processes without judging it", () => {
+    const previous = {
+      totalCount: 1500,
+      incidentsCreated: 20,
+      incidentRatePct: 1.3,
+      partial: false,
+      suppressed: false,
+    }
+    renderIn("de", ExecutionPerformanceKpi, { ...DASHBOARD, previous })
+    const reference = screen.getByText("Vorperiode: 1,3")
+    const line = reference.parentElement!
+    expect(iconOf(line)).toBe("")
+    expect(line.querySelector("[class*='bg-danger'], [class*='bg-success']")).toBeNull()
+    expect(screen.queryByText(/schlechter|besser/)).toBeNull()
+    expect(kpiTone("Incidents je 100 Starts")).toBeUndefined()
   })
 
   it("lays the breakdown out as a table with right-aligned figures", () => {
@@ -203,16 +227,26 @@ describe("the analytics dashboard in German", () => {
     const started = screen.getByText("1.288").closest("td")!
     expect(started.className).toContain("text-right")
     expect(started.className).toContain("tabular-nums")
-    // Not measured is "—", never 0, and its tooltip says why (U17).
+    // Not measured is "—", never 0, and it says why (U17): read out in its
+    // place, as the tooltip, and in the key under the table for everyone.
     const invoiceRow = screen.getByText("invoice").closest("tr")!
-    expect(
-      within(invoiceRow)
-        .getAllByText("—")
-        .map((dash) => dash.getAttribute("title")),
-    ).toEqual([
-      "Keine Engine meldet diesen Wert: unbekannt",
-      "In diesem Zeitraum ist nichts beendet: keine Dauer",
+    expect(missingFigures(invoiceRow)).toEqual([
+      missing("Keine Engine meldet diesen Wert: unbekannt"),
+      missing("In diesem Zeitraum ist nichts beendet: keine Dauer"),
     ])
+    expect(legendLines()).toEqual([
+      "— Keine Engine meldet diesen Wert: unbekannt",
+      "— In diesem Zeitraum ist nichts beendet: keine Dauer",
+    ])
+  })
+
+  it("shows no key under a breakdown without a missing figure", () => {
+    renderIn("de", ProcessDefinitionBreakdown, {
+      ...DASHBOARD,
+      definitionBreakdown: [DASHBOARD.definitionBreakdown[0]],
+    })
+    expect(missingFigures(document.body)).toEqual([])
+    expect(legendLines()).toEqual([])
   })
 
   // CI §3.3, decisions f and o: new incidents are a volume of the period, as
@@ -255,10 +289,12 @@ describe("the analytics dashboard in German", () => {
     // An unknown name: the id leads; the engine's own type name folded into the BPMN element.
     const paid = screen.getByText("Event_Paid").closest("td")!
     expect(plain(paid.textContent)).toBe("Event_PaidEndereignis · invoice")
-    // A P95 over nothing that ended: "—" with its reason, never 0 ms.
-    expect(within(paid.closest("tr")!).getByText("—").getAttribute("title")).toBe(
-      "In diesem Zeitraum ist nichts beendet: keine Dauer",
-    )
+    // A P95 over nothing that ended: "—" with its reason, never 0 ms, and
+    // the key under the table says it to readers who cannot hover.
+    expect(missingFigures(paid.closest("tr")!)).toEqual([
+      missing("In diesem Zeitraum ist nichts beendet: keine Dauer"),
+    ])
+    expect(legendLines()).toEqual(["— In diesem Zeitraum ist nichts beendet: keine Dauer"])
     expect(screen.getByText("1.240")).toBeTruthy()
     const ask = screen.getAllByRole("button", { name: "Engpass im Chat erklären" })[0]
     expect(iconOf(ask)).toContain("lucide-hourglass")
@@ -346,7 +382,7 @@ describe("the BPMN heatmap", () => {
     })
     expect(
       screen.getByText(
-        "Das Diagramm konnte nicht geladen werden: Die erste konfigurierte Engine war nicht erreichbar, oder der Prozess ist dort nicht bereitgestellt. Prüf die Engine oder frag im Chat nach den Kennzahlen je Aktivität.",
+        "Das Diagramm konnte nicht geladen werden: Keine Engine dieser Ansicht hat es geliefert. Prüf, ob die Engines erreichbar sind und der Prozess bereitgestellt ist, oder frag im Chat nach den Kennzahlen je Aktivität.",
       ),
     ).toBeTruthy()
     expect(screen.queryByText(/camunda7-Modul/)).toBeNull()

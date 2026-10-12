@@ -21,17 +21,25 @@ const VERDICT_KEY: Record<DeltaVerdict, string> = {
  * on (1 incident per 100 starts) is "worse" (danger arrow) or "better"
  * (success arrow), a smaller one is flat and neutral, and over fewer starts
  * than the comparison floor it reads "not reliable" without a colour.
+ *
+ * Only with the process held fixed: over several processes the rate is a
+ * total over their mix, so it moves when the mix moves while no process
+ * changed, and can even invert the per-process truth (Simpson's paradox, the
+ * reason every comparison requires a `processDefinitionKey`). An unscoped
+ * dashboard names the previous rate as a plain reference: no verdict, no
+ * direction, no colour.
  */
 export function incidentRateTrend(
   t: T,
-  data: Pick<DashboardView, "incidentRatePct" | "previous">,
+  data: Pick<DashboardView, "incidentRatePct" | "previous" | "processDefinitionKey">,
 ): Pick<KpiCell, "trend" | "trendDirection" | "trendTone"> {
   const previous = data.previous
   if (!previous || data.incidentRatePct === null) return {}
   if (previous.incidentRatePct === null) return { trend: t("aExecPerf.previousNoStarts") }
+  const value = rate(previous.incidentRatePct)
+  if (!data.processDefinitionKey) return { trend: t("aExecPerf.previous", { value }) }
   const change = data.incidentRatePct - previous.incidentRatePct
   const verdict = deltaVerdict(change, RATE_UP_IS_WORSE, previous.suppressed)
-  const value = rate(previous.incidentRatePct)
   if (!verdict) {
     return {
       trend: t("aExecPerf.previous", { value }),

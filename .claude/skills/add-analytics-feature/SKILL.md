@@ -232,14 +232,24 @@ Rules while building:
 - Names before ids (U13): metrics carry ids only; a view that lists processes or
   activities passes its payload through `src/named-views.ts` in the show tool, its feed
   AND its step (one function each), which adds `names` from the injected BPMN lookup
-  (`createNameLookup` in `src/bpmn-name-lookup.ts`: one read per key and five minutes,
-  2 s at most, a failure leaves the key out). The widget shows `NamedId`
+  (`createNameLookup` in `src/bpmn-name-lookup.ts`). Each model is read on the engines
+  the view's rows come from (`engines`, or `enginesByKey` per process), in order, until
+  one has it, so a process that runs only on a later engine is named too. An engine's
+  answer is kept five minutes PER CALLER (`callerCacheKey` from widget-shell: under
+  passthrough auth the engine answers with the caller's own permissions, so one caller's names never reach
+  another); `null` from the injected `FetchBpmnXml` means "not deployed there" and is
+  kept, a failed read REJECTS and is never kept. A view waits 2 s at most and reads up
+  to 40 keys, named by priority (the dashboard: its scope, then the activities'
+  processes, then the breakdown's). The widget shows `NamedId`
   (`src/widgets/names.tsx`: the name first, the id quiet in mono below, the id alone in
   mono without a name) and an activity's type in words (`activityTypeLabel`).
 - A count nobody measured is `null` and renders "—" through `Figure`
-  (`src/widgets/figure.tsx`, the reason as its tooltip), one meaning everywhere; a silent
-  engine's counts are null, never 0. A different state (a process not deployed on an
-  engine) gets its own sign and a legend line.
+  (`src/widgets/figure.tsx`: the reason is read out in its place and is its tooltip),
+  one meaning everywhere, and the table puts `FigureLegend` under it (the reasons that
+  occur, one line each), so keyboard and touch readers get the meaning too; a silent
+  engine's counts are null, never 0. A known "none" is words, never "—" ("Kein
+  Prozess"). A different state (a process not deployed on an engine) gets its own sign
+  and a legend line.
 - The heatmap is the kit's `BpmnHeatmapWidget`: ONE hue from `--cd-info-soft` to
   `--cd-blau` (red is for incidents), every element above zero at a visible minimum, a
   legend with the smallest and largest value (`HeatmapLegend` `min`/`max`, formatted),
@@ -256,7 +266,9 @@ Rules while building:
   table. A rate is judged only against a reference, never on its own: the dashboard's
   incident rate against the period before (`previous` in `dashboardData`, the trend of its
   `KpiCell`, `deltaVerdict` with the comparisons' threshold, "not reliable" under the
-  saved `minBucketSize`). A bar scales to the largest value in its table, never to 100, and is a magnitude
+  saved `minBucketSize`), and only with the process held fixed: over several processes
+  the rate is a total over their mix and moves with it, so the trend names the previous
+  rate without a verdict, direction or colour (`incidentRateTrend`). A bar scales to the largest value in its table, never to 100, and is a magnitude
   in the data-viz blue (`TONE_DOT.info`), never a state colour.
   No palette classes or raw colours.
 - Icons are Lucide via `Icon` (devDependency `lucide-react` `0.562.0`, see invariant 6), never

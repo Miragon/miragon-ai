@@ -37,6 +37,13 @@ import { versionCompareCaveats } from "../version-compare-caveats.js"
 /** Said whenever a figure adds up several engines (the deliberate fleet aggregate). */
 const AGGREGATED = " The figures add up every engine listed (aggregated)."
 
+/**
+ * Said for an incident rate over several processes: a total over their mix,
+ * so the screen judges no change of it (`incidentRateTrend`).
+ */
+const MIXED_RATE =
+  " The incident rate totals several processes, so its change against the previous period reflects their mix and is not judged; compare per process."
+
 /** How many definitions an unscoped dashboard covers (none when scoped to one). */
 function definitionCount(data: AnalyticsDashboardData) {
   return data.processDefinitionKey ? undefined : data.definitionBreakdown.length
@@ -78,6 +85,7 @@ export const describeExecutionPerformance: DescribeForModel<AnalyticsDashboardDa
       (data.avgDurationMs === null
         ? " No instance ended in the period, so there are no durations."
         : "") +
+      (data.processDefinitionKey ? "" : MIXED_RATE) +
       (isAggregate(data.engines) ? AGGREGATED : ""),
     ids: {
       engine: engineIdsOf(data.engines),
@@ -90,9 +98,11 @@ export const describeExecutionPerformance: DescribeForModel<AnalyticsDashboardDa
       medianDurationMs: data.medianDurationMs,
       p95DurationMs: data.p95DurationMs,
       incidentRatePct: data.incidentRatePct,
-      // The reference the rate is judged against on screen: the period before.
+      // The reference the rate is judged against on screen (one process
+      // only): the period before.
       previousPeriodIncidentRatePct: data.previous?.incidentRatePct,
-      previousPeriodComparisonNotReliable: data.previous?.suppressed || undefined,
+      previousPeriodComparisonNotReliable:
+        (data.processDefinitionKey && data.previous?.suppressed) || undefined,
     },
     tools: ["analytics_element_bottleneck"],
     surface: ANALYTICS_ONLY_SURFACE,

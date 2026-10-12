@@ -114,14 +114,31 @@ describe("dashboard model descriptions", () => {
       partial: false,
       suppressed: false,
     }
-    const text = describeExecutionPerformance(dashboard({ previous }), {})
+    const scoped = { processDefinitionKey: "order" }
+    const text = describeExecutionPerformance(dashboard({ ...scoped, previous }), {})
     expect(text).toContain("incidentRatePct=12.5, previousPeriodIncidentRatePct=6.7")
     expect(text).not.toContain("NotReliable")
+    expect(text).not.toContain("mix")
     const noisy = describeExecutionPerformance(
-      dashboard({ previous: { ...previous, suppressed: true } }),
+      dashboard({ ...scoped, previous: { ...previous, suppressed: true } }),
       {},
     )
     expect(noisy).toContain("previousPeriodComparisonNotReliable=true")
+  })
+
+  // Simpson's paradox: a rate over several processes moves with their mix.
+  it("says a rate over several processes is not judged against the previous period", () => {
+    const previous = {
+      totalCount: 30,
+      incidentsCreated: 2,
+      incidentRatePct: 6.7,
+      partial: false,
+      suppressed: true,
+    }
+    const text = describeExecutionPerformance(dashboard({ previous }), {})
+    expect(text).toContain("reflects their mix and is not judged")
+    expect(text).toContain("previousPeriodIncidentRatePct=6.7")
+    expect(text).not.toContain("NotReliable")
   })
 
   it("names the busiest definition with its window flows and live state", () => {

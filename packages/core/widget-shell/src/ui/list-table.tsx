@@ -163,7 +163,14 @@ export function listTableCss(
   return rules.join("\n")
 }
 
-/** The group row: a head per group (a `colgroup` header), an empty cell over a column in none. */
+/**
+ * The group row: a head per group, an empty cell over a column in none. A
+ * head is a column header (`scope="col"`) spanning its columns: the HTML
+ * table model assigns it to every cell below the columns it spans.
+ * `scope="colgroup"` would need a `<colgroup>` element to anchor it, and the
+ * table has none (a `<col>` element also keeps a hidden column in the table
+ * model).
+ */
 function GroupRow({ groups }: { groups: ReadonlyArray<ListTableGroup> }) {
   return (
     <tr data-list-table-groups="">
@@ -173,7 +180,7 @@ function GroupRow({ groups }: { groups: ReadonlyArray<ListTableGroup> }) {
         ) : (
           <th
             key={index}
-            scope="colgroup"
+            scope="col"
             colSpan={group.span ?? 1}
             className={cn(
               "border-border text-foreground border-t border-l px-4 pt-2.5 pb-1 text-center",

@@ -94,7 +94,8 @@ function buildSharedResources(
   profileStore: ProfileStore,
 ): SharedResources {
   // From the camunda7 module, for modules that must not depend on the engine
-  // SDK: the BPMN-XML lookup (its primary engine — the analytics heatmap) and
+  // SDK: the BPMN-XML lookup (on any of its engines — the analytics heatmap
+  // and the names in the analytics views) and
   // the configured engine ids (the only engines analytics reads from a
   // possibly shared Prometheus). Absent when camunda7 is inactive: the heatmap
   // degrades, analytics falls back to ANALYTICS_ENGINE_IDS, else fails closed.

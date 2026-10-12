@@ -17,7 +17,7 @@ import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { processNameOf } from "../../bpmn-names.js"
 import { NamedId } from "../names.js"
-import { Figure } from "../figure.js"
+import { Figure, FigureLegend } from "../figure.js"
 
 /**
  * What drives ONE process's open incidents right now (live gauges: open
@@ -151,6 +151,12 @@ export function FailureRateTable({
                   </tr>
                 ))}
               </ListTable>
+              <FigureLegend
+                reasons={[
+                  data.processBreakdown.some((p) => p.incidentRatePct === null) &&
+                    t("aFigure.noRate"),
+                ]}
+              />
             </Section>
           </WidgetShell>
         )

@@ -171,7 +171,8 @@ describe("engine errors as the model reads them (registrar tool)", () => {
       }),
     )!
     const started = Date.now()
-    expect(await fetchBpmnXml("hang")).toBeNull()
+    // A timeout is a failed read, never "not deployed": it rejects.
+    await expect(fetchBpmnXml("hang")).rejects.toThrow()
     expect(Date.now() - started).toBeLessThan(2_000)
   })
 })

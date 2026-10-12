@@ -189,8 +189,11 @@ describe("ListTable: column groups (a head over adjacent columns)", () => {
     const groupRow = rows[0]
     expect(groupRow.hasAttribute("data-list-table-groups")).toBe(true)
     const load = screen.getByRole("columnheader", { name: "Load" })
-    expect(load.getAttribute("scope")).toBe("colgroup")
+    // A column header over the columns it spans: `colgroup` needs a
+    // `<colgroup>` element to anchor it, which the table does not have.
+    expect(load.getAttribute("scope")).toBe("col")
     expect(load.getAttribute("colspan")).toBe("2")
+    expect(screen.getByRole("table").querySelector("colgroup, [scope='colgroup']")).toBeNull()
     expect(screen.getByRole("columnheader", { name: "Backlog" }).getAttribute("colspan")).toBe("1")
     // A column in no group gets an empty cell, not an empty header.
     expect(groupRow.querySelectorAll("td")).toHaveLength(3)

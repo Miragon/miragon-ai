@@ -60,7 +60,7 @@ export function createPlugin(config: AnalyticsPluginConfig): AppPlugin<MCPServer
     timeoutMs: config.timeoutMs,
   })
   const engineScope = createEngineScope(config.engineIds)
-  // ONE name lookup (and its cache) for the tools, the feeds and the steps.
+  // ONE name lookup (and its per-caller cache) for the tools, the feeds and the steps.
   const namesFor = createNameLookup(config.fetchBpmnXml)
   // The steps get the profile store too: a step's omitted period resolves to
   // the caller's saved default, like every tool's.

@@ -61,9 +61,12 @@ metric-backed — use the `camunda7_query_historic_*` tools in the [camunda7 mod
 
 The BPMN heatmap gets its diagram XML via an injected `fetchBpmnXml` shared resource (wired by the
 host app from the camunda7 module), and the dashboards, the failure dashboard and the landscape read
-the process and activity names behind their ids through the same lookup (`bpmn-name-lookup.ts`) —
-this package has **no** engine-SDK dependency, the heatmap
-degrades gracefully without it and the views show ids.
+the process and activity names behind their ids through the same lookup (`bpmn-name-lookup.ts`).
+This package has **no** engine-SDK dependency: the heatmap
+degrades gracefully without it and the views show ids. `fetchBpmnXml(key, engineId?)` reads on the
+named engine (the default one without), resolves `null` for a key not deployed there and rejects a
+failed read; the views ask the engines their rows come from, and the names are cached per caller
+(under passthrough auth the engine answers with each caller's own permissions).
 
 ## Adding an analytics capability
 

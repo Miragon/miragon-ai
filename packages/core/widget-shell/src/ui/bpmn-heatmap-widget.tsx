@@ -10,7 +10,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import { ChevronRight } from "lucide-react"
 import { BpmnHeatmap, HeatmapLegend } from "./bpmn-heatmap.js"
-import { bpmnElementNames, heatRange } from "./bpmn-heatmap/heat-utils.js"
+import { bpmnElementNames, bpmnProcessName, heatRange } from "./bpmn-heatmap/heat-utils.js"
 import { DEFAULT_HEATMAP_LABELS, type BpmnHeatmapLabels } from "./bpmn-heatmap-labels.js"
 import { formatDuration, formatNumber } from "./format.js"
 import { Icon } from "./icon.js"
@@ -123,11 +123,10 @@ export function BpmnHeatmapWidget({
   const kit = kitLabels(useLocale())
   const l = { ...DEFAULT_HEATMAP_LABELS, ...labels }
   const xml = data?.bpmnXml ?? null
-  // The process's own name from its model (U13): the key stays as a quiet id next to it.
-  const processName = useMemo(
-    () => (xml && data ? (bpmnElementNames(xml)[data.processDefinitionKey] ?? null) : null),
-    [xml, data],
-  )
+  // The process's name from its model (U13), by the rule the other analytics
+  // views name it (its own, else its pool's): the key stays a quiet id next to it.
+  const key = data?.processDefinitionKey
+  const processName = useMemo(() => (xml && key ? bpmnProcessName(xml, key) : null), [xml, key])
 
   if (!data) return <TableEmptyState>{l.noData}</TableEmptyState>
   if (!data.bpmnXml) return <TableEmptyState>{l.bpmnUnavailable}</TableEmptyState>

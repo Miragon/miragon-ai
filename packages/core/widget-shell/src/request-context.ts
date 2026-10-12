@@ -23,6 +23,7 @@
  * bundle.
  */
 import { AsyncLocalStorage } from "node:async_hooks"
+import { createHash } from "node:crypto"
 import { resolveCallerId } from "@miragon/mcp-toolkit-core"
 
 /** The per-request slice the ctx-less consumers actually need. */
@@ -45,6 +46,24 @@ const storage = new AsyncLocalStorage<McpRequestInfo>()
 /** The current request's info, or `undefined` outside one (boot, tests, no middleware). */
 export function getMcpRequestInfo(): McpRequestInfo | undefined {
   return storage.getStore()
+}
+
+/**
+ * An opaque, stable key for the current request's caller AND the credential
+ * it presents: the OAuth caller's id and the raw `Authorization` header,
+ * hashed, so no credential is kept by whoever stores the key. For a cache
+ * whose answers depend on whose permissions a read ran under: with
+ * passthrough auth the engine answers each caller with that caller's own
+ * permissions, so one caller's answer must never serve another. Two requests
+ * share a key only with the same caller and the same credential; outside a
+ * request (or without either) the key is the empty string.
+ */
+export function callerCacheKey(): string {
+  const info = storage.getStore()
+  if (!info?.authUserId && !info?.authorization) return ""
+  return createHash("sha256")
+    .update(JSON.stringify([info.authUserId ?? null, info.authorization ?? null]))
+    .digest("base64url")
 }
 
 /**

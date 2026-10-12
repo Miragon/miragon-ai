@@ -133,6 +133,7 @@ export const enSweep: MessageCatalog = {
   "aFailureRate.heading": "Open incidents by process",
   "aFailureRate.tableLabel": "Open incidents per 100 running instances by process definition",
   "aFailureSummary.mostAffected": "Most affected",
+  "aFailureSummary.mostAffectedNone": "No process",
   "aFailureSummary.summaryAriaLabel": "Failure analysis summary",
   "aFailureSummary.title": "Failure analysis",
   "aFailureSummary.totalIncidents": "Open incidents",
@@ -143,7 +144,7 @@ export const enSweep: MessageCatalog = {
   "aHeatmap.bpmnNoCamunda7":
     "The diagram is not available here: without the camunda7 module, analytics cannot load BPMN files. Ask in the chat for the figures per activity instead.",
   "aHeatmap.bpmnNotLoaded":
-    "Could not load the diagram: the first configured engine was unreachable, or the process is not deployed there. Check the engine, or ask in the chat for the figures per activity.",
+    "Could not load the diagram: no engine in this view returned it. Check that the engines are reachable and the process is deployed, or ask in the chat for the figures per activity.",
   "aHeatmap.bpmnUnavailable":
     "Could not load the diagram. Ask in the chat for the figures per activity instead.",
   "aHeatmap.diagramAria": "BPMN diagram with the execution heat per element",
@@ -191,7 +192,6 @@ export const enSweep: MessageCatalog = {
   "aLandscape.kpiProcessesShared": "{count} on several engines",
   "aLandscape.kpiRunning": "Running instances",
   "aLandscape.legendNotDeployed": "An empty cell means the process is not deployed on that engine.",
-  "aLandscape.legendUnknown": "stands for an engine without metrics: its figure is unknown.",
   "aLandscape.matrix.hint": "running instances per engine",
   "aLandscape.matrix.tableLabel": "Process definitions by engine",
   "aLandscape.matrix.title": "What runs where",
@@ -200,7 +200,11 @@ export const enSweep: MessageCatalog = {
   "aLandscape.noMetrics": "no metrics",
   "aLandscape.notDeployed": "not deployed on this engine",
   "aLandscape.sharedBadge": plural("count", "on 1 engine", "on {count} engines"),
-  "aLandscape.silentNote": "Not in the table, as they send no metrics: {engines}.",
+  "aLandscape.silentNote": plural(
+    "count",
+    "No column for {engines}: this engine sends no metrics.",
+    "No columns for {engines}: these engines send no metrics.",
+  ),
   "aLandscape.unknown": "No metrics from this engine: figure unknown",
   "aSettings.heading": "Analytics settings",
   "aSettings.loadError": "Could not load the settings.",

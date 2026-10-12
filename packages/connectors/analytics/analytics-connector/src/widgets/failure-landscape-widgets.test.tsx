@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest"
-import { screen, within } from "@testing-library/react"
+import { cleanup, screen, within } from "@testing-library/react"
 import type { EngineLandscapeResult, FailureDashboardData } from "@miragon-ai/analytics-client"
 import { FailureSummaryKpi } from "./failure-dashboard/summary-kpi.js"
 import { ErrorPatternsTable } from "./failure-dashboard/error-patterns-table.js"
@@ -9,10 +9,14 @@ import { EngineLandscapeWidget } from "./engine-landscape.js"
 import type { Named } from "../bpmn-names.js"
 import {
   AS_OF,
+  groupHeads,
   headers,
   iconOf,
   kpiTone,
+  legendLines,
   metaLine,
+  missing,
+  missingFigures,
   renderIn,
   withWidgetClock,
 } from "./widget-render.test-support.js"
@@ -77,7 +81,7 @@ describe("the failure dashboard", () => {
     expect(screen.getByText("order").className).toContain("font-mono")
   })
 
-  it("marks no state when nothing is open", () => {
+  it("marks no state when nothing is open, and names no process as affected", () => {
     renderIn("en", FailureSummaryKpi, {
       ...FAILURES,
       totalIncidents: 0,
@@ -85,6 +89,19 @@ describe("the failure dashboard", () => {
       mostAffectedProcess: null,
     })
     expect(kpiTone("Open incidents")).toBeUndefined()
+    // Known to be none, so words, quiet: "—" is kept for a figure nobody measured (U17).
+    const none = screen.getByText("No process")
+    expect(none.className).toContain("text-muted-foreground")
+    expect(kpiTone("Most affected")).toBeUndefined()
+    expect(screen.queryByText("—")).toBeNull()
+    cleanup()
+    renderIn("de", FailureSummaryKpi, { ...FAILURES, totalIncidents: 0, mostAffectedProcess: null })
+    expect(screen.getByText("Kein Prozess")).toBeTruthy()
+  })
+
+  it("shows an unnamed most affected process by its key in mono", () => {
+    renderIn("en", FailureSummaryKpi, { ...FAILURES, mostAffectedProcess: "invoice" })
+    expect(screen.getByText("invoice").className).toContain("font-mono")
   })
 
   it("finds the cause of an incident group in the chat (en)", () => {
@@ -148,9 +165,15 @@ describe("the failure dashboard", () => {
       ...FAILURES,
       processBreakdown: [{ ...FAILURES.processBreakdown[0], runningNow: 0, incidentRatePct: null }],
     })
-    expect(screen.getByText("—").getAttribute("title")).toBe(
-      "No running instance reported: no rate",
-    )
+    expect(missingFigures(document.body)).toEqual([
+      missing("No running instance reported: no rate"),
+    ])
+    expect(legendLines()).toEqual(["— No running instance reported: no rate"])
+  })
+
+  it("shows no key under the rate table while every rate is measured", () => {
+    renderIn("en", FailureRateTable, FAILURES)
+    expect(legendLines()).toEqual([])
   })
 })
 
@@ -246,10 +269,7 @@ describe("the cross-engine landscape", () => {
   it("heads the per-engine table's two column groups", () => {
     renderIn("de", EngineLandscapeWidget, LANDSCAPE)
     const table = screen.getByRole("table", { name: "Last und Job-Rückstand je Engine" })
-    const groups = within(table)
-      .getAllByRole("columnheader")
-      .filter((th) => th.getAttribute("scope") === "colgroup")
-    expect(groups.map((th) => [th.textContent, th.getAttribute("colspan")])).toEqual([
+    expect(groupHeads(table)).toEqual([
       ["Last (absolut)", "3"],
       ["Job-Rückstand, über Engines vergleichbar", "4"],
     ])
@@ -271,18 +291,37 @@ describe("the cross-engine landscape", () => {
     renderIn("en", EngineLandscapeWidget, LANDSCAPE)
     const row = screen.getByText("prod-c").closest("tr")!
     expect(within(row).queryByText("0")).toBeNull()
-    const dashes = within(row).getAllByText("—")
-    expect(dashes).toHaveLength(8)
-    expect(dashes[0].getAttribute("title")).toBe("No metrics from this engine: figure unknown")
+    expect(missingFigures(row)).toEqual(
+      Array(8).fill(missing("No metrics from this engine: figure unknown")),
+    )
     const badge = within(row).getByText("no metrics").closest("[data-slot='status-badge']")!
     expect(badge.getAttribute("data-tone")).toBe("warning")
-    expect(
-      screen.getByText("stands for an engine without metrics: its figure is unknown."),
-    ).toBeTruthy()
-    // The silent engine has no column in the matrix; a note names it.
+    // One line in its pill, whatever the column width: never "no / metrics".
+    expect(badge.className).toContain("whitespace-nowrap")
+    // The silent engine has no column in the matrix; a note names it, in the singular.
     const matrix = screen.getByRole("table", { name: "Process definitions by engine" })
     expect(headers(matrix)).not.toContain("prod-c")
-    expect(screen.getByText("Not in the table, as they send no metrics: prod-c.")).toBeTruthy()
+    expect(legendLines()).toEqual([
+      "— No metrics from this engine: figure unknown",
+      "An empty cell means the process is not deployed on that engine.",
+      "No column for prod-c: this engine sends no metrics.",
+    ])
+  })
+
+  it("names several silent engines in the plural (de)", () => {
+    const silent = LANDSCAPE.engines[2]
+    renderIn("de", EngineLandscapeWidget, {
+      ...LANDSCAPE,
+      engines: [...LANDSCAPE.engines, { ...silent, engineId: "prod-d" }],
+    })
+    expect(
+      screen.getByText("Keine Spalten für prod-c, prod-d: Diese Engines melden keine Metriken."),
+    ).toBeTruthy()
+    cleanup()
+    renderIn("de", EngineLandscapeWidget, LANDSCAPE)
+    expect(
+      screen.getByText("Keine Spalte für prod-c: Diese Engine meldet keine Metriken."),
+    ).toBeTruthy()
   })
 
   it("marks a process that is not deployed on an engine as an empty cell, not as unknown", () => {

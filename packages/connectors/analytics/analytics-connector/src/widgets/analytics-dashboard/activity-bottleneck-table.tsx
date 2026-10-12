@@ -17,7 +17,7 @@ import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { elementNameOf, processNameOf } from "../../bpmn-names.js"
 import { NamedId, activityTypeLabel } from "../names.js"
-import { Figure } from "../figure.js"
+import { Figure, FigureLegend } from "../figure.js"
 
 type ActivityRow = AnalyticsDashboardData["activityBreakdown"][number]
 
@@ -163,6 +163,12 @@ export function ActivityBottleneckTable({
                   </tr>
                 ))}
               </ListTable>
+              <FigureLegend
+                reasons={[
+                  rows.some((a) => a.avgDurationMs === null || a.p95DurationMs === null) &&
+                    t("aFigure.nothingEnded"),
+                ]}
+              />
             </Section>
           </WidgetShell>
         )

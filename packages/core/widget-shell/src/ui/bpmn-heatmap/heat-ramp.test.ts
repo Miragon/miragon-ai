@@ -4,6 +4,7 @@ import { CD_TOKENS } from "@miragon/mcp-toolkit-ui"
 import { composite, contrastRatio, type Rgba } from "../../testing/index.js"
 import {
   bpmnElementNames,
+  bpmnProcessName,
   buildGradientLut,
   drawHeatLayer,
   HEAT_GRADIENT_CSS,
@@ -164,6 +165,44 @@ describe("bpmnElementNames", () => {
 
   it("gives no names for a document it cannot parse", () => {
     expect(bpmnElementNames("<not xml")).toEqual({})
+  })
+})
+
+/** The rule the server names a process by (analytics' `parseBpmnNames`), in the browser. */
+describe("bpmnProcessName", () => {
+  const collaboration = (processName: string) => `<?xml version="1.0"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d">
+  <bpmn:collaboration id="c">
+    <bpmn:participant id="Pool_1" name="Invoice&#10;&#10;handling" processRef="invoice" />
+    <bpmn:participant id="Pool_2" name="Other pool" processRef="other" />
+  </bpmn:collaboration>
+  <bpmn:process id="other" name="Other process" />
+  <bpmn:process id="invoice"${processName}>
+    <bpmn:userTask id="approve" name="Approve" />
+  </bpmn:process>
+</bpmn:definitions>`
+
+  it("takes the process's own name first, never another process's", () => {
+    expect(bpmnProcessName(collaboration(' name="Invoice Receipt"'), "invoice")).toBe(
+      "Invoice Receipt",
+    )
+    expect(bpmnProcessName(collaboration(""), "other")).toBe("Other process")
+  })
+
+  it("takes its pool's name when the process has none, line breaks folded", () => {
+    expect(bpmnProcessName(collaboration(""), "invoice")).toBe("Invoice handling")
+    expect(bpmnProcessName(collaboration(' name="  "'), "invoice")).toBe("Invoice handling")
+  })
+
+  it("names no process the diagram does not name, and none for a document it cannot parse", () => {
+    expect(bpmnProcessName(collaboration(""), "unknown")).toBeNull()
+    expect(bpmnProcessName('<definitions><process id="p"/></definitions>', "p")).toBeNull()
+    expect(bpmnProcessName("<not xml", "p")).toBeNull()
+  })
+
+  it("reads a diagram without a namespace prefix", () => {
+    const plain = `<definitions><participant processRef="p" name="Pool"/><process id="p"/></definitions>`
+    expect(bpmnProcessName(plain, "p")).toBe("Pool")
   })
 })
 
