@@ -129,8 +129,27 @@ describe("engineLandscape", () => {
     const res = await engineLandscape(ch, { engine: ["prod-a", "prod-b", "prod-c"] })
 
     const silent = res.engines.find((e) => e.engineId === "prod-c")
-    expect(silent).toMatchObject({ engineId: "prod-c", reporting: false, runningInstances: 0 })
-    expect(res.totals).toMatchObject({ engineCount: 3, reportingEngineCount: 2 })
+    // Unknown, not zero: a row of 0s would read as an idle, healthy engine.
+    expect(silent).toEqual({
+      engineId: "prod-c",
+      reporting: false,
+      runningInstances: null,
+      openIncidents: null,
+      failedJobs: null,
+      executableJobs: null,
+      suspendedJobs: null,
+      jobsDueFuture: null,
+      openExternalTasks: null,
+      deployedDefinitionKeys: null,
+      exclusiveDefinitionKeys: null,
+    })
+    // The totals add up the engines that report.
+    expect(res.totals).toMatchObject({
+      engineCount: 3,
+      reportingEngineCount: 2,
+      runningInstances: 18,
+      openIncidents: 7,
+    })
   })
 
   it("scopes every query by the engine filter", async () => {
@@ -152,6 +171,12 @@ describe("engineLandscape", () => {
 
     expect(res.engines).toEqual([])
     expect(res.processes).toEqual([])
-    expect(res.totals).toMatchObject({ engineCount: 0, processKeyCount: 0, runningInstances: 0 })
+    expect(res.totals).toMatchObject({
+      engineCount: 0,
+      processKeyCount: 0,
+      runningInstances: null,
+      openIncidents: null,
+      failedJobs: null,
+    })
   })
 })

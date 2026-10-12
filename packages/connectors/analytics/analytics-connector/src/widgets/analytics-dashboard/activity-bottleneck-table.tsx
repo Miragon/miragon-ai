@@ -1,27 +1,22 @@
 import {
-  Badge,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  Alert,
-  AlertDescription,
-  Skeleton,
-} from "@miragon/mcp-toolkit-ui"
-import {
   HandOffButton,
+  ListTable,
   Section,
+  TableEmptyState,
+  TableSkeleton,
+  Td,
   WidgetShell,
   formatDuration,
   formatNumber,
+  type ListTableColumn,
 } from "@miragon-ai/widget-shell/widgets"
 import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
-import { useDashboardSelfFetch, type DashboardScopeProps } from "./lib.js"
+import { useDashboardSelfFetch, type DashboardScopeProps, type DashboardView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
-import { useT } from "../../messages/use-t.js"
+import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
+import { elementNameOf, processNameOf } from "../../bpmn-names.js"
+import { NamedId, activityTypeLabel } from "../names.js"
 
 type ActivityRow = AnalyticsDashboardData["activityBreakdown"][number]
 
@@ -55,105 +50,114 @@ export function activityBottleneckHandOff(
 }
 
 /**
+ * The columns by priority (U2): the activity (named, with its id, type and
+ * process below), then the sort key right after it, the executions, and the
+ * two duration columns, which give way only below 640 px (the 760 px inline
+ * view shows every one). The chat hand-off is pinned at the right edge.
+ */
+function columns(t: T): ListTableColumn[] {
+  return [
+    { label: t("aBottleneck.colActivity") },
+    { label: t("aBottleneck.colTotalTime"), align: "right", sort: "descending" },
+    { label: t("aBottleneck.colExecutions"), align: "right" },
+    { label: t("aBottleneck.colAvg"), align: "right", hideBelow: "sm" },
+    { label: t("aBottleneck.colP95"), align: "right", hideBelow: "sm" },
+    { plain: true, sticky: true },
+  ]
+}
+
+/**
  * One row per (process, activity): BPMN ids are only unique within one model,
- * so the same id in two processes is two rows — the process column says which.
+ * so the same id in two processes is two rows — the second line says which
+ * process when the dashboard spans several. The list is the top of the
+ * breakdown by total time; its heading says so when it is cut.
  */
 export function ActivityBottleneckTable({
   data: initialData,
   processDefinitionKey,
   period,
   engine,
-}: { data: AnalyticsDashboardData | null } & DashboardScopeProps) {
+}: { data: DashboardView | null } & DashboardScopeProps) {
   const t = useT()
   const { ask } = useHandOff()
   const fallbackQuery = useDashboardSelfFetch(initialData, { processDefinitionKey, period, engine })
 
   return (
-    <QueryGate
-      initialData={initialData}
-      query={fallbackQuery}
-      skeleton={
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full rounded" />
-          ))}
-        </div>
-      }
-    >
-      {(data) =>
-        data.activityBreakdown.length === 0 ? (
-          <WidgetShell>
-            <Alert>
-              <AlertDescription>{t("aBottleneck.emptyState")}</AlertDescription>
-            </Alert>
-          </WidgetShell>
-        ) : (
+    <QueryGate initialData={initialData} query={fallbackQuery} skeleton={<TableSkeleton />}>
+      {(data) => {
+        const rows = data.activityBreakdown
+        if (rows.length === 0) {
+          return (
+            <WidgetShell>
+              <TableEmptyState description={t("aBottleneck.emptyHint")}>
+                {t("aBottleneck.emptyState")}
+              </TableEmptyState>
+            </WidgetShell>
+          )
+        }
+        const cut = data.activityCount > rows.length
+        const fleet = data.processDefinitionKey === null
+        return (
           <WidgetShell>
             <Section
-              title={t("aBottleneck.heading")}
-              count={data.activityBreakdown.length}
+              title={
+                cut
+                  ? t("aBottleneck.headingTop", { count: formatNumber(rows.length) })
+                  : t("aBottleneck.heading")
+              }
+              count={cut ? undefined : rows.length}
               defaultOpen
             >
-              <div className="border-border rounded-lg border">
-                <Table aria-label={t("aBottleneck.tableLabel")}>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead scope="col">{t("aBottleneck.colProcess")}</TableHead>
-                      <TableHead scope="col">{t("aBottleneck.colActivity")}</TableHead>
-                      <TableHead scope="col">{t("aBottleneck.colType")}</TableHead>
-                      <TableHead scope="col" className="text-right">
-                        {t("aBottleneck.colExecutions")}
-                      </TableHead>
-                      <TableHead scope="col" className="text-right">
-                        {t("aBottleneck.colAvg")}
-                      </TableHead>
-                      <TableHead scope="col" className="text-right">
-                        {t("aBottleneck.colP95")}
-                      </TableHead>
-                      <TableHead scope="col" className="text-right">
-                        {t("aBottleneck.colTotalTime")}
-                      </TableHead>
-                      <TableHead scope="col" className="w-px" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.activityBreakdown.map((act) => (
-                      <TableRow key={`${act.processDefinitionKey}:${act.activityId}`}>
-                        <TableCell className="font-mono text-sm">
-                          {act.processDefinitionKey}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{act.activityId}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{act.activityType}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatNumber(act.executionCount)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatDuration(act.avgDurationMs)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatDuration(act.p95DurationMs)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatDuration(act.totalTimeMs)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <HandOffButton
-                            action="explainBottleneck"
-                            variant="icon"
-                            prompt={ask(activityBottleneckHandOff(act, data))}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              {cut && (
+                <p className="text-muted-foreground text-small mb-2">
+                  {t("aBottleneck.topNote", {
+                    count: formatNumber(rows.length),
+                    total: formatNumber(data.activityCount),
+                  })}
+                </p>
+              )}
+              <ListTable ariaLabel={t("aBottleneck.tableLabel")} columns={columns(t)}>
+                {rows.map((act) => (
+                  <tr key={`${act.processDefinitionKey}:${act.activityId}`}>
+                    <Td>
+                      <NamedId
+                        name={elementNameOf(data.names, act.processDefinitionKey, act.activityId)}
+                        id={act.activityId}
+                        detail={[
+                          activityTypeLabel(t, act.activityType),
+                          fleet
+                            ? (processNameOf(data.names, act.processDefinitionKey) ??
+                              act.processDefinitionKey)
+                            : null,
+                        ]}
+                      />
+                    </Td>
+                    <Td align="right" className="font-medium whitespace-nowrap tabular-nums">
+                      {formatDuration(act.totalTimeMs)}
+                    </Td>
+                    <Td align="right" className="tabular-nums">
+                      {formatNumber(act.executionCount)}
+                    </Td>
+                    <Td align="right" className="whitespace-nowrap tabular-nums">
+                      {formatDuration(act.avgDurationMs)}
+                    </Td>
+                    <Td align="right" className="whitespace-nowrap tabular-nums">
+                      {formatDuration(act.p95DurationMs)}
+                    </Td>
+                    <Td align="right">
+                      <HandOffButton
+                        action="explainBottleneck"
+                        variant="icon"
+                        prompt={ask(activityBottleneckHandOff(act, data))}
+                      />
+                    </Td>
+                  </tr>
+                ))}
+              </ListTable>
             </Section>
           </WidgetShell>
         )
-      }
+      }}
     </QueryGate>
   )
 }

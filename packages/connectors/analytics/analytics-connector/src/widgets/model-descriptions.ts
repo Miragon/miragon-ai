@@ -90,6 +90,9 @@ export const describeExecutionPerformance: DescribeForModel<AnalyticsDashboardDa
       medianDurationMs: data.medianDurationMs,
       p95DurationMs: data.p95DurationMs,
       incidentRatePct: data.incidentRatePct,
+      // The reference the rate is judged against on screen: the period before.
+      previousPeriodIncidentRatePct: data.previous?.incidentRatePct,
+      previousPeriodComparisonNotReliable: data.previous?.suppressed || undefined,
     },
     tools: ["analytics_element_bottleneck"],
     surface: ANALYTICS_ONLY_SURFACE,
@@ -136,6 +139,9 @@ export const describeActivityBottlenecks: DescribeForModel<AnalyticsDashboardDat
     },
     facts: {
       rows: data.activityBreakdown.length,
+      // The list is the top of the breakdown by total time: how many there were in all.
+      activitiesInAll:
+        data.activityCount > data.activityBreakdown.length ? data.activityCount : undefined,
       topProcessDefinitionKey: top?.processDefinitionKey,
       topActivityId: top?.activityId,
       topExecutions: top?.executionCount,
@@ -332,8 +338,14 @@ export const describeEngineCompare: DescribeForModel<EngineCompareData> = (data)
 export const describeEngineLandscape: DescribeForModel<EngineLandscapeData> = (data) => {
   const { totals } = data
   const silent = data.engines.filter((e) => !e.reporting).map((e) => e.engineId)
-  const busiest = [...data.engines].sort((a, b) => b.runningInstances - a.runningInstances)[0]
-  const backlog = [...data.engines].sort((a, b) => b.executableJobs - a.executableJobs)[0]
+  // Ranked among the engines that report: a silent engine's counts are unknown (null).
+  const measured = data.engines.flatMap((e) =>
+    e.reporting
+      ? [{ ...e, running: e.runningInstances ?? 0, executable: e.executableJobs ?? 0 }]
+      : [],
+  )
+  const busiest = [...measured].sort((a, b) => b.running - a.running)[0]
+  const backlog = [...measured].sort((a, b) => b.executable - a.executable)[0]
   const shared = data.sharedProcessKeys.length > 0
   return modelContextText({
     summary:
@@ -352,10 +364,10 @@ export const describeEngineLandscape: DescribeForModel<EngineLandscapeData> = (d
       openIncidents: totals.openIncidents,
       enginesReportingNoMetrics: silent.length > 0 ? silent : undefined,
       busiestEngine: busiest?.engineId,
-      busiestRunningInstances: busiest?.runningInstances,
-      largestBacklogEngine: backlog && backlog.executableJobs > 0 ? backlog.engineId : undefined,
+      busiestRunningInstances: busiest?.running,
+      largestBacklogEngine: backlog && backlog.executable > 0 ? backlog.engineId : undefined,
       largestBacklogExecutableJobs:
-        backlog && backlog.executableJobs > 0 ? backlog.executableJobs : undefined,
+        backlog && backlog.executable > 0 ? backlog.executable : undefined,
       sharedProcessKeys: shared ? data.sharedProcessKeys : undefined,
     },
     tools: ["analytics_engine_compare", "analytics_engine_health"].filter(

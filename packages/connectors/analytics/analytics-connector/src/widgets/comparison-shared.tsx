@@ -131,7 +131,8 @@ export type ComparisonMetric = {
 }
 
 const VOLUME: DeltaRule = { kind: "volume" }
-const RATE_UP_IS_WORSE: DeltaRule = {
+/** Incidents per 100 starts: up is worse, from 1 per 100 starts on (also the dashboard's trend). */
+export const RATE_UP_IS_WORSE: DeltaRule = {
   kind: "quality",
   worseIfUp: true,
   minChange: RATE_MIN_CHANGE,
@@ -257,7 +258,7 @@ function DeltaCell({
           />
         )}
         {formatDelta(delta.value, delta.unit)}
-        {word && <span className="text-muted-foreground text-xs">{word}</span>}
+        {word && <span className="text-muted-foreground text-small">{word}</span>}
       </span>
     </TableCell>
   )
@@ -282,7 +283,7 @@ export function ComparisonEmptyState({ children }: { children: ReactNode }) {
 export function SuppressedBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="text-foreground inline-flex w-fit shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+      className="text-foreground text-small inline-flex w-fit shrink-0 items-center gap-1 rounded-sm border px-2 py-0.5 font-medium whitespace-nowrap"
       data-suppressed=""
     >
       <Icon icon={CircleAlert} dense />
@@ -330,7 +331,7 @@ export function ComparisonCard({
     <Card>
       <CardContent>
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-foreground text-base font-semibold">{title}</h2>
+          <h2 className="text-foreground text-section">{title}</h2>
           {badges}
           {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
         </div>

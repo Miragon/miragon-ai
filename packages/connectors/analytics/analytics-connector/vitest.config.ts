@@ -32,8 +32,11 @@ export default mergeConfig(
         // missing-diagram cause, the measured window lengths under test):
         // measured 92.8 / 79.36 / 92.95 / 94.67. Raised again with the kit
         // layout (the query gate's retry and the settings save's toasts under
-        // test): measured 95.08 / 83.15 / 95.21 / 97.21.
-        thresholds: { statements: 93, branches: 81, functions: 93, lines: 95 },
+        // test): measured 95.08 / 83.15 / 95.21 / 97.21. Raised again with the
+        // analytics pass (the name lookup, the named views, the settings
+        // validation and the landscape's unknown engines under test):
+        // measured 96.82 / 88.5 / 96.94 / 98.44.
+        thresholds: { statements: 94, branches: 86, functions: 94, lines: 96 },
       },
     },
   }),

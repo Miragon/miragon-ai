@@ -2,6 +2,7 @@ import { PERIODS, type PrometheusClient, type Period } from "@miragon-ai/analyti
 import type { AnalyticsEngineScope } from "../engine-ids.js"
 import type { ProfileSource } from "../server-locale.js"
 import { settingsFor } from "../settings.js"
+import type { NameLookup } from "../bpmn-name-lookup.js"
 
 /** What the analytics plugin hands its pipeline steps (`appConfig` in `plugin.ts`). */
 export interface AnalyticsAppConfig {
@@ -10,6 +11,8 @@ export interface AnalyticsAppConfig {
   engineScope: AnalyticsEngineScope
   /** The shared profile store — the source of the caller's saved analytics defaults. */
   profileStore?: ProfileSource
+  /** The process names behind the ids, the same lookup the tools use (absent → ids). */
+  namesFor?: NameLookup
 }
 
 /*

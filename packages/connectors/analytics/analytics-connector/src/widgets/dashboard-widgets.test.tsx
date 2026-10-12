@@ -1,66 +1,36 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { ComponentType } from "react"
-import { cleanup, render, screen } from "@testing-library/react"
-import { LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
-import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import type {
-  AnalyticsDashboardData,
-  EngineLandscapeResult,
-  FailureDashboardData,
-} from "@miragon-ai/analytics-client"
-import { setFormatLocale } from "@miragon-ai/widget-shell/testing"
+import { describe, expect, it } from "vitest"
+import { cleanup, screen, within } from "@testing-library/react"
+import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
 import { ExecutionSummaryKpi } from "./analytics-dashboard/execution-summary-kpi.js"
 import { ExecutionPerformanceKpi } from "./analytics-dashboard/execution-performance-kpi.js"
 import { ProcessDefinitionBreakdown } from "./analytics-dashboard/definition-breakdown.js"
 import { ActivityBottleneckTable } from "./analytics-dashboard/activity-bottleneck-table.js"
-import { FailureSummaryKpi } from "./failure-dashboard/summary-kpi.js"
-import { ErrorPatternsTable } from "./failure-dashboard/error-patterns-table.js"
-import { FailureRateTable } from "./failure-dashboard/failure-rate-table.js"
-import { EngineLandscapeWidget } from "./engine-landscape.js"
 import { AnalyticsBpmnHeatmap, type AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
+import type { Named } from "../bpmn-names.js"
+import {
+  AS_OF,
+  headers,
+  iconOf,
+  kpiTone,
+  metaLine,
+  plain,
+  renderIn,
+  withWidgetClock,
+} from "./widget-render.test-support.js"
 
 /**
- * The dashboards as a person reads them, in German and English: numbers in
- * the view's locale, the reference frame under the title (U7), and every
- * hand-off named after its function and the chat (U4) with a Lucide icon.
+ * The analytics dashboard and the heatmap as a person reads them, in German
+ * and English: numbers in the view's locale, the reference frame under the
+ * title (U7), names before ids (U13), numbers neutral with the state as a dot
+ * (U14), and every hand-off named after its function and the chat (U4) with
+ * a Lucide icon. The failure dashboard and the landscape:
+ * `failure-landscape-widgets.test.tsx`.
  */
 
-const NOW = "2026-10-10T12:40:00.000Z"
-const AS_OF = "2026-10-10T12:32:00.000Z"
+withWidgetClock()
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date"] })
-  vi.setSystemTime(new Date(NOW))
-})
-afterEach(() => {
-  cleanup()
-  queryClient.clear()
-  setFormatLocale(undefined)
-  vi.useRealTimers()
-})
-
-function renderIn(language: "de" | "en", Widget: ComponentType<{ data: never }>, data: unknown) {
-  setFormatLocale({
-    language,
-    locale: language === "de" ? "de-DE" : "en-GB",
-    timeZone: "Europe/Berlin",
-  })
-  return render(
-    <LocaleProvider locale={language}>
-      <WidgetFixtureHost
-        widget={Widget as unknown as ComponentType<Record<string, unknown>>}
-        data={data as Record<string, unknown>}
-      />
-    </LocaleProvider>,
-  )
-}
-
-const plain = (s: string | null | undefined) => s?.replace(/\u00a0/g, " ")
-const metaLine = () => plain(document.querySelector("[data-view-meta]")?.textContent)
-const iconOf = (el: HTMLElement) => el.querySelector("svg")?.getAttribute("class") ?? ""
-
-const DASHBOARD: AnalyticsDashboardData = {
+const DASHBOARD: Named<AnalyticsDashboardData> = {
   processDefinitionKey: null,
   period: "7d",
   engines: ["prod-a", "prod-b", "prod-c"],
@@ -76,6 +46,7 @@ const DASHBOARD: AnalyticsDashboardData = {
   p95DurationMs: 73_860_000,
   runningNow: 52,
   openIncidentsNow: null,
+  previous: null,
   activityBreakdown: [
     {
       processDefinitionKey: "miraveloLeasing",
@@ -86,7 +57,17 @@ const DASHBOARD: AnalyticsDashboardData = {
       p95DurationMs: 420_000,
       totalTimeMs: 231_880_000,
     },
+    {
+      processDefinitionKey: "invoice",
+      activityId: "Event_Paid",
+      activityType: "noneEndEvent",
+      executionCount: 300,
+      avgDurationMs: 0,
+      p95DurationMs: null,
+      totalTimeMs: 0,
+    },
   ],
+  activityCount: 2,
   definitionBreakdown: [
     {
       processDefinitionKey: "miraveloLeasing",
@@ -96,7 +77,21 @@ const DASHBOARD: AnalyticsDashboardData = {
       incidentsCreated: 1,
       avgDurationMs: 8_340_000,
     },
+    {
+      processDefinitionKey: "invoice",
+      totalInstances: 341,
+      completed: 220,
+      runningNow: null,
+      incidentsCreated: 0,
+      avgDurationMs: null,
+    },
   ],
+  names: {
+    miraveloLeasing: {
+      name: "Bike Leasing",
+      elements: { Activity_DecideOnApplication: "Decide on application" },
+    },
+  },
 }
 
 describe("the analytics dashboard in German", () => {
@@ -112,13 +107,26 @@ describe("the analytics dashboard in German", () => {
     expect(iconOf(ask)).toContain("lucide-list-checks")
   })
 
-  it("names the process a scoped dashboard is about first", () => {
+  it("names the process a scoped dashboard is about first, by its name when known", () => {
     renderIn("de", ExecutionSummaryKpi, {
       ...DASHBOARD,
       processDefinitionKey: "order",
       period: "1d",
     })
     expect(metaLine()).toBe("order · Letzte 24 Stunden · 3 Engines (1 ohne Metriken) · Stand 14:32")
+    cleanup()
+    renderIn("de", ExecutionSummaryKpi, { ...DASHBOARD, processDefinitionKey: "miraveloLeasing" })
+    expect(metaLine()).toMatch(/^Bike Leasing · Letzte 7 Tage/)
+  })
+
+  // U14: counts of what happened carry no state; only an open incident does.
+  it("keeps every count neutral and marks only open incidents", () => {
+    renderIn("de", ExecutionSummaryKpi, { ...DASHBOARD, openIncidentsNow: 21 })
+    for (const label of ["Gestartet", "Abgeschlossen", "Neue Incidents", "Laufen gerade"]) {
+      expect(kpiTone(label), label).toBeUndefined()
+    }
+    expect(kpiTone("Offene Incidents jetzt")).toBe("danger")
+    expect(document.querySelector("[class*='text-success'], [class*='text-info']")).toBeNull()
   })
 
   it("shows an incident rate as incidents per 100 starts, not as a share", () => {
@@ -126,32 +134,148 @@ describe("the analytics dashboard in German", () => {
     expect(screen.getByText("Incidents je 100 Starts")).toBeTruthy()
     expect(screen.getByText("3,4")).toBeTruthy()
     expect(plain(screen.getByText(/^8 h/).textContent)).toBe("8 h 34 Min.")
+    // No previous period (a 30-day view): no verdict, no tone.
+    expect(kpiTone("Incidents je 100 Starts")).toBeUndefined()
+    expect(screen.queryByText(/Vorperiode/)).toBeNull()
   })
 
-  it("counts in the plural only from two on", () => {
-    renderIn("de", ProcessDefinitionBreakdown, DASHBOARD)
-    expect(screen.getByText("1.288 gestartet")).toBeTruthy()
-    expect(screen.getByText("1 läuft gerade")).toBeTruthy()
-    expect(screen.getByText("1 Incident")).toBeTruthy()
-  })
-
-  // CI §3.3, decision f: a number is never coloured; the words say what it counts.
-  it("renders the breakdown's counts neutral, never as coloured digits", () => {
-    const { container } = renderIn("de", ProcessDefinitionBreakdown, DASHBOARD)
-    for (const text of ["1.288 gestartet", "1.262 abgeschlossen", "1 läuft gerade"]) {
-      expect(screen.getByText(text).className, text).not.toMatch(
-        /text-(success|warning|danger|info)/,
-      )
+  it("judges the incident rate only against the previous period, from its threshold on", () => {
+    const previous = {
+      totalCount: 1500,
+      incidentsCreated: 20,
+      incidentRatePct: 1.3,
+      partial: false,
+      suppressed: false,
     }
-    expect(container.querySelector("[class*='-ink']")).toBeNull()
+    renderIn("de", ExecutionPerformanceKpi, { ...DASHBOARD, previous })
+    const worse = screen.getByText("Vorperiode: 1,3, schlechter")
+    expect(iconOf(worse.parentElement!)).toContain("lucide-trending-up")
+    expect(iconOf(worse.parentElement!)).toContain("text-danger")
+    // The rate itself stays neutral: the verdict is the trend, never the digit.
+    expect(kpiTone("Incidents je 100 Starts")).toBeUndefined()
+    cleanup()
+
+    // Below the threshold of 1 per 100 starts: the number, no verdict.
+    renderIn("de", ExecutionPerformanceKpi, {
+      ...DASHBOARD,
+      previous: { ...previous, incidentRatePct: 3 },
+    })
+    const flat = screen.getByText("Vorperiode: 3")
+    expect(iconOf(flat.parentElement!)).toContain("lucide-minus")
+    expect(iconOf(flat.parentElement!)).not.toMatch(/text-(danger|success)/)
+    cleanup()
+
+    // Over too few starts: shown, not judged.
+    renderIn("en", ExecutionPerformanceKpi, {
+      ...DASHBOARD,
+      previous: { ...previous, suppressed: true },
+    })
+    const noisy = screen.getByText("Previous period: 1.3, not reliable")
+    expect(iconOf(noisy.parentElement!)).not.toMatch(/text-(danger|success)/)
+    cleanup()
+
+    renderIn("en", ExecutionPerformanceKpi, {
+      ...DASHBOARD,
+      previous: { ...previous, totalCount: 0, incidentsCreated: 0, incidentRatePct: null },
+    })
+    expect(screen.getByText("Previous period: no starts")).toBeTruthy()
   })
 
-  it("explains a bottleneck in the chat from a labelled icon button", () => {
+  it("lays the breakdown out as a table with right-aligned figures", () => {
+    renderIn("de", ProcessDefinitionBreakdown, DASHBOARD)
+    const table = screen.getByRole("table", {
+      name: "Starts, Abschlüsse, laufende Instanzen und Incidents je Prozess",
+    })
+    expect(headers(table)).toEqual([
+      "Prozess",
+      "Gestartet",
+      "Abgeschlossen",
+      "Laufen gerade",
+      "Neue Incidents",
+      "Durchschn. Dauer",
+    ])
+    // The name first, the key below it, quiet and in mono.
+    expect(screen.getByText("Bike Leasing")).toBeTruthy()
+    const key = screen.getByText("miraveloLeasing")
+    expect(key.className).toContain("font-mono")
+    // Without a known name the key leads, still in mono.
+    expect(screen.getByText("invoice").className).toContain("font-mono")
+    const started = screen.getByText("1.288").closest("td")!
+    expect(started.className).toContain("text-right")
+    expect(started.className).toContain("tabular-nums")
+    // Not reported is "—", never 0.
+    const invoiceRow = screen.getByText("invoice").closest("tr")!
+    expect(within(invoiceRow).getAllByText("—")).toHaveLength(2)
+  })
+
+  // CI §3.3, decision f: a number is never coloured; a dot marks the state.
+  it("gives only a process with new incidents a danger dot", () => {
+    const { container } = renderIn("de", ProcessDefinitionBreakdown, DASHBOARD)
+    const dots = container.querySelectorAll("[data-tone='danger']")
+    expect(dots).toHaveLength(1)
+    expect(dots[0].closest("tr")?.textContent).toContain("Bike Leasing")
+    expect(container.querySelector("[class*='-ink']")).toBeNull()
+    expect(container.querySelector("[class*='text-success'], [class*='text-danger']")).toBeNull()
+  })
+
+  it("names the activities, keeps the sort key next to them and explains a bottleneck in the chat", () => {
     renderIn("de", ActivityBottleneckTable, DASHBOARD)
     expect(screen.getByText("Aktivitäten nach Gesamtzeit")).toBeTruthy()
+    const table = screen.getByRole("table", {
+      name: "Aktivitäten je Prozess, sortiert nach gesamter Ausführungszeit",
+    })
+    expect(headers(table).slice(0, 5)).toEqual([
+      "Aktivität",
+      "Gesamtzeit",
+      "Ausführungen",
+      "Durchschn.",
+      "P95",
+    ])
+    const total = within(table).getAllByRole("columnheader")[1]
+    expect(total.getAttribute("aria-sort")).toBe("descending")
+    expect(iconOf(total)).toContain("lucide-arrow-down")
+    // Name first; id, type in words and (on a dashboard over several processes) the process below.
+    expect(screen.getByText("Decide on application")).toBeTruthy()
+    const row = screen.getByText("Decide on application").closest("tr")!
+    expect(plain(row.querySelector("td")?.textContent)).toBe(
+      "Decide on applicationActivity_DecideOnApplication · User-Task · Bike Leasing",
+    )
+    // An unknown name: the id leads; the engine's own type name folded into the BPMN element.
+    const paid = screen.getByText("Event_Paid").closest("td")!
+    expect(plain(paid.textContent)).toBe("Event_PaidEndereignis · invoice")
     expect(screen.getByText("1.240")).toBeTruthy()
-    const ask = screen.getByRole("button", { name: "Engpass im Chat erklären" })
+    const ask = screen.getAllByRole("button", { name: "Engpass im Chat erklären" })[0]
     expect(iconOf(ask)).toContain("lucide-hourglass")
+  })
+
+  it("calls a cut list what it is: the top by total time, of how many", () => {
+    renderIn("de", ActivityBottleneckTable, { ...DASHBOARD, activityCount: 37 })
+    expect(screen.getByText("Top 2 nach Gesamtzeit")).toBeTruthy()
+    expect(screen.getByText("Die 2 Aktivitäten mit der meisten Gesamtzeit, von 37.")).toBeTruthy()
+  })
+
+  it("drops the process from the second line of a dashboard about one process", () => {
+    renderIn("en", ActivityBottleneckTable, {
+      ...DASHBOARD,
+      processDefinitionKey: "miraveloLeasing",
+    })
+    const row = screen.getByText("Decide on application").closest("td")!
+    expect(plain(row.textContent)).toBe(
+      "Decide on applicationActivity_DecideOnApplication · User task",
+    )
+  })
+
+  it("says what to do when nothing ended, in a quiet empty state", () => {
+    renderIn("de", ActivityBottleneckTable, {
+      ...DASHBOARD,
+      activityBreakdown: [],
+      activityCount: 0,
+    })
+    expect(screen.getByText("In diesem Zeitraum hat keine Aktivität geendet")).toBeTruthy()
+    expect(
+      screen.getByText("Wähl einen längeren Zeitraum oder prüf, ob die Engines Metriken melden."),
+    ).toBeTruthy()
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 })
 
@@ -163,131 +287,6 @@ describe("the analytics dashboard in English", () => {
     expect(screen.getByText("1,629")).toBeTruthy()
     expect(screen.getByText("Process analytics")).toBeTruthy()
     expect(screen.getByRole("button", { name: /Assess in chat/ })).toBeTruthy()
-  })
-})
-
-const FAILURES: FailureDashboardData = {
-  engines: ["prod-a"],
-  totalIncidents: 1234,
-  uniqueErrorPatterns: 2,
-  mostAffectedProcess: "order",
-  errorPatterns: [
-    { incidentType: "failedJob", processDefinitionKey: "order", incidentCount: 1200 },
-    { incidentType: "failedExternalTask", processDefinitionKey: "invoice", incidentCount: 34 },
-  ],
-  processBreakdown: [
-    {
-      processDefinitionKey: "order",
-      runningNow: 3000,
-      deadJobs: 1100,
-      openIncidents: 1200,
-      incidentRatePct: 40,
-    },
-    {
-      processDefinitionKey: "invoice",
-      runningNow: 8,
-      deadJobs: 0,
-      openIncidents: 34,
-      incidentRatePct: 425,
-    },
-  ],
-  asOf: AS_OF,
-}
-
-describe("the failure dashboard", () => {
-  it("frames a live snapshot without a period and hands off to prioritize (de)", () => {
-    renderIn("de", FailureSummaryKpi, FAILURES)
-    expect(metaLine()).toBe("1 Engine · Stand 14:32")
-    expect(screen.getByText("1.234")).toBeTruthy()
-    expect(screen.getByText("Incident-Gruppen")).toBeTruthy()
-    const ask = screen.getByRole("button", { name: /Im Chat priorisieren/ })
-    expect(iconOf(ask)).toContain("lucide-list-ordered")
-  })
-
-  it("finds the cause of an incident group in the chat (en)", () => {
-    renderIn("en", ErrorPatternsTable, FAILURES)
-    expect(screen.getByText("1,200")).toBeTruthy()
-    const asks = screen.getAllByRole("button", { name: "Find cause in chat" })
-    expect(asks).toHaveLength(2)
-    expect(iconOf(asks[0])).toContain("lucide-scan-search")
-  })
-
-  it("names the jobs without retries and a rate over 100 as a number (de)", () => {
-    renderIn("de", FailureRateTable, FAILURES)
-    expect(screen.getByText("Jobs ohne Versuche")).toBeTruthy()
-    expect(screen.getByText("Incidents je 100 laufende Instanzen")).toBeTruthy()
-    expect(screen.getByText("425")).toBeTruthy()
-    expect(screen.getByText("3.000")).toBeTruthy()
-    const asks = screen.getAllByRole("button", { name: "Ursache im Chat klären" })
-    expect(asks).toHaveLength(2)
-    expect(iconOf(asks[0])).toContain("lucide-scan-search")
-  })
-})
-
-const LANDSCAPE: EngineLandscapeResult = {
-  engines: [
-    {
-      engineId: "prod-a",
-      reporting: true,
-      runningInstances: 1500,
-      openIncidents: 3,
-      failedJobs: 0,
-      executableJobs: 12,
-      suspendedJobs: 0,
-      jobsDueFuture: 4,
-      openExternalTasks: 2,
-      deployedDefinitionKeys: 2,
-      exclusiveDefinitionKeys: 1,
-    },
-    {
-      engineId: "prod-b",
-      reporting: false,
-      runningInstances: 0,
-      openIncidents: 0,
-      failedJobs: 0,
-      executableJobs: 0,
-      suspendedJobs: 0,
-      jobsDueFuture: 0,
-      openExternalTasks: 0,
-      deployedDefinitionKeys: 1,
-      exclusiveDefinitionKeys: 0,
-    },
-  ],
-  processes: [
-    {
-      processDefinitionKey: "order",
-      engineIds: ["prod-a", "prod-b"],
-      shared: true,
-      runningByEngine: { "prod-a": 1500 },
-      runningTotal: 1500,
-      openIncidentsTotal: 3,
-      failedJobsTotal: 0,
-    },
-  ],
-  sharedProcessKeys: ["order"],
-  totals: {
-    engineCount: 2,
-    reportingEngineCount: 1,
-    processKeyCount: 1,
-    sharedProcessKeyCount: 1,
-    runningInstances: 1500,
-    openIncidents: 3,
-    failedJobs: 0,
-  },
-  asOf: AS_OF,
-}
-
-describe("the cross-engine landscape", () => {
-  it("frames the snapshot and compares a shared process across engines in the chat (de)", () => {
-    renderIn("de", EngineLandscapeWidget, LANDSCAPE)
-    expect(metaLine()).toBe("2 Engines (1 ohne Metriken) · Stand 14:32")
-    expect(screen.getByText("Was wo läuft. Keine Rangliste der Engines.")).toBeTruthy()
-    expect(screen.getAllByText("1.500").length).toBeGreaterThan(0)
-    expect(screen.getByText("auf 2 Engines")).toBeTruthy()
-    const ask = screen.getByRole("button", {
-      name: "„order“ im Chat zwischen seinen Engines vergleichen",
-    })
-    expect(iconOf(ask)).toContain("lucide-arrow-left-right")
   })
 })
 

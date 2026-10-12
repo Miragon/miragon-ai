@@ -175,3 +175,96 @@ describe("the heatmap's missing-diagram cause", () => {
     }
   })
 })
+
+/**
+ * The names behind the ids (U13): the dashboard, the failure dashboard and
+ * the landscape carry the process (and, for the activity breakdown, the
+ * element) names the lookup knows, in the show tool's payload and in its
+ * feed alike. The dashboard judges its rate against the caller's saved
+ * comparison floor.
+ */
+describe("the names behind the ids", () => {
+  const ORDER = { process_definition_key: "order" }
+  /** One process with one activity, an open incident group and a deployment. */
+  const client: PrometheusClient = {
+    instant: (query: string) => {
+      if (query.includes("by (process_definition_key, activity_id, activity_type)")) {
+        return Promise.resolve([
+          { metric: { ...ORDER, activity_id: "Task_A", activity_type: "userTask" }, value: 2 },
+        ])
+      }
+      if (query.includes("by (process_definition_key, incident_type)")) {
+        return Promise.resolve([{ metric: { ...ORDER, incident_type: "failedJob" }, value: 1 }])
+      }
+      if (query.includes("by (engine_id, process_definition_key)")) {
+        return Promise.resolve([{ metric: { ...ORDER, engine_id: "prod-a" }, value: 1 }])
+      }
+      if (query.includes("by (process_definition_key)")) {
+        return Promise.resolve([{ metric: ORDER, value: 3 }])
+      }
+      if (query.includes("process_instance_started_total")) {
+        return Promise.resolve([{ metric: {}, value: 4 }])
+      }
+      return Promise.resolve([])
+    },
+  }
+  const NAMES = { order: { name: "Order fulfillment", elements: { Task_A: "Pack" } } }
+
+  async function run(name: string) {
+    const byName = new Map<string, Handler>()
+    const server = {
+      tool: (definition: { name: string }, handler: Handler) => {
+        byName.set(definition.name, handler)
+      },
+    } as unknown as MCPServer
+    const calls: Array<[string[], unknown]> = []
+    const profileStore: ProfileSource = {
+      get: () => Promise.resolve({ modules: { analytics: { minBucketSize: 3 } } }),
+    }
+    registerWidgetTools(server, client, {
+      engineScope: createEngineScope(["prod-a"]),
+      profileStore,
+      namesFor: (keys, elementIds) => {
+        calls.push([[...keys], elementIds])
+        return Promise.resolve(NAMES)
+      },
+    })
+    const ctx = { auth: { user: { id: "user-1" } } }
+    const result = (await byName.get(name)!({}, ctx)) as unknown as {
+      structuredContent: Record<string, unknown>
+    }
+    return { content: result.structuredContent, calls }
+  }
+
+  /** The payload of a show tool (its step data) or of a feed (the content itself). */
+  const payloadOf = (content: Record<string, unknown>) =>
+    ((content.context as { stepData?: { result?: { data?: unknown } } } | undefined)?.stepData
+      ?.result?.data ?? content) as Record<string, unknown>
+
+  it.each([
+    "analytics_show_dashboard",
+    "analytics_dashboard_data",
+    "analytics_show_failure_dashboard",
+    "analytics_failure_dashboard_data",
+    "analytics_show_engine_landscape",
+    "analytics_engine_landscape_data",
+  ])("%s carries the names", async (name) => {
+    const { content, calls } = await run(name)
+    expect(JSON.stringify(content)).toContain('"names":{"order":{"name":"Order fulfillment"')
+    expect(calls).toHaveLength(1)
+    expect(calls[0][0]).toContain("order")
+  })
+
+  it("asks for the elements of the activity breakdown only", async () => {
+    const { calls } = await run("analytics_dashboard_data")
+    expect(calls[0][1]).toEqual({ order: ["Task_A"] })
+    const failures = await run("analytics_failure_dashboard_data")
+    expect(failures.calls[0][1]).toEqual({ order: [] })
+  })
+
+  it("judges the dashboard's rate against the caller's saved comparison floor", async () => {
+    const { content } = await run("analytics_dashboard_data")
+    // 4 starts in each window, the saved floor 3: a change of the rate is judged.
+    expect(payloadOf(content).previous).toMatchObject({ totalCount: 4, suppressed: false })
+  })
+})

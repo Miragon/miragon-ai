@@ -31,7 +31,9 @@ const dashboard = (over: Partial<AnalyticsDashboardData> = {}): AnalyticsDashboa
   p95DurationMs: 187_000,
   runningNow: 156,
   openIncidentsNow: 12,
+  previous: null,
   activityBreakdown: [],
+  activityCount: 0,
   definitionBreakdown: [
     {
       processDefinitionKey: "order",
@@ -104,6 +106,24 @@ describe("dashboard model descriptions", () => {
     )
   })
 
+  it("states the previous period's rate the screen judges against, and when it is noise", () => {
+    const previous = {
+      totalCount: 30,
+      incidentsCreated: 2,
+      incidentRatePct: 6.7,
+      partial: false,
+      suppressed: false,
+    }
+    const text = describeExecutionPerformance(dashboard({ previous }), {})
+    expect(text).toContain("incidentRatePct=12.5, previousPeriodIncidentRatePct=6.7")
+    expect(text).not.toContain("NotReliable")
+    const noisy = describeExecutionPerformance(
+      dashboard({ previous: { ...previous, suppressed: true } }),
+      {},
+    )
+    expect(noisy).toContain("previousPeriodComparisonNotReliable=true")
+  })
+
   it("names the busiest definition with its window flows and live state", () => {
     const text = describeDefinitionBreakdown(dashboard(), {})
     expect(text).toContain(
@@ -131,6 +151,25 @@ describe("dashboard model descriptions", () => {
     )
     expect(text).toContain('topProcessDefinitionKey="invoice", topActivityId="StartEvent_1"')
     expect(text).toContain('Ids: engine=["prod-a","prod-b"], period="7d"')
+    // The whole breakdown is on screen: no "in all" count.
+    expect(text).not.toContain("activitiesInAll")
+  })
+
+  it("says a cut list is the top of more activities", () => {
+    const row = {
+      processDefinitionKey: "invoice",
+      activityId: "Task_A",
+      activityType: "userTask",
+      executionCount: 9,
+      avgDurationMs: 10,
+      p95DurationMs: 20,
+      totalTimeMs: 90,
+    }
+    const text = describeActivityBottlenecks(
+      dashboard({ activityBreakdown: [row], activityCount: 37 }),
+      {},
+    )
+    expect(text).toContain("rows=1, activitiesInAll=37")
   })
 })
 

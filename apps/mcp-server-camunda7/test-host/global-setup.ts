@@ -4,6 +4,7 @@ import { createApp } from "../src/app.js"
 import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
 import { startHostBackend, type HostBackend } from "./host-backend.js"
 import { startStubEngine } from "./stub-engine.js"
+import { startStubPrometheus } from "./stub-prometheus.js"
 
 interface Deployment {
   host: HostBackend
@@ -53,13 +54,14 @@ async function deploy(env: Record<string, string>): Promise<Deployment> {
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const engine = await startStubEngine()
+  // The analytics views read their figures from it (analytics.spec.ts).
+  const prometheus = await startStubPrometheus()
   const engines = {
     CAMUNDA_ENGINES_JSON: JSON.stringify([
       { id: HEALTHY_ENGINE, baseUrl: engine.baseUrl },
       { id: BROKEN_ENGINE, baseUrl: engine.brokenBaseUrl },
     ]),
-    // Nothing listens there; no scenario renders an analytics view.
-    PROMETHEUS_URL: "http://127.0.0.1:9",
+    PROMETHEUS_URL: prometheus.url,
   }
   // The default deployment: no OAuth, so every module runs read-only — the
   // widest audience a view has to work for.
@@ -74,6 +76,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   return async () => {
     await readOnly.close()
     await operations.close()
+    await prometheus.close()
     await engine.close()
   }
 }

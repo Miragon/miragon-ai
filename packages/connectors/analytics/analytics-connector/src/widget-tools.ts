@@ -26,20 +26,21 @@ import { registerComparisonWidgetTools } from "./widget-tools/comparisons.js"
 import { engineScopeSummary } from "./widget-tools/shared.js"
 import { isFleetRequest, withEngineScope, type AnalyticsEngineScope } from "./engine-ids.js"
 import type { BpmnMissingReason } from "./heatmap-data.js"
+import { NO_NAMES, type FetchBpmnXml, type NameLookup } from "./bpmn-name-lookup.js"
+import { namedDashboard, namedFailureDashboard } from "./named-views.js"
 
-/**
- * Engine-agnostic BPMN-XML lookup injected by the host app (which owns the
- * engine client) — this module never talks to an engine itself. Resolves the
- * latest deployed version's diagram XML for a process definition key, or
- * `null` when unavailable.
- */
-export type FetchBpmnXml = (processDefinitionKey: string) => Promise<string | null>
+export type { FetchBpmnXml } from "./bpmn-name-lookup.js"
 
 export interface AnalyticsWidgetToolsOptions {
   /** The server's configured engine ids — every query resolves `engine` through it. */
   engineScope: AnalyticsEngineScope
   /** Used by the BPMN heatmap to fetch the diagram XML. Absent → non-diagram fallback. */
   fetchBpmnXml?: FetchBpmnXml
+  /**
+   * The process and element names behind the ids the dashboards list
+   * (`createNameLookup` over the same BPMN lookup). Absent → the ids.
+   */
+  namesFor?: NameLookup
   /**
    * Profile store: locale for model-facing summaries plus the caller's saved
    * analytics defaults (`modules.analytics`) — the "explicit arg > saved
@@ -96,6 +97,7 @@ export function registerWidgetTools(
   // identity), `title` for the view title, set only in a language the profile
   // names (the kit's one rule for every module, #322 U3).
   const { profileStore, engineScope } = options
+  const namesFor = options.namesFor ?? NO_NAMES
 
   /**
    * Fetches the latest deployed version's BPMN XML for the heatmap overlay via
@@ -124,11 +126,16 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const { t, title } = await localizeViewFor(profileStore, ctx)
-      const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
-        ...withEngineScope(engineScope, args),
-        period,
-      })
+      const settings = await settingsFor(profileStore, ctx)
+      const period = args.period ?? settings.defaultPeriod
+      const data = await namedDashboard(
+        await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
+          ...withEngineScope(engineScope, args),
+          period,
+          minBucketSize: settings.minBucketSize,
+        }),
+        namesFor,
+      )
       // The RESOLVED period and the requested scope travel as cell props, so a
       // widget that self-fetches (structuredContent stripped, a saved view)
       // reads the same scope instead of the fleet default.
@@ -169,9 +176,12 @@ export function registerWidgetTools(
     },
     withToolErrors(async (args, ctx) => {
       const { t, title } = await localizeViewFor(profileStore, ctx)
-      const data = await queries.failureDashboardData(
-        withCallerSignal(ch, ctx.signal),
-        withEngineScope(engineScope, args),
+      const data = await namedFailureDashboard(
+        await queries.failureDashboardData(
+          withCallerSignal(ch, ctx.signal),
+          withEngineScope(engineScope, args),
+        ),
+        namesFor,
       )
       // The requested scope travels as cell props so a self-fetch keeps it.
       const cellProps = isFleetRequest(args.engine) ? undefined : { engine: args.engine }
@@ -196,7 +206,7 @@ export function registerWidgetTools(
     }),
   )
 
-  registerComparisonWidgetTools({ server, ch, engineScope, profileStore })
+  registerComparisonWidgetTools({ server, ch, engineScope, profileStore, namesFor })
 
   // --- BPMN Heatmap (per-element frequency + duration on the diagram) ---
   server.tool(
@@ -296,11 +306,15 @@ export function registerWidgetTools(
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
-      const period = args.period ?? (await settingsFor(profileStore, ctx)).defaultPeriod
-      const data = await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
-        ...withEngineScope(engineScope, args),
-        period,
-      })
+      const settings = await settingsFor(profileStore, ctx)
+      const data = await namedDashboard(
+        await queries.dashboardData(withCallerSignal(ch, ctx.signal), {
+          ...withEngineScope(engineScope, args),
+          period: args.period ?? settings.defaultPeriod,
+          minBucketSize: settings.minBucketSize,
+        }),
+        namesFor,
+      )
       return buildDataFeedResult({ ...data })
     }),
   )
@@ -318,9 +332,12 @@ export function registerWidgetTools(
       ...appOnly,
     },
     withToolErrors(async (args, ctx) => {
-      const data = await queries.failureDashboardData(
-        withCallerSignal(ch, ctx.signal),
-        withEngineScope(engineScope, args),
+      const data = await namedFailureDashboard(
+        await queries.failureDashboardData(
+          withCallerSignal(ch, ctx.signal),
+          withEngineScope(engineScope, args),
+        ),
+        namesFor,
       )
       return buildDataFeedResult({ ...data })
     }),

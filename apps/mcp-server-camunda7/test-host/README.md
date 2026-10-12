@@ -7,7 +7,9 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
   `src/app.ts`, default read-only deployment — plus a `camunda7:operations`
   one for the write scenario) serving `dist/mcp-app.{js,css}`, a CIB Seven
   REST stub (`stub-engine.ts`, `fixtures/process-definitions.json` plus the
-  `invoice` diagram `fixtures/invoice.bpmn`, three failed jobs) and the host's
+  `invoice` diagram `fixtures/invoice.bpmn`, three failed jobs), a Prometheus
+  stub (`stub-prometheus.ts`: two engines, two processes, the `invoice`
+  activities, evaluating the exact PromQL shapes analytics sends) and the host's
   server side (`host-backend.ts`, a real MCP client) — all on ephemeral
   loopback ports. A scenario can hold the stub's answers to one search term
   and release them later (`POST /__control/hold|release?nameLike=<term>` at
@@ -58,6 +60,9 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | write refresh (operations) | `camunda7_show_job_panel`, user clicks Retry      | the retry refetches the seeded feed and re-renders, **zero** re-executions                         |
 | cockpit on an engine       | `camunda7_open_cockpit` with `engine`             | opens on that engine (the head's engine select), not on the engine picker                          |
 | cockpit picker             | `camunda7_open_cockpit` without `engine`          | the engine list (two engines, no saved default), each engine's state in its accessible name        |
+| analytics dashboard        | `analytics_show_dashboard` at 760 px              | every activity column shown inside its region, names from the diagram, no document scroll          |
+| analytics landscape        | `analytics_show_engine_landscape` at 760 px       | the column groups headed, the backlog columns and the compare action inside their regions          |
+| axe (analytics)            | dashboard + landscape, light and dark, 760 px     | zero WCAG 2.1 A/AA violations (`analytics.spec.ts`)                                                |
 
 Height checks read the **settled** report — the one equal to the document's current
 max-content height — since the ProfileGate skeleton's earlier report (~208 px) can

@@ -127,6 +127,35 @@ describe("the plugin wires the steps' caller lookup", () => {
     // finds no identity and every saved period silently reads as the default.
     expect(patterns).toEqual(["mcp:*"])
   })
+
+  it("hands the steps the name lookup over the injected BPMN lookup", async () => {
+    const xml = '<definitions><process id="order" name="Order fulfillment"/></definitions>'
+    const plugin = analyticsModule.createPlugin(
+      { url: "http://prometheus.invalid" },
+      { profileStore, engineIds: ["prod-a"], fetchBpmnXml: () => Promise.resolve(xml) },
+    )
+    const { namesFor } = plugin.appConfig as unknown as AnalyticsAppConfig
+    expect(await namesFor!(["order"])).toEqual({
+      order: { name: "Order fulfillment", elements: {} },
+    })
+  })
+})
+
+describe.each(STEPS)("%s — the names behind the ids", (_id, step) => {
+  it("passes its figures through the view's name lookup", async () => {
+    const names = { order: { name: "Order fulfillment", elements: {} } }
+    const { appConfig } = setup()
+    const out = await step.execute(context({}), {
+      ...appConfig,
+      namesFor: () => Promise.resolve(names),
+    })
+    expect((out.data as { names: unknown }).names).toEqual(names)
+  })
+
+  it("shows ids when the server has no lookup", async () => {
+    const out = await step.execute(context({}), setup().appConfig)
+    expect((out.data as { names: unknown }).names).toEqual({})
+  })
 })
 
 describe("analytics:load-dashboard — analytics:period", () => {

@@ -1,6 +1,8 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { PERIODS, queries } from "@miragon-ai/analytics-client"
-import { analyticsSettingsSchema } from "../settings.js"
+import { analyticsSettingsSchema, settingsFor } from "../settings.js"
+import { NO_NAMES } from "../bpmn-name-lookup.js"
+import { namedDashboard } from "../named-views.js"
 import {
   ENGINE_KEY_DECLARATION,
   stepEngines,
@@ -47,12 +49,19 @@ export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
     const processDefinitionKey = stepProcessKey(context.keys)
     const engine = stepEngines(context.keys, appConfig.engineScope)
     const period = await stepPeriod(context.keys, appConfig.profileStore)
+    // The floor for judging the incident rate against the previous period:
+    // the caller's saved minBucketSize, like the tools'.
+    const { minBucketSize } = await settingsFor(appConfig.profileStore)
 
-    const data = await queries.dashboardData(appConfig.client, {
-      processDefinitionKey,
-      period,
-      engine,
-    })
+    const data = await namedDashboard(
+      await queries.dashboardData(appConfig.client, {
+        processDefinitionKey,
+        period,
+        engine,
+        minBucketSize,
+      }),
+      appConfig.namesFor ?? NO_NAMES,
+    )
 
     return {
       data,

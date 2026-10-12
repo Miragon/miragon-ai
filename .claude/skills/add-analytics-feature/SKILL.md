@@ -218,11 +218,27 @@ Rules while building:
 - Tables: the kit's `ListTable` (a named, keyboard-reachable scroll region with a
   required `ariaLabel`, so a wide breakdown never widens the document at 760 px;
   `hideBelow: "sm" | "md" | "lg"` on a column a narrow view can do without, by the
-  region's width; `sticky: true` on the last column when it holds row actions; rows stay
-  `<tr>` + `Td`, one cell per column, numbers `tabular-nums` right-aligned). Nothing to
+  region's width; `sticky: true` on the last column when it holds row actions; `sort` on
+  the column the rows are ordered by; `groups` to head adjacent columns, like the
+  landscape's "Load" and "Job backlog"; rows stay `<tr>` + `Td`, one cell per column,
+  numbers `tabular-nums` right-aligned). Order columns by priority: the identifying
+  column, then the sort key, then what can give way (`hideBelow`); the host simulation
+  (`apps/mcp-server-camunda7/test-host/analytics.spec.ts`, against `stub-prometheus.ts`)
+  checks at 760 px that the promised columns show inside their region. Nothing to
   show: `TableEmptyState` (`variant="done"` for "nothing failing", the quiet default for
-  no data). Type on the toolkit's scale: `text-section` for a card heading, `text-dense`
-  for table text, `text-small` (13 px, the floor) for captions, never `text-xs`.
+  no data, the next step as `description`). Type on the toolkit's scale: `text-section`
+  for a card heading, `text-dense` for table text, `text-small` (13 px, the floor) for
+  captions, never `text-xs` (`scanTypeScale` in `src/brand-gates.test.ts`).
+- Names before ids (U13): metrics carry ids only; a view that lists processes or
+  activities passes its payload through `src/named-views.ts` in the show tool, its feed
+  AND its step (one function each), which adds `names` from the injected BPMN lookup
+  (`createNameLookup` in `src/bpmn-name-lookup.ts`: one read per key and five minutes,
+  2 s at most, a failure leaves the key out). The widget shows `NamedId`
+  (`src/widgets/names.tsx`: the name first, the id quiet in mono below, the id alone in
+  mono without a name) and an activity's type in words (`activityTypeLabel`).
+- A count nobody measured is `null` and renders "—" (`formatNumber(null)`), one meaning
+  everywhere; a silent engine's counts are null, never 0. A different state (a process
+  not deployed on an engine) gets its own sign and a legend line.
 - The heatmap is the kit's `BpmnHeatmapWidget`: ONE hue from `--cd-info-soft` to
   `--cd-blau` (red is for incidents), every element above zero at a visible minimum, a
   legend with the smallest and largest value (`HeatmapLegend` `min`/`max`, formatted),
@@ -234,7 +250,12 @@ Rules while building:
   maps, `resolveTone` for a tone from the wire, CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
   volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
-  incidents/failures. No palette classes or raw colours.
+  incidents/failures. A count of what happened carries no tone; the open incident is the
+  state. A rate is judged only against a reference, never on its own: the dashboard's
+  incident rate against the period before (`previous` in `dashboardData`, the trend of its
+  `KpiCell`, `deltaVerdict` with the comparisons' threshold, "not reliable" under the
+  saved `minBucketSize`). A bar scales to the largest value in its table, never to 100.
+  No palette classes or raw colours.
 - Icons are Lucide via `Icon` (devDependency `lucide-react` `0.562.0`, see invariant 6), never
   glyphs or emoji, at 16 px (`dense` in rows and chips; no `size` other than 16 or 24). A chat
   hand-off is the kit's `<HandOffButton action="findCause" prompt={ask(…)} />`: the product's

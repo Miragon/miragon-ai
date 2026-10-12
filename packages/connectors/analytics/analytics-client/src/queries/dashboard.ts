@@ -19,14 +19,30 @@ import {
   reportingEngineIds,
   reportingEnginesQuery,
 } from "./helpers.js"
+import { clampWindow, DAY_SECONDS, nowSeconds, rangeAt } from "./windows.js"
 import type {
   ActivityBreakdownItem,
   AnalyticsDashboardData,
   DefinitionBreakdownItem,
   ErrorPatternItem,
   FailureDashboardData,
+  PreviousPeriodFlows,
   ProcessFailureItem,
 } from "../widgets.js"
+
+/**
+ * How many (process, activity) rows the activity breakdown carries: the top
+ * ones by total time. The result says how many there were in all
+ * (`activityCount`), so a view calls the list what it is ("Top 20 by total
+ * time") instead of showing an unexplained count.
+ */
+export const ACTIVITY_BREAKDOWN_LIMIT = 20
+
+/**
+ * The comparison floor when the caller names none: the analytics settings'
+ * default `minBucketSize` (10 instances per window).
+ */
+const DEFAULT_MIN_BUCKET_SIZE = 10
 
 /** Seconds -> integer milliseconds (preserves the sub-100ms precision the dashboard formats). */
 const ms = (sec: number) => Math.round(sec * 1000)
@@ -53,10 +69,23 @@ const msOrNull = (sec: number | null) => (sec === null ? null : ms(sec))
  * The activity breakdown groups by (process, activity): BPMN ids are only
  * unique within one model, so `StartEvent_1` of two processes are two rows.
  * The result echoes its scope (process key, period, engines).
+ *
+ * `previous` holds the starts and incidents of the window right before the
+ * period: the reference an incident rate is judged against (a rate on its
+ * own says nothing about whether it is high). It is null when that window
+ * lies wholly before the Prometheus retention (a 30-day period), and
+ * `suppressed` when either window started fewer than `minBucketSize`
+ * instances: a change of a rate over a handful of starts is noise.
  */
 export async function dashboardData(
   ch: PrometheusClient,
-  params: { processDefinitionKey?: string; period: Period; engine?: EngineFilterInput },
+  params: {
+    processDefinitionKey?: string
+    period: Period
+    engine?: EngineFilterInput
+    /** The floor per window for judging the rate's change (the caller's saved `minBucketSize`); default 10. */
+    minBucketSize?: number
+  },
 ): Promise<AnalyticsDashboardData> {
   const asOf = asOfNow()
   const range = params.period
@@ -68,6 +97,8 @@ export async function dashboardData(
   const completedSel = selector(keyMatcher, `state="COMPLETED"`, engine)
   const r = `[${range}]`
   const q = kpiQueries({ sel, completedSel }, r)
+  const before = previousWindow(params.period)
+  const prev = before ? kpiQueries({ sel, completedSel }, rangeAt(before)) : null
 
   // By-clauses stay literal: the contract test attributes each one to its series.
   const [
@@ -90,6 +121,8 @@ export async function dashboardData(
     defDurCount,
     defRunning,
     reporting,
+    prevStarted,
+    prevIncidents,
   ] = await Promise.all([
     ch.instant(q.started),
     ch.instant(q.completed),
@@ -122,6 +155,8 @@ export async function dashboardData(
     ),
     ch.instant(`sum by (process_definition_key)(${M.processInstancesRunning}${sel})`),
     ch.instant(reportingEnginesQuery(selector(engine))),
+    prev ? ch.instant(prev.started) : null,
+    prev ? ch.instant(prev.incidents) : null,
   ])
 
   const totalCount = Math.round(first(started))
@@ -133,6 +168,10 @@ export async function dashboardData(
     if (value !== null) return Math.round(value)
     return engineReports ? 0 : null
   }
+
+  const activities = buildActivityBreakdown(actCount, actSum, actP95)
+  const minBucket = Math.max(1, Math.floor(params.minBucketSize ?? DEFAULT_MIN_BUCKET_SIZE))
+  const previous = previousFlows(prevStarted, prevIncidents, before?.partial ?? false)
 
   return {
     processDefinitionKey: params.processDefinitionKey ?? null,
@@ -150,7 +189,12 @@ export async function dashboardData(
     p95DurationMs: msOrNull(firstOrNull(p95)),
     runningNow: live(runningNow),
     openIncidentsNow: live(openIncidentsNow),
-    activityBreakdown: buildActivityBreakdown(actCount, actSum, actP95),
+    previous: previous && {
+      ...previous,
+      suppressed: Math.min(totalCount, previous.totalCount) < minBucket,
+    },
+    activityBreakdown: activities.slice(0, ACTIVITY_BREAKDOWN_LIMIT),
+    activityCount: activities.length,
     definitionBreakdown: buildDefinitionBreakdown(
       {
         started: defStarted,
@@ -162,6 +206,40 @@ export async function dashboardData(
       },
       engineReports || defRunning.length > 0,
     ),
+  }
+}
+
+/** A period's length in seconds ("7d" → 604 800). */
+const periodSeconds = (period: Period) => Number.parseInt(period, 10) * DAY_SECONDS
+
+/**
+ * The window right before `period`, held inside the retention; null when it
+ * lies wholly before it (no figures can exist for it).
+ */
+function previousWindow(period: Period) {
+  const now = nowSeconds()
+  const length = periodSeconds(period)
+  try {
+    return clampWindow("previous period", now - 2 * length, now - length, now)
+  } catch {
+    return null
+  }
+}
+
+/** The previous window's starts and incidents, or null when it was not read. */
+function previousFlows(
+  started: PromSample[] | null,
+  incidents: PromSample[] | null,
+  partial: boolean,
+): Omit<PreviousPeriodFlows, "suppressed"> | null {
+  if (!started || !incidents) return null
+  const totalCount = Math.round(first(started))
+  const incidentsCreated = Math.round(first(incidents))
+  return {
+    totalCount,
+    incidentsCreated,
+    incidentRatePct: ratePct(incidentsCreated, totalCount),
+    partial,
   }
 }
 
@@ -212,7 +290,6 @@ function buildActivityBreakdown(
       }
     })
     .sort((a, b) => b.totalTimeMs - a.totalTimeMs)
-    .slice(0, 20)
 }
 
 /**

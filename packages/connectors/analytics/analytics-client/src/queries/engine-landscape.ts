@@ -8,7 +8,11 @@ import {
 import { METRIC_NAMES as M } from "../metric-names.js"
 import { asOfNow } from "./helpers.js"
 
-/** Per-engine row of the landscape. Absolute counts only — see the module note. */
+/**
+ * Per-engine row of the landscape. Absolute counts only — see the module note.
+ * Every count is `null` for an engine that reports nothing (`reporting:
+ * false`): its figures are unknown, never a plausible 0.
+ */
 export interface EngineLandscapeEngine {
   engineId: string
   /**
@@ -21,20 +25,20 @@ export interface EngineLandscapeEngine {
   // ── Absolute load ────────────────────────────────────────────────────────
   // Counts, not rates: they are additive across engines and stay meaningful
   // regardless of which processes an engine happens to run.
-  runningInstances: number
-  openIncidents: number
-  failedJobs: number
+  runningInstances: number | null
+  openIncidents: number | null
+  failedJobs: number | null
   // ── Engine-owned backlog ─────────────────────────────────────────────────
   // These gauges carry ONLY `engine_id` (no process label), so the process mix
   // cancels out — the one metric family that IS comparable across engines.
-  executableJobs: number
-  suspendedJobs: number
-  jobsDueFuture: number
-  openExternalTasks: number
+  executableJobs: number | null
+  suspendedJobs: number | null
+  jobsDueFuture: number | null
+  openExternalTasks: number | null
   // ── Inventory ────────────────────────────────────────────────────────────
-  deployedDefinitionKeys: number
+  deployedDefinitionKeys: number | null
   /** Keys present on this engine only — the load no other engine shares. */
-  exclusiveDefinitionKeys: number
+  exclusiveDefinitionKeys: number | null
 }
 
 /** One row of the process × engine inventory matrix. */
@@ -63,9 +67,10 @@ export interface EngineLandscapeResult {
     reportingEngineCount: number
     processKeyCount: number
     sharedProcessKeyCount: number
-    runningInstances: number
-    openIncidents: number
-    failedJobs: number
+    /** The sums over the reporting engines; `null` while no engine reports (unknown, not 0). */
+    runningInstances: number | null
+    openIncidents: number | null
+    failedJobs: number | null
   }
   /**
    * When the figures were read from Prometheus (ISO timestamp): the "Stand"
@@ -164,10 +169,11 @@ export async function engineLandscape(
     ].sort()
 
   const engines: EngineLandscapeEngine[] = engineIds.map((engineId) => {
+    if (!reporting.has(engineId)) return silentEngine(engineId)
     const keys = keysOn(engineId)
     return {
       engineId,
-      reporting: reporting.has(engineId),
+      reporting: true,
       runningInstances: sumBy(runningCells, (c) => c.engineId === engineId),
       openIncidents: sumBy(incidentCells, (c) => c.engineId === engineId),
       failedJobs: sumBy(failedCells, (c) => c.engineId === engineId),
@@ -214,6 +220,9 @@ export async function engineLandscape(
     )
 
   const sharedProcessKeys = processes.filter((p) => p.shared).map((p) => p.processDefinitionKey)
+  const reportingEngineCount = engines.filter((e) => e.reporting).length
+  /** A total over the reporting engines; unknown (null) while none reports. */
+  const total = (list: Cell[]) => (reportingEngineCount > 0 ? sumBy(list, () => true) : null)
 
   return {
     asOf,
@@ -222,13 +231,33 @@ export async function engineLandscape(
     sharedProcessKeys,
     totals: {
       engineCount: engines.length,
-      reportingEngineCount: engines.filter((e) => e.reporting).length,
+      reportingEngineCount,
       processKeyCount: processes.length,
       sharedProcessKeyCount: sharedProcessKeys.length,
-      runningInstances: sumBy(runningCells, () => true),
-      openIncidents: sumBy(incidentCells, () => true),
-      failedJobs: sumBy(failedCells, () => true),
+      runningInstances: total(runningCells),
+      openIncidents: total(incidentCells),
+      failedJobs: total(failedCells),
     },
+  }
+}
+
+/**
+ * The row of a declared engine that sent no series at all: every count is
+ * unknown. A row of zeros would read as an idle, healthy engine.
+ */
+function silentEngine(engineId: string): EngineLandscapeEngine {
+  return {
+    engineId,
+    reporting: false,
+    runningInstances: null,
+    openIncidents: null,
+    failedJobs: null,
+    executableJobs: null,
+    suspendedJobs: null,
+    jobsDueFuture: null,
+    openExternalTasks: null,
+    deployedDefinitionKeys: null,
+    exclusiveDefinitionKeys: null,
   }
 }
 

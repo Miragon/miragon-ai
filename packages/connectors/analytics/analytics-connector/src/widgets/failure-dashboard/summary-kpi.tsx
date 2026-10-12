@@ -5,10 +5,11 @@ import {
   formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/analytics-client"
-import { KpiGrid, KpiGridSkeleton, WidgetHeader } from "@miragon/mcp-toolkit-ui"
-import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
+import { KpiGrid, KpiGridSkeleton, WidgetHeader, cn, type KpiCell } from "@miragon/mcp-toolkit-ui"
+import { useFailureDashboardSelfFetch, type FailureScopeProps, type FailureView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
-import { useT } from "../../messages/use-t.js"
+import { useT, type T } from "../../messages/use-t.js"
+import { processNameOf } from "../../bpmn-names.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { enginesMeta } from "../view-meta.js"
 
@@ -35,10 +36,28 @@ export function failureSummaryHandOff(data: FailureDashboardData): HandOff {
   }
 }
 
+/**
+ * The most affected process as a figure: its name (the key below it, quiet),
+ * or the key alone in mono when the model's name is unknown; "—" without one.
+ */
+function mostAffectedCell(t: T, data: FailureView): KpiCell {
+  const key = data.mostAffectedProcess
+  const name = key ? processNameOf(data.names, key) : null
+  return {
+    label: t("aFailureSummary.mostAffected"),
+    value: (
+      <span className={cn("text-section block break-words", !name && key && "font-mono")}>
+        {name ?? key ?? "—"}
+      </span>
+    ),
+    trend: name ? <span className="font-mono break-all">{key}</span> : undefined,
+  }
+}
+
 export function FailureSummaryKpi({
   data: initialData,
   engine,
-}: { data: FailureDashboardData | null } & FailureScopeProps) {
+}: { data: FailureView | null } & FailureScopeProps) {
   const fallbackQuery = useFailureDashboardSelfFetch(initialData, { engine })
   const t = useT()
   const { ask } = useHandOff()
@@ -48,7 +67,7 @@ export function FailureSummaryKpi({
       initialData={initialData}
       query={fallbackQuery}
       header={<WidgetHeader title={t("aFailureSummary.title")} />}
-      skeleton={<KpiGridSkeleton cells={3} variant="soft" />}
+      skeleton={<KpiGridSkeleton cells={3} boxed />}
     >
       {(data) => (
         <WidgetShell>
@@ -64,29 +83,23 @@ export function FailureSummaryKpi({
               />
             }
           />
+          {/* The dashboards' one KPI pattern (U14): a neutral strip, the state
+              as a dot. Only an open incident is a state (danger); how many
+              groups they form and which process has the most are neutral. */}
           <KpiGrid
-            variant="soft"
+            boxed
             ariaLabel={t("aFailureSummary.summaryAriaLabel")}
             cells={[
               {
                 label: t("aFailureSummary.totalIncidents"),
                 value: formatNumber(data.totalIncidents),
-                tone: "danger",
+                tone: data.totalIncidents > 0 ? "danger" : undefined,
               },
               {
                 label: t("aFailureSummary.uniqueErrorPatterns"),
                 value: formatNumber(data.uniqueErrorPatterns),
-                tone: "warning",
               },
-              {
-                label: t("aFailureSummary.mostAffected"),
-                value: (
-                  <span className="block truncate font-mono text-lg">
-                    {data.mostAffectedProcess ?? "—"}
-                  </span>
-                ),
-                tone: "info",
-              },
+              mostAffectedCell(t, data),
             ]}
           />
         </WidgetShell>

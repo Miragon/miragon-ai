@@ -1,34 +1,38 @@
+import type { ReactNode } from "react"
 import {
-  Alert,
-  AlertDescription,
   Badge,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  useToolQuery,
   CountPill,
   KpiGrid,
   SectionHeading,
+  StatusBadge,
+  useToolQuery,
   type KpiCell,
 } from "@miragon/mcp-toolkit-ui"
+import { Info } from "lucide-react"
 import {
   HandOffButton,
+  Icon,
+  ListTable,
   TableEmptyState,
   TableSkeleton,
+  Td,
   ViewMeta,
   WidgetShell,
   formatNumber,
+  type ListTableColumn,
+  type ListTableGroup,
 } from "@miragon-ai/widget-shell/widgets"
-import type { EngineLandscapeResult } from "@miragon-ai/analytics-client"
+import type { EngineLandscapeEngine, EngineLandscapeResult } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { QueryGate } from "./query-gate.js"
 import { useT, type T } from "../messages/use-t.js"
 import { useHandOff, type HandOff } from "./hand-off.js"
+import { processNameOf, type Named } from "../bpmn-names.js"
+import { NamedId } from "./names.js"
 
-export type EngineLandscapeData = EngineLandscapeResult | null
+/** The landscape payload: the figures plus the process names behind the matrix's keys. */
+export type EngineLandscapeView = Named<EngineLandscapeResult>
+export type EngineLandscapeData = EngineLandscapeView | null
 
 /** Engine ids from the layout cell props (`engine` may be a string or a list). */
 function engineIdsFromProps(engine: string | string[] | undefined): string[] {
@@ -46,6 +50,9 @@ function engineIdsFromProps(engine: string | string[] | undefined): string[] {
  * not the engine — the widget therefore shows absolute counts plus the
  * process-independent job backlog, and offers the KPI comparison only for the
  * definitions that actually run on more than one engine.
+ *
+ * "—" means one thing here: not measured (an engine that sends no metrics).
+ * A process that is not deployed on an engine is an empty matrix cell.
  */
 export function EngineLandscapeWidget({
   data: initialData,
@@ -57,7 +64,7 @@ export function EngineLandscapeWidget({
 }) {
   const t = useT()
   const engineIds = engineIdsFromProps(engine)
-  const query = useToolQuery<EngineLandscapeResult>(
+  const query = useToolQuery<EngineLandscapeView>(
     // The engine scope belongs in the key: a subset view must not read the
     // full-fleet payload out of the cache.
     ["analytics:engine-landscape", engineIds.join(",")],
@@ -79,16 +86,17 @@ export function EngineLandscapeWidget({
   )
 }
 
-function LandscapeSummary({ data, t }: { data: EngineLandscapeResult; t: T }) {
+function LandscapeSummary({ data, t }: { data: EngineLandscapeView; t: T }) {
   const { totals } = data
   const silent = totals.engineCount - totals.reportingEngineCount
   const cells: KpiCell[] = [
     {
       label: t("aLandscape.kpiEngines"),
       value: formatNumber(totals.engineCount),
+      // An engine without metrics may be down: worth a look, not an error.
       trend:
         silent > 0 ? t("aLandscape.kpiEnginesSilent", { count: formatNumber(silent) }) : undefined,
-      trendTone: silent > 0 ? "danger" : undefined,
+      trendTone: silent > 0 ? "warning" : undefined,
     },
     {
       label: t("aLandscape.kpiProcesses"),
@@ -101,7 +109,7 @@ function LandscapeSummary({ data, t }: { data: EngineLandscapeResult; t: T }) {
     {
       label: t("aLandscape.kpiIncidents"),
       value: formatNumber(totals.openIncidents),
-      tone: totals.openIncidents > 0 ? "danger" : undefined,
+      tone: (totals.openIncidents ?? 0) > 0 ? "danger" : undefined,
     },
   ]
   return (
@@ -119,106 +127,111 @@ function LandscapeSummary({ data, t }: { data: EngineLandscapeResult; t: T }) {
 }
 
 /**
- * One row per engine. Split into two column groups on purpose: the load counts
- * are absolute (comparable only as "where the work sits"), while the backlog
- * gauges carry no process label and therefore genuinely compare across engines.
- * That second group is shown in FULL (executable, suspended, due-later,
- * external tasks) — it is the only mix-independent evidence this view offers,
- * and the fleet prompt tells the model to judge engines on exactly it.
+ * The per-engine table in its two column groups, headed as such (U17): the
+ * load counts are absolute (comparable only as "where the work sits"), while
+ * the backlog gauges carry no process label and therefore genuinely compare
+ * across engines. The backlog is shown in FULL — it is the only
+ * mix-independent evidence this view offers, and the fleet prompt tells the
+ * model to judge engines on exactly it — so it never hides; only the
+ * inventory column gives way below 768 px.
  */
-function EngineTable({ data, t }: { data: EngineLandscapeResult; t: T }) {
+function engineColumns(t: T): ListTableColumn[] {
+  return [
+    { label: t("aLandscape.colEngine") },
+    { label: t("aLandscape.colRunning"), align: "right" },
+    { label: t("aLandscape.colIncidents"), align: "right" },
+    { label: t("aLandscape.colFailedJobs"), align: "right" },
+    { label: t("aLandscape.colExecutable"), align: "right" },
+    { label: t("aLandscape.colSuspended"), align: "right" },
+    { label: t("aLandscape.colDueFuture"), align: "right" },
+    { label: t("aLandscape.colExternalTasks"), align: "right" },
+    { label: t("aLandscape.colProcesses"), align: "right", hideBelow: "md" },
+  ]
+}
+
+function engineGroups(t: T): ListTableGroup[] {
+  return [
+    {},
+    { label: t("aLandscape.groupLoad"), span: 3 },
+    { label: t("aLandscape.groupBacklog"), span: 4 },
+    {},
+  ]
+}
+
+/** One count of an engine: the number, or "—" with its meaning for an engine without metrics. */
+function CountCell({ value, t }: { value: number | null; t: T }) {
+  return (
+    <Td align="right" className="tabular-nums">
+      {value === null ? (
+        <span title={t("aLandscape.unknown")}>{formatNumber(null)}</span>
+      ) : (
+        formatNumber(value)
+      )}
+    </Td>
+  )
+}
+
+function EngineRow({ engine: e, t }: { engine: EngineLandscapeEngine; t: T }) {
+  return (
+    <tr>
+      <Td>
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-mono font-medium">{e.engineId}</span>
+          {!e.reporting && <StatusBadge tone="warning">{t("aLandscape.noMetrics")}</StatusBadge>}
+        </span>
+      </Td>
+      <CountCell value={e.runningInstances} t={t} />
+      <CountCell value={e.openIncidents} t={t} />
+      <CountCell value={e.failedJobs} t={t} />
+      <CountCell value={e.executableJobs} t={t} />
+      <CountCell value={e.suspendedJobs} t={t} />
+      <CountCell value={e.jobsDueFuture} t={t} />
+      <CountCell value={e.openExternalTasks} t={t} />
+      <Td align="right" className="tabular-nums">
+        {formatNumber(e.deployedDefinitionKeys)}
+        {(e.exclusiveDefinitionKeys ?? 0) > 0 && (
+          <span className="text-muted-foreground text-small ml-1 whitespace-nowrap">
+            {t("aLandscape.exclusiveSuffix", {
+              count: formatNumber(e.exclusiveDefinitionKeys),
+            })}
+          </span>
+        )}
+      </Td>
+    </tr>
+  )
+}
+
+/** A quiet note under a table: what a sign in it means. */
+function Legend({ children }: { children: ReactNode }) {
+  return <p className="text-muted-foreground text-small mt-2">{children}</p>
+}
+
+function EngineTable({ data, t }: { data: EngineLandscapeView; t: T }) {
   if (data.engines.length === 0) {
     return <TableEmptyState>{t("aLandscape.emptyEngines")}</TableEmptyState>
   }
+  const silent = data.engines.some((e) => !e.reporting)
   return (
     <section>
       <SectionHeading title={t("aLandscape.engines.title")} hint={t("aLandscape.engines.hint")} />
-      <div className="overflow-x-auto rounded-lg border">
-        <Table aria-label={t("aLandscape.engines.tableLabel")}>
-          <TableHeader>
-            <TableRow>
-              <TableHead scope="col">{t("aLandscape.colEngine")}</TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colRunning")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colIncidents")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colFailedJobs")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colExecutable")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colSuspended")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colDueFuture")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colExternalTasks")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colProcesses")}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.engines.map((e) => (
-              <TableRow key={e.engineId}>
-                <TableCell className="font-mono text-sm font-medium">
-                  {e.engineId}
-                  {!e.reporting && (
-                    <Badge variant="destructive" className="ml-2">
-                      {t("aLandscape.noMetrics")}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(e.runningInstances)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {e.openIncidents > 0 ? (
-                    <CountPill tone="danger">{formatNumber(e.openIncidents)}</CountPill>
-                  ) : (
-                    <span className="text-muted-foreground tabular-nums">0</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  {e.failedJobs > 0 ? (
-                    <CountPill tone="warning">{formatNumber(e.failedJobs)}</CountPill>
-                  ) : (
-                    <span className="text-muted-foreground tabular-nums">0</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(e.executableJobs)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(e.suspendedJobs)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(e.jobsDueFuture)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(e.openExternalTasks)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(e.deployedDefinitionKeys)}
-                  {e.exclusiveDefinitionKeys > 0 && (
-                    <span className="text-muted-foreground ml-1 text-xs">
-                      {t("aLandscape.exclusiveSuffix", {
-                        count: formatNumber(e.exclusiveDefinitionKeys),
-                      })}
-                    </span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <ListTable
+        ariaLabel={t("aLandscape.engines.tableLabel")}
+        columns={engineColumns(t)}
+        groups={engineGroups(t)}
+        // Eight figures side by side: the compact cell padding keeps every
+        // backlog column in a 760 px inline view, in German too.
+        className="[&_td]:px-3 [&_th]:px-3"
+      >
+        {data.engines.map((e) => (
+          <EngineRow key={e.engineId} engine={e} t={t} />
+        ))}
+      </ListTable>
+      {silent && (
+        <Legend>
+          <span className="text-foreground font-medium">{formatNumber(null)}</span>{" "}
+          {t("aLandscape.legendUnknown")}
+        </Legend>
+      )}
     </section>
   )
 }
@@ -226,79 +239,82 @@ function EngineTable({ data, t }: { data: EngineLandscapeResult; t: T }) {
 /**
  * The process × engine inventory. Shared definitions lead the table and are the
  * only rows offering the KPI comparison — everywhere else the two engines have
- * no common workload to compare.
+ * no common workload to compare. Its columns are the engines that send
+ * metrics: a silent engine has nothing to show here, the meta line counts it
+ * and a note names it. The comparison is pinned at the right edge, so it
+ * stays in reach however many engines there are.
  */
-function ProcessMatrix({ data, t }: { data: EngineLandscapeResult; t: T }) {
-  const engineIds = data.engines.map((e) => e.engineId)
+function ProcessMatrix({ data, t }: { data: EngineLandscapeView; t: T }) {
   if (data.processes.length === 0) {
     return <TableEmptyState>{t("aLandscape.emptyProcesses")}</TableEmptyState>
   }
+  const engineIds = data.engines.filter((e) => e.reporting).map((e) => e.engineId)
+  const silent = data.engines.filter((e) => !e.reporting).map((e) => e.engineId)
+  const columns: ListTableColumn[] = [
+    { label: t("aLandscape.colProcess") },
+    ...engineIds.map((id): ListTableColumn => ({
+      label: <span className="font-mono">{id}</span>,
+      align: "right",
+    })),
+    { label: t("aLandscape.colIncidents"), align: "right" },
+    {
+      label: <span className="sr-only">{t("aLandscape.colCompare")}</span>,
+      plain: true,
+      sticky: true,
+    },
+  ]
   return (
     <section>
       <SectionHeading title={t("aLandscape.matrix.title")} hint={t("aLandscape.matrix.hint")} />
-      <Alert className="mb-3">
-        <AlertDescription>{t("aLandscape.mixNote")}</AlertDescription>
-      </Alert>
-      <div className="overflow-x-auto rounded-lg border">
-        <Table aria-label={t("aLandscape.matrix.tableLabel")}>
-          <TableHeader>
-            <TableRow>
-              <TableHead scope="col">{t("aLandscape.colProcess")}</TableHead>
-              {engineIds.map((id) => (
-                <TableHead key={id} scope="col" className="text-right font-mono">
-                  {id}
-                </TableHead>
-              ))}
-              <TableHead scope="col" className="text-right">
-                {t("aLandscape.colIncidents")}
-              </TableHead>
-              <TableHead scope="col" className="text-right">
-                <span className="sr-only">{t("aLandscape.colCompare")}</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.processes.map((p) => (
-              <TableRow key={p.processDefinitionKey}>
-                <TableCell className="font-mono text-sm font-medium">
-                  {p.processDefinitionKey}
-                  {p.shared && (
-                    <Badge variant="secondary" className="ml-2">
-                      {t("aLandscape.sharedBadge", { count: formatNumber(p.engineIds.length) })}
-                    </Badge>
-                  )}
-                </TableCell>
-                {engineIds.map((id) => {
-                  const deployed = p.engineIds.includes(id)
-                  return (
-                    <TableCell key={id} className="text-right tabular-nums">
-                      {deployed ? (
-                        formatNumber(p.runningByEngine[id] ?? 0)
-                      ) : (
-                        <span className="text-muted-foreground" title={t("aLandscape.notDeployed")}>
-                          —
-                        </span>
-                      )}
-                    </TableCell>
-                  )
-                })}
-                <TableCell className="text-right">
-                  {p.openIncidentsTotal > 0 ? (
-                    <CountPill tone="danger">{formatNumber(p.openIncidentsTotal)}</CountPill>
-                  ) : (
-                    <span className="text-muted-foreground tabular-nums">0</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  {p.shared && (
-                    <CompareAction processKey={p.processDefinitionKey} on={p.engineIds} t={t} />
-                  )}
-                </TableCell>
-              </TableRow>
+      <p className="text-muted-foreground text-small mb-3 flex items-start gap-2">
+        <Icon icon={Info} dense className="mt-0.5" />
+        <span>{t("aLandscape.mixNote")}</span>
+      </p>
+      <ListTable ariaLabel={t("aLandscape.matrix.tableLabel")} columns={columns}>
+        {data.processes.map((p) => (
+          <tr key={p.processDefinitionKey}>
+            <Td>
+              <span className="flex flex-wrap items-center gap-2">
+                <NamedId
+                  name={processNameOf(data.names, p.processDefinitionKey)}
+                  id={p.processDefinitionKey}
+                />
+                {p.shared && (
+                  <Badge variant="outline">
+                    {t("aLandscape.sharedBadge", { count: formatNumber(p.engineIds.length) })}
+                  </Badge>
+                )}
+              </span>
+            </Td>
+            {engineIds.map((id) => (
+              <Td key={id} align="right" className="tabular-nums">
+                {p.engineIds.includes(id) ? (
+                  formatNumber(p.runningByEngine[id] ?? 0)
+                ) : (
+                  // Not deployed: an empty cell (the legend says so), never "—".
+                  <span className="sr-only">{t("aLandscape.notDeployed")}</span>
+                )}
+              </Td>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+            <Td align="right">
+              {p.openIncidentsTotal > 0 ? (
+                <CountPill tone="danger">{formatNumber(p.openIncidentsTotal)}</CountPill>
+              ) : (
+                <span className="tabular-nums">{formatNumber(0)}</span>
+              )}
+            </Td>
+            <Td align="right">
+              {p.shared && (
+                <CompareAction processKey={p.processDefinitionKey} on={p.engineIds} t={t} />
+              )}
+            </Td>
+          </tr>
+        ))}
+      </ListTable>
+      <Legend>{t("aLandscape.legendNotDeployed")}</Legend>
+      {silent.length > 0 && (
+        <Legend>{t("aLandscape.silentNote", { engines: silent.join(", ") })}</Legend>
+      )}
     </section>
   )
 }

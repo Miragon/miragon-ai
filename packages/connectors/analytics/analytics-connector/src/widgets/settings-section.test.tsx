@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { LocaleProvider, queryClient, ToastProvider } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "../tool-names.js"
-import { AnalyticsSettingsWidget } from "./settings-section.js"
+import { AnalyticsSettingsWidget, parseMinBucketSize } from "./settings-section.js"
 
 /**
  * The settings section's own error state: when its feed fails it says the
@@ -101,5 +101,74 @@ describe("the analytics settings section when it saves (U9: a save is never sile
     await waitFor(() => expect(toast()?.textContent).toContain("Couldn't save the settings"))
     expect(toast()?.getAttribute("data-tone")).toBe("danger")
     expect(toast()?.textContent).toContain("This data isn't available on this server.")
+  })
+
+  // U25: an entry that is no valid size is said to be wrong, never turned into 1.
+  it.each(["abc", "0", "2.5", " ", "-3"])("refuses %j inline and saves nothing", async (entry) => {
+    const saves: unknown[] = []
+    renderSaving((args?: unknown) => {
+      saves.push(args)
+      return { success: true }
+    })
+    const field = await screen.findByRole("textbox", { name: "Minimum size for comparisons" })
+    fireEvent.change(field, { target: { value: entry } })
+    expect(field.getAttribute("aria-invalid")).toBe("true")
+    const error = screen.getByText("Enter a whole number of 1 or more.")
+    expect(field.getAttribute("aria-describedby")).toContain(error.closest("[id]")!.id)
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await waitFor(() => expect(document.activeElement).toBe(field))
+    expect(saves).toEqual([])
+    expect(toast()).toBeNull()
+  })
+
+  it("saves a valid size as the number you typed", async () => {
+    const saves: unknown[] = []
+    renderSaving((args?: unknown) => {
+      saves.push(args)
+      return { success: true }
+    })
+    const field = await screen.findByRole("textbox", { name: "Minimum size for comparisons" })
+    fireEvent.change(field, { target: { value: " 25 " } })
+    expect(field.getAttribute("aria-invalid")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await waitFor(() => expect(saves).toEqual([{ defaultPeriod: "7d", minBucketSize: 25 }]))
+  })
+})
+
+describe("the analytics settings section without the right to save (U25)", () => {
+  const READ_ONLY = { settings: { defaultPeriod: "7d", minBucketSize: 5 }, canSave: false }
+
+  it("says why first, above the fields it cannot change, and offers no Save (de)", async () => {
+    render(
+      <LocaleProvider locale="de">
+        <WidgetFixtureHost
+          widget={Section}
+          tools={{ [ANALYTICS_SETTINGS_DATA]: () => READ_ONLY }}
+        />
+      </LocaleProvider>,
+    )
+    const notice = await screen.findByText("Nur lesen")
+    expect(
+      screen.getByText(
+        "Diese Verbindung kann keine Einstellungen speichern. Ändern kannst du sie, wenn du dich über eine Verbindung mit dem Analytics-Toolset standard anmeldest.",
+      ),
+    ).toBeTruthy()
+    const field = screen.getByRole("textbox", { name: "Mindestgröße für Vergleiche" })
+    expect(field.hasAttribute("disabled")).toBe(true)
+    // The reason comes before the fields in reading order.
+    expect(notice.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Speichern" })).toBeNull()
+    // A notice in the first paint, not an announcement.
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+})
+
+describe("parseMinBucketSize", () => {
+  it("takes a whole number of 1 or more, nothing else", () => {
+    expect(parseMinBucketSize("10")).toBe(10)
+    expect(parseMinBucketSize(" 3 ")).toBe(3)
+    for (const raw of ["", "0", "-1", "1.5", "1e3", "abc", "99999999999999999999"]) {
+      expect(parseMinBucketSize(raw), raw).toBeNull()
+    }
   })
 })

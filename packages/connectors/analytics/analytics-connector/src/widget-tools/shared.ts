@@ -2,6 +2,7 @@ import type { MCPServer } from "mcp-use"
 import type { CompareKpiDelta, PrometheusClient } from "@miragon-ai/analytics-client"
 import type { ProfileSource, ServerT } from "../server-locale.js"
 import type { AnalyticsEngineScope } from "../engine-ids.js"
+import type { NameLookup } from "../bpmn-name-lookup.js"
 
 /**
  * Everything the per-domain widget-tool registrars need, handed over by the
@@ -17,6 +18,8 @@ export interface AnalyticsWidgetToolsContext {
   engineScope: AnalyticsEngineScope
   /** Locale for model-facing summaries plus the saved analytics defaults. */
   profileStore?: ProfileSource
+  /** The process names behind the ids a view lists (`bpmn-name-lookup.ts`); absent → ids. */
+  namesFor?: NameLookup
 }
 
 /** Formats a nullable comparison delta ("+12.5%", "-3pp", "n/a") for summaries. */

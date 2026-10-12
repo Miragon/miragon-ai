@@ -1,6 +1,10 @@
 import { useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type { EngineFilterInput, FailureDashboardData } from "@miragon-ai/analytics-client"
+import type { Named } from "../../bpmn-names.js"
 import { ANALYTICS_FAILURE_DASHBOARD_DATA } from "../../tool-names.js"
+
+/** The failure payload the widgets read: the figures plus the process names behind their keys. */
+export type FailureView = Named<FailureDashboardData>
 
 /** The cell props every failure widget takes — the engine scope its self-fetch reads. */
 export interface FailureScopeProps {
@@ -16,10 +20,10 @@ export interface FailureScopeProps {
 // behavior (hosts honoring resultCanProduceWidget may render a second widget
 // per refresh).
 export function useFailureDashboardSelfFetch(
-  initialData: FailureDashboardData | null,
+  initialData: FailureView | null,
   { engine }: FailureScopeProps,
 ) {
-  return useToolQuery<FailureDashboardData>(
+  return useToolQuery<FailureView>(
     ["analytics:failure-dashboard", engine ?? null],
     ANALYTICS_FAILURE_DASHBOARD_DATA,
     engine === undefined ? {} : { engine },

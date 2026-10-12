@@ -6,7 +6,10 @@
     "configFile": "vitest.stryker.config.ts"
   },
   "mutate": [
+    "src/bpmn-name-lookup.ts",
+    "src/bpmn-names.ts",
     "src/engine-ids.ts",
+    "src/named-views.ts",
     "src/server-locale.ts",
     "src/settings-tools.ts",
     "src/settings.ts",

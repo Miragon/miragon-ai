@@ -115,6 +115,33 @@ export interface AnalyticsDashboardData {
    * an engine in scope reports but has none open, null only when none reports.
    */
   openIncidentsNow: number | null
+  // ── The reference ────────────────────────────────────────────────────────
+  /**
+   * Starts and incidents over the window right before the period — what the
+   * incident rate is judged against. Null when that window lies wholly before
+   * the Prometheus retention (no figures can exist for it).
+   */
+  previous: PreviousPeriodFlows | null
+  /** The top (process, activity) rows by total time, at most `ACTIVITY_BREAKDOWN_LIMIT`. */
   activityBreakdown: ActivityBreakdownItem[]
+  /** How many (process, activity) rows there were before the cut — the "of" of a top list. */
+  activityCount: number
   definitionBreakdown: DefinitionBreakdownItem[]
+}
+
+/** The flows of the window right before a dashboard's period. */
+export interface PreviousPeriodFlows {
+  /** Instances started in the previous window. */
+  totalCount: number
+  /** Incidents created in the previous window. */
+  incidentsCreated: number
+  /** `incidentsCreated` per 100 starts; null when nothing started. */
+  incidentRatePct: number | null
+  /** The retention cut the previous window short; its rate still compares (per 100 starts). */
+  partial: boolean
+  /**
+   * Either window started fewer instances than the comparison floor
+   * (`minBucketSize`): the rate's change is shown, but not judged.
+   */
+  suppressed: boolean
 }
