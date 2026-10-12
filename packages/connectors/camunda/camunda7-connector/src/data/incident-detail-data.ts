@@ -17,14 +17,17 @@ import {
   getIncident,
   getJobs,
   getProcessDefinition,
-  getProcessDefinitionBpmn20Xml,
   getProcessInstance,
 } from "@miragon-ai/camunda7-client/sdk"
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { bpmnProcessNameOf, readBpmnNames } from "@miragon-ai/widget-shell/server"
-import { definitionKeyInId, processDefinitionKeyFromId } from "./definition-info.js"
+import {
+  definitionKeyInId,
+  fetchDefinitionXml,
+  processDefinitionKeyFromId,
+} from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 
 interface BuildOptions {
@@ -219,11 +222,11 @@ function fetchIncidentContext(client: Client, incident: IncidentRecord): Promise
       ? (readProcessInstanceVariables(client, processInstanceId) as Promise<unknown>)
       : Promise.resolve({}),
     processDefinitionId
-      ? (optional(
-          getProcessDefinitionBpmn20Xml({ client, path: { id: processDefinitionId } }),
-        ) as Promise<{
-          bpmn20Xml?: string
-        } | null>)
+      ? optional(
+          fetchDefinitionXml(client, processDefinitionId).then((xml) => ({
+            bpmn20Xml: xml ?? undefined,
+          })),
+        )
       : Promise.resolve(null),
     // The History tab pages the rows itself (registrar history query); the
     // payload only carries the honest total for the KPI. Degrades to null

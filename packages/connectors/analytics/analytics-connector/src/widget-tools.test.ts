@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest"
+import { parseToolResult } from "@miragon/mcp-toolkit-ui"
 import type { MCPServer } from "mcp-use"
 import type { PrometheusClient } from "@miragon-ai/analytics-client"
 import { registerWidgetTools } from "./widget-tools.js"
 import { createEngineScope } from "./engine-ids.js"
 import type { ProfileSource } from "./server-locale.js"
 import type { FetchBpmnXml, NameRequest } from "./bpmn-name-lookup.js"
+
+/** A feed's payload as the widget reads it (feeds answer in JSON text only). */
+const feedData = <T = Record<string, unknown>>(result: unknown): T => parseToolResult<T>(result)
 
 type Cell = { widget: string; props?: Record<string, unknown> }
 type ShowResult = { structuredContent: { layout: Array<{ row: Cell[] }> } }
@@ -111,12 +115,10 @@ describe("view titles (U3) and the heatmap's as-of stamp (U7)", () => {
     const show = (await tools.get("analytics_show_bpmn_heatmap")!(args, CTX)) as unknown as {
       structuredContent: { context: { stepData: { result: { data: { asOf?: string } } } } }
     }
-    const feed = (await tools.get("analytics_bpmn_heatmap_data")!(args, CTX)) as unknown as {
-      structuredContent: { asOf?: string }
-    }
+    const feed = await tools.get("analytics_bpmn_heatmap_data")!(args, CTX)
     const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
     expect(show.structuredContent.context.stepData.result.data.asOf).toMatch(iso)
-    expect(feed.structuredContent.asOf).toMatch(iso)
+    expect(feedData<{ asOf?: string }>(feed).asOf).toMatch(iso)
   })
 })
 
@@ -144,12 +146,11 @@ describe("the heatmap's missing-diagram cause", () => {
     const show = (await byName.get("analytics_show_bpmn_heatmap")!(args, {})) as unknown as {
       structuredContent: { context: { stepData: { result: { data: HeatmapPayload } } } }
     }
-    const feed = (await byName.get("analytics_bpmn_heatmap_data")!(args, {})) as unknown as {
-      structuredContent: HeatmapPayload
-    }
-    return [show.structuredContent.context.stepData.result.data, feed.structuredContent].map(
-      ({ bpmnXml, bpmnMissing }) => ({ bpmnXml, bpmnMissing }),
-    )
+    const feed = await byName.get("analytics_bpmn_heatmap_data")!(args, {})
+    return [
+      show.structuredContent.context.stepData.result.data,
+      feedData<HeatmapPayload>(feed),
+    ].map(({ bpmnXml, bpmnMissing }) => ({ bpmnXml, bpmnMissing }))
   }
 
   it("names the missing camunda7 module only when no lookup was injected", async () => {
@@ -250,10 +251,8 @@ describe("the names behind the ids", () => {
       },
     })
     const ctx = { auth: { user: { id: "user-1" } } }
-    const result = (await byName.get(name)!({}, ctx)) as unknown as {
-      structuredContent: Record<string, unknown>
-    }
-    return { content: result.structuredContent, calls }
+    const result = await byName.get(name)!({}, ctx)
+    return { content: feedData(result), calls }
   }
 
   /** The payload of a show tool (its step data) or of a feed (the content itself). */

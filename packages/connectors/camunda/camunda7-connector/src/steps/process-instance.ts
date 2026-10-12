@@ -23,7 +23,6 @@ export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7StepAppConf
     "camunda7:activityTree",
     "camunda7:variables",
     "camunda7:incidents",
-    "camunda7:bpmnXml",
   ],
   execute: async (context, appConfig) => {
     const { client, engineId, baseUrl, cockpitUrl, provider } = await stepEngine(context, appConfig)
@@ -40,7 +39,6 @@ export const loadProcessInstanceStep: PipelineStepDefinition<Camunda7StepAppConf
         "camunda7:activityTree": data.activityTree,
         "camunda7:variables": data.variables,
         "camunda7:incidents": data.incidents,
-        "camunda7:bpmnXml": data.bpmnXml,
       },
       _app: "camunda7",
       _step: "load-process-instance",

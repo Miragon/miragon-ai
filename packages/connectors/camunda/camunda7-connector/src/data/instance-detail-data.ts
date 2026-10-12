@@ -8,7 +8,6 @@ import {
   getActivityInstanceTree,
   getIncidents,
   getIncidentsCount,
-  getProcessDefinitionBpmn20Xml,
   getProcessInstance,
   getTasks,
   getTasksCount,
@@ -21,6 +20,7 @@ import type { EngineProvider } from "../engine-provider.js"
 import {
   definitionKeyInId,
   definitionVersionFromId,
+  fetchDefinitionXml,
   resolveDefinitionKeys,
 } from "./definition-info.js"
 import { countOf, optional, rowsOf } from "./engine-reads.js"
@@ -46,8 +46,7 @@ async function readBpmnXml(
 ): Promise<{ bpmnXml: string | null; unreadable: boolean }> {
   if (!definitionId) return { bpmnXml: null, unreadable: false }
   try {
-    const res = await getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } })
-    return { bpmnXml: (res as { bpmn20Xml?: string } | null)?.bpmn20Xml ?? null, unreadable: false }
+    return { bpmnXml: await fetchDefinitionXml(client, definitionId), unreadable: false }
   } catch {
     return { bpmnXml: null, unreadable: true }
   }

@@ -1,4 +1,5 @@
 import { vi } from "vitest"
+import { feedPayload } from "../../tools/test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
 import type { ToolSurface } from "@miragon-ai/widget-shell/widgets"
 import { createPlugin } from "../../plugin.js"
@@ -38,10 +39,7 @@ export async function widgetActionsFeedFor(
   plugin.registerWidgetTools?.(server)
   const calls = tool.mock.calls as Array<[{ name: string }, (p: unknown) => Promise<unknown>]>
   const feed = calls.find(([definition]) => definition.name === CAMUNDA7_WIDGET_ACTIONS_DATA)
-  const result = (await feed![1]({})) as {
-    structuredContent: { allowedActions: string[]; modelTools: string[] }
-  }
-  return result.structuredContent
+  return feedPayload<{ allowedActions: string[]; modelTools: string[] }>(await feed![1]({}))
 }
 
 /** The hand-off builders bound to `toolset`'s live surface and `locale`. */

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { parseToolResult } from "@miragon/mcp-toolkit-ui"
 import type { MCPServer } from "mcp-use"
 import { createInMemoryProfileStore, runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
 import {
@@ -11,6 +12,9 @@ import { registerSettingsTools } from "./settings-tools.js"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import { localizeFor, type ProfileSource } from "./server-locale.js"
 import type { AnalyticsToolset } from "./toolsets.js"
+
+/** A feed's payload as the widget reads it (feeds answer in JSON text only). */
+const feedData = <T = Record<string, unknown>>(result: unknown): T => parseToolResult<T>(result)
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -174,9 +178,9 @@ describe("registerSettingsTools", () => {
     registerSettingsTools({ tool } as unknown as MCPServer, writable, "read-only")
     const data = tool.mock.calls.find(
       (c) => (c[0] as { name: string }).name === ANALYTICS_SETTINGS_DATA,
-    )![1] as () => Promise<{ structuredContent?: Record<string, unknown> }>
+    )![1] as () => Promise<unknown>
     const view = await runWithMcpRequestInfo({ authUserId: "user-7" }, () => data())
-    expect(view.structuredContent?.canSave).toBe(false)
+    expect(feedData(view).canSave).toBe(false)
   })
 
   it("the model summary points at the save tool only when it is registered", async () => {
@@ -286,7 +290,7 @@ describe("registerSettingsTools", () => {
       analytics: { defaultPeriod: "30d" },
     })
     const data = await handlerFor(ANALYTICS_SETTINGS_DATA)({}, CTX)
-    expect(data.structuredContent?.settings).toEqual({ defaultPeriod: "30d", minBucketSize: 10 })
+    expect(feedData(data).settings).toEqual({ defaultPeriod: "30d", minBucketSize: 10 })
   })
 
   it("a partial save keeps the other saved value (the store merges the patch)", async () => {
@@ -362,7 +366,7 @@ describe("registerSettingsTools", () => {
     }
 
     const bare = await runWithMcpRequestInfo({}, () => handlerFor(ANALYTICS_SETTINGS_DATA)({}))
-    expect(bare.structuredContent?.canSave).toBe(false)
+    expect(feedData(bare).canSave).toBe(false)
     const refused = await runWithMcpRequestInfo({}, () =>
       handlerFor(ANALYTICS_SAVE_SETTINGS)({ defaultPeriod: "30d" }),
     )
@@ -372,7 +376,7 @@ describe("registerSettingsTools", () => {
     const authed = await runWithMcpRequestInfo({ authUserId: "user-7" }, () =>
       handlerFor(ANALYTICS_SETTINGS_DATA)({}),
     )
-    expect(authed.structuredContent?.canSave).toBe(true)
+    expect(feedData(authed).canSave).toBe(true)
   })
 
   it("stamps the OAuth caller on the saved record as its owner", async () => {

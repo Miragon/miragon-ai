@@ -308,7 +308,9 @@ describe.each(TOOLSETS)("the live surface on $label", ({ options }) => {
       name: "camunda7_widget_actions_data",
       arguments: {},
     })
-    const reported = (result.structuredContent as { modelTools: string[] }).modelTools
+    // A feed answers in JSON text only.
+    const [{ text }] = result.content as Array<{ text: string }>
+    const reported = (JSON.parse(text) as { modelTools: string[] }).modelTools
     expect(reported).toEqual(
       modelTools(tools)
         .filter((name) => name.startsWith("camunda7_"))

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { feedPayload } from "./tools/test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
 import type { Client } from "@miragon-ai/camunda7-client"
 import { z } from "zod"
@@ -55,14 +56,14 @@ async function bootSurface(config: Partial<Camunda7PluginConfig>) {
   const byName = new Map(
     calls.map(([definition, handler]) => [definition.name, { definition, handler }]),
   )
-  const feed = (await byName.get(CAMUNDA7_WIDGET_ACTIONS_DATA)!.handler({})) as {
-    structuredContent: { allowedActions: string[]; modelTools: string[] }
-  }
+  const feed = feedPayload<{ allowedActions: string[]; modelTools: string[] }>(
+    await byName.get(CAMUNDA7_WIDGET_ACTIONS_DATA)!.handler({}),
+  )
   return {
     names: [...byName.keys()],
     byName,
-    allowedActions: feed.structuredContent.allowedActions,
-    modelTools: feed.structuredContent.modelTools,
+    allowedActions: feed.allowedActions,
+    modelTools: feed.modelTools,
   }
 }
 

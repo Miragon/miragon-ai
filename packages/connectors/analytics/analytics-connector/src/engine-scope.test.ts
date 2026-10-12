@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { parseToolResult } from "@miragon/mcp-toolkit-ui"
 import type { MCPServer } from "mcp-use"
 import type { PrometheusClient, PromSample } from "@miragon-ai/analytics-client"
 import {
@@ -234,9 +235,10 @@ describe("the BPMN heatmap names the engines its heat adds up (K33)", () => {
   /** The heatmap payload of a show-tool view or a data feed. */
   const payloadOf = (result: unknown): Payload => {
     const r = result as {
-      structuredContent: Payload & { context?: { stepData: { result: { data: Payload } } } }
+      structuredContent?: { context?: { stepData: { result: { data: Payload } } } }
     }
-    return r.structuredContent.context?.stepData.result.data ?? r.structuredContent
+    // A view carries it in its step data; a feed answers in JSON text.
+    return r.structuredContent?.context?.stepData.result.data ?? parseToolResult<Payload>(result)
   }
 
   it.each(["analytics_show_bpmn_heatmap", "analytics_bpmn_heatmap_data"])(

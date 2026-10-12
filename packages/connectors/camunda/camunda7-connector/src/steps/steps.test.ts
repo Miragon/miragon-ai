@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
+import { feedPayload } from "../tools/test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
 import type { z } from "zod"
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
@@ -86,10 +87,13 @@ interface ToolResult {
   } & Record<string, unknown>
 }
 
-/** One engine id, the plugin's provider-built client, every widget tool captured. */
-async function world(reply = worldReply) {
-  const engine = await startFakeEngine({}, reply)
-  engines.push(engine)
+/**
+ * One engine id, the plugin's provider-built client, every widget tool
+ * captured. Pass `existing` for a second client on the same fake engine.
+ */
+async function world(reply = worldReply, existing?: FakeEngine) {
+  const engine = existing ?? (await startFakeEngine({}, reply))
+  if (!existing) engines.push(engine)
   const registry = createEngineRegistry([{ id: "prod-a", baseUrl: engine.baseUrl }], (e) =>
     providerForEntry(e).createClient(e, { type: "none" }),
   )
@@ -124,8 +128,11 @@ function requestsOf(engine: FakeEngine, from: number): string[] {
 /** The data a show tool renders (its first view entry), or a feed's payload. */
 function twinData(result: ToolResult): unknown {
   expect(result.isError, JSON.stringify(result)).toBeFalsy()
-  const stepData = result.structuredContent?.context?.stepData
-  return stepData ? Object.values(stepData)[0]?.data : result.structuredContent
+  const payload = feedPayload<{ context?: { stepData?: Record<string, { data: unknown }> } }>(
+    result,
+  )
+  const stepData = payload.context?.stepData
+  return stepData ? Object.values(stepData)[0]?.data : payload
 }
 
 const steps = definition.steps as PipelineStepDefinition<Camunda7StepAppConfig>[]
@@ -144,7 +151,7 @@ describe("camunda7 pipeline steps are thin adapters over their show tools' build
     const twin = TWINS[id]
 
     it("renders exactly its twin's data from exactly its twin's requests, engineId stamped", async () => {
-      const { tools, appConfig, engine } = await world()
+      const { tools, engine } = await world()
       const tool = tools.get(twin.twinTool)!
       const viaTool = twinData(
         (await tool.callback(
@@ -154,7 +161,10 @@ describe("camunda7 pipeline steps are thin adapters over their show tools' build
       )
       const toolRequests = requestsOf(engine, 0)
 
+      // The step on a client of its own (same engine): the XML read is
+      // cached per client, so on the same one it would skip the diagram read.
       const stepStart = engine.requests.length
+      const { appConfig } = await world(worldReply, engine)
       const output = await run(step, twin, appConfig)
 
       expect(output.data).toEqual(viaTool)

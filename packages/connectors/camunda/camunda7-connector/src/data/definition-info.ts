@@ -1,6 +1,5 @@
 import type { Client } from "@miragon-ai/camunda7-client"
 import {
-  getProcessDefinitionBpmn20Xml,
   getProcessDefinitionStatistics,
   getProcessDefinitions,
 } from "@miragon-ai/camunda7-client/sdk"
@@ -9,7 +8,12 @@ import {
   readBpmnNames,
   type BpmnModelNames,
 } from "@miragon-ai/widget-shell/server"
+import { fetchDefinitionXml } from "../lib/definition-xml.js"
 import { rowsOf } from "./engine-reads.js"
+
+// The one cached XML read (`lib/definition-xml.ts`), offered with the other
+// definition lookups.
+export { fetchDefinitionXml }
 
 /**
  * Definition lookups shared by every builder (CLAUDE.md invariant 7): the
@@ -105,20 +109,6 @@ export async function fetchLatestDefinition(client: Client, key: string): Promis
 /** The not-found error of a view scoped to a key no version is deployed for. */
 export function unknownKeyError(key: string): Error {
   return new Error(`No process definition with key "${key}" is deployed on this engine.`)
-}
-
-/**
- * The BPMN 2.0 XML of ONE deployed version, read by its id — the only XML
- * read that finds every definition, tenant deployments included. Null when
- * the reply carries no XML; a failed read propagates (the caller decides
- * whether the diagram is enrichment).
- */
-export async function fetchDefinitionXml(
-  client: Client,
-  definitionId: string,
-): Promise<string | null> {
-  const reply = await getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } })
-  return (reply as { bpmn20Xml?: string | null } | null)?.bpmn20Xml ?? null
 }
 
 /**

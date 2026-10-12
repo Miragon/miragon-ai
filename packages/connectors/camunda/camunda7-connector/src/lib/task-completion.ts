@@ -25,14 +25,9 @@ import {
   type EngineVariableInput,
   type VariableMap,
 } from "@miragon-ai/camunda7-client"
-import {
-  complete,
-  getProcessDefinitionBpmn20Xml,
-  getTask,
-  resolve,
-  submit,
-} from "@miragon-ai/camunda7-client/sdk"
+import { complete, getTask, resolve, submit } from "@miragon-ai/camunda7-client/sdk"
 import { formFieldSubmitRules, type FormFieldSubmitRule } from "./bpmn-task-form.js"
+import { fetchDefinitionXml } from "./definition-xml.js"
 
 export type TaskCompletion =
   | { success: true; taskId: string; outcome: "completed" }
@@ -53,11 +48,8 @@ interface TaskRow {
  */
 async function formRules(client: Client, task: TaskRow): Promise<FormFieldSubmitRule[]> {
   if (!task.processDefinitionId || !task.taskDefinitionKey) return []
-  const xml = await getProcessDefinitionBpmn20Xml({
-    client,
-    path: { id: task.processDefinitionId },
-  })
-  return xml.bpmn20Xml ? formFieldSubmitRules(xml.bpmn20Xml, task.taskDefinitionKey) : []
+  const xml = await fetchDefinitionXml(client, task.processDefinitionId)
+  return xml ? formFieldSubmitRules(xml, task.taskDefinitionKey) : []
 }
 
 /**
