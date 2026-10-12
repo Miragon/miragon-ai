@@ -27,8 +27,8 @@ helpers from `src/prometheus.ts` — never concatenate label values by hand:
   or histogram series over a window (contract rule 2): the plugin creates a series on its
   first event and `increase()`/`rate()` never count a series' first sample, so the first
   incident of a type at an activity would read 0. It counts a series born inside the window
-  with its whole value, and falls back to plain `increase()` where the hour before the
-  window lies past the retention
+  with its whole value: one silent in the hour before the window (where that hour lies
+  past the retention, in the window's own first hour)
 - `engineState(gauge, sel)` — the ONE way to read a gauge (contract rule 3): every node
   of a clustered engine reports the same engine-wide rows, so they are folded with
   `max by (<the gauge's contract labels>)` before anything sums them

@@ -28,17 +28,31 @@ describe("increaseIn", () => {
     )
   })
 
-  it("reads plain increase() where the hour before the window lies past the retention", () => {
-    expect(increaseIn("camunda_x_total", { range: "30d" })).toBe("increase(camunda_x_total[30d])")
-    const at = NOW_SECONDS - 29 * DAY_SECONDS
-    expect(increaseIn("camunda_x_total", { range: "1d", at })).toBe(
-      `increase(camunda_x_total[1d] @ ${at})`,
+  it("checks the window's first hour where the hour before it lies past the retention", () => {
+    // 30 days back reaches the retention edge: the series silent in the window's
+    // first hour (30d − 1h = 2588400s before its end) were born inside it.
+    expect(increaseIn("camunda_x_total", { range: "30d" })).toBe(
+      "((increase(camunda_x_total[30d]) and present_over_time(camunda_x_total[1h] offset 2588400s))" +
+        " or (max_over_time(camunda_x_total[30d]) unless present_over_time(camunda_x_total[1h] offset 2588400s)))",
     )
-    // The hour before the window starts exactly at the retention edge: still retained.
+    const at = NOW_SECONDS - 29 * DAY_SECONDS
+    expect(increaseIn("camunda_x_total", { range: "1d", at })).toContain(
+      `present_over_time(camunda_x_total[1h] @ ${at} offset 82800s)`,
+    )
+    // The hour before the window starts exactly at the retention edge: still that hour.
     const edge = NOW_SECONDS - 30 * DAY_SECONDS + 3600 + DAY_SECONDS
-    expect(increaseIn("camunda_x_total", { range: "1d", at: edge })).toContain("present_over_time")
-    expect(increaseIn("camunda_x_total", { range: "1d", at: edge - 1 })).toBe(
-      `increase(camunda_x_total[1d] @ ${edge - 1})`,
+    expect(increaseIn("camunda_x_total", { range: "1d", at: edge })).toContain(
+      `present_over_time(camunda_x_total[1h] @ ${edge} offset 1d)`,
+    )
+    expect(increaseIn("camunda_x_total", { range: "1d", at: edge - 1 })).toContain(
+      `present_over_time(camunda_x_total[1h] @ ${edge - 1} offset 82800s)`,
+    )
+  })
+
+  it("reads plain increase() for a window of an hour or less at the retention edge", () => {
+    const at = NOW_SECONDS - 30 * DAY_SECONDS + 1800
+    expect(increaseIn("camunda_x_total", { range: "3600s", at })).toBe(
+      `increase(camunda_x_total[3600s] @ ${at})`,
     )
   })
 

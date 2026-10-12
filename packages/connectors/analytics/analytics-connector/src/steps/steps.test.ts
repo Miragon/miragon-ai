@@ -159,8 +159,11 @@ describe.each(STEPS)("%s — the names behind the ids", (_id, step) => {
 })
 
 describe("analytics:load-dashboard — analytics:period", () => {
+  // The windows read — not the hour the born-series check looks at (`[1h] offset …`).
   const windows = (sent: string[]) =>
-    new Set(sent.flatMap((q) => [...q.matchAll(/\[(\w+)\]/g)].map((m) => m[1])))
+    new Set(
+      sent.flatMap((q) => [...q.matchAll(/\[(\w+)\](?!(?: @ \d+)? offset)/g)].map((m) => m[1])),
+    )
 
   it("takes the caller's SAVED period when the key is omitted (N83/N116)", async () => {
     const { appConfig, sent } = setup(true)

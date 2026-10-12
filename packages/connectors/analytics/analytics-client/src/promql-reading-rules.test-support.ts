@@ -6,7 +6,7 @@
  * - A counter or histogram series is read only inside the born-series count
  *   `increaseIn` builds (contract rule 2): `increase()` alone never counts a
  *   series' first sample, `rate()` neither. The one exception is a plain
- *   `increase()` over a window whose hour before lies past the retention,
+ *   `increase()` over a window of an hour or less at the retention edge,
  *   which the caller allows through `plainIncreaseAllowed`.
  * - A gauge is read only node-folded (contract rule 3): directly inside
  *   `max by (<exactly its contract labels>)(…)`.
@@ -29,14 +29,16 @@ export interface ReadingRuleOptions {
 
 const SERIES = String.raw`camunda_[A-Za-z0-9_]+(?:\{[^}]*\})?`
 const RANGE = String.raw`[^\]\s]+`
+const OFFSET = String.raw`[^)\s]+`
 
 /**
- * `((increase(S[R]@) and present_over_time(S[1h]@ offset R)) or
- * (max_over_time(S[R]@) unless present_over_time(S[1h]@ offset R)))`.
+ * `((increase(S[R]@) and present_over_time(S[1h]@ offset O)) or
+ * (max_over_time(S[R]@) unless present_over_time(S[1h]@ offset O)))` — O is
+ * the window's range, or the end of its first hour at the retention edge.
  */
 const BORN_READ = new RegExp(
-  String.raw`\(\(increase\((${SERIES})\[(${RANGE})\]((?: @ \d+)?)\) and present_over_time\(\1\[1h\]\3 offset \2\)\)` +
-    String.raw` or \(max_over_time\(\1\[\2\]\3\) unless present_over_time\(\1\[1h\]\3 offset \2\)\)\)`,
+  String.raw`\(\(increase\((${SERIES})\[(${RANGE})\]((?: @ \d+)?)\) and present_over_time\(\1\[1h\]\3 offset (${OFFSET})\)\)` +
+    String.raw` or \(max_over_time\(\1\[\2\]\3\) unless present_over_time\(\1\[1h\]\3 offset \4\)\)\)`,
   "g",
 )
 

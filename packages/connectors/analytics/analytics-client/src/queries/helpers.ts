@@ -31,25 +31,34 @@ const BORN_LOOKBACK_SECONDS = 3600
  *
  * The check looks at the hour before the window. Where that hour lies past
  * the retention (the 30-day period), Prometheus has deleted it and every
- * series would pass for new, counting its whole history; there the window
- * reads plain `increase()`, which can miss a series' first sample but never
- * counts what happened before the window.
+ * series would pass for new, counting its whole history; there it looks at
+ * the window's own first hour instead: a series silent then was born later.
+ * Only a window of an hour or less at the retention edge has no hour to look
+ * at and reads plain `increase()`, which can miss a series' first sample but
+ * never counts what happened before the window.
  */
 export function increaseIn(series: string, w: CountWindow): string {
   const at = w.at === undefined ? "" : ` @ ${w.at}`
   const plain = `increase(${series}[${w.range}]${at})`
-  if (!lookbackRetained(w)) return plain
-  const before = `present_over_time(${series}[${BORN_LOOKBACK}]${at} offset ${w.range})`
+  const offset = bornCheckOffset(w)
+  if (offset === null) return plain
+  const silent = `present_over_time(${series}[${BORN_LOOKBACK}]${at} offset ${offset})`
   return (
-    `((${plain} and ${before})` +
-    ` or (max_over_time(${series}[${w.range}]${at}) unless ${before}))`
+    `((${plain} and ${silent})` +
+    ` or (max_over_time(${series}[${w.range}]${at}) unless ${silent}))`
   )
 }
 
-/** Whether the hour before `w` still lies inside the Prometheus retention. */
-function lookbackRetained(w: CountWindow, now: number = nowSeconds()): boolean {
-  const start = (w.at ?? now) - rangeSeconds(w.range)
-  return start - BORN_LOOKBACK_SECONDS >= now - RETENTION_DAYS * DAY_SECONDS
+/**
+ * How far back from the window's end the born check's hour ends: the window's
+ * start (the hour before it), or, where that hour lies past the retention,
+ * the end of the window's first hour; `null` when the window has none.
+ */
+function bornCheckOffset(w: CountWindow, now: number = nowSeconds()): string | null {
+  const seconds = rangeSeconds(w.range)
+  const start = (w.at ?? now) - seconds
+  if (start - BORN_LOOKBACK_SECONDS >= now - RETENTION_DAYS * DAY_SECONDS) return w.range
+  return seconds > BORN_LOOKBACK_SECONDS ? `${seconds - BORN_LOOKBACK_SECONDS}s` : null
 }
 
 /**

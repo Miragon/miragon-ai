@@ -148,14 +148,15 @@ describe("metrics contract — labels in alert rules and dashboards", () => {
 /**
  * Contract rules 2 and 3 over every consumer: a counter or histogram is read
  * only through the born-series count, a gauge only folded over its nodes.
- * Queries may read plain `increase()` where the hour before their window lies
- * past the retention (`increaseIn` falls back there); the alert rules and
- * dashboards never.
+ * Queries may read plain `increase()` only over a window of an hour or less
+ * at the retention edge (`increaseIn` has no hour to check there); the alert
+ * rules and dashboards never.
  */
 describe("metrics contract — reading rules", () => {
   const plainIncreaseAllowed = (range: string, at: number | undefined) => {
     const now = nowSeconds()
-    return (at ?? now) - rangeSeconds(range) - 3600 < now - RETENTION_DAYS * DAY_SECONDS
+    const seconds = rangeSeconds(range)
+    return seconds <= 3600 && (at ?? now) - seconds - 3600 < now - RETENTION_DAYS * DAY_SECONDS
   }
 
   it.each(Object.entries(SCENARIOS))(

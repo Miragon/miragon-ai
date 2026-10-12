@@ -36,9 +36,20 @@ describe("readingRuleViolations — counters and histograms", () => {
   })
 
   it("rejects a born-series count whose parts disagree", () => {
-    const mixed =
-      "((increase(camunda_inc_total[7d]) and present_over_time(camunda_inc_total[1h] offset 1d)) or (max_over_time(camunda_inc_total[7d]) unless present_over_time(camunda_inc_total[1h] offset 1d)))"
-    expect(violations(mixed).length).toBeGreaterThan(0)
+    // The two silence checks must look at the same hour …
+    const offsets =
+      "((increase(camunda_inc_total[7d]) and present_over_time(camunda_inc_total[1h] offset 7d)) or (max_over_time(camunda_inc_total[7d]) unless present_over_time(camunda_inc_total[1h] offset 1d)))"
+    expect(violations(offsets).length).toBeGreaterThan(0)
+    // … and both reads span the same window.
+    const ranges =
+      "((increase(camunda_inc_total[7d]) and present_over_time(camunda_inc_total[1h] offset 7d)) or (max_over_time(camunda_inc_total[1d]) unless present_over_time(camunda_inc_total[1h] offset 7d)))"
+    expect(violations(ranges).length).toBeGreaterThan(0)
+  })
+
+  it("accepts the window's own first hour as the silence check at the retention edge", () => {
+    const edge =
+      "((increase(camunda_inc_total[30d]) and present_over_time(camunda_inc_total[1h] offset 2588400s)) or (max_over_time(camunda_inc_total[30d]) unless present_over_time(camunda_inc_total[1h] offset 2588400s)))"
+    expect(violations(`sum(${edge})`)).toEqual([])
   })
 
   it("lets a plain increase() through only where the caller allows its window", () => {
