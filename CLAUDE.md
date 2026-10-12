@@ -259,7 +259,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    above the pinned column, `REGION_FOCUS_RING`, since it fills clipping cards edge to
    edge); `hideBelow: "sm" | "md" | "lg"` hides a column (header and every row's cell
    in that position, rows one cell per column) while the REGION is narrower than
-   640/768/1024 px; `sticky: true` on the last column pins the row actions; `IdCell` /
+   640/768/1024 px; `sticky: true` on the last column pins the row actions; `sort` on the
+   column the rows are ordered by sets `aria-sort` and a direction arrow; `groups` heads
+   adjacent columns in a row above theirs (`scope="colgroup"`; a column under a group of
+   several never hides, `listTableCss` throws on it); `IdCell` /
    `IdText` show an id in Geist Mono, shortened ("5f0ce78e…", whole for screen readers and
    in `title`), with a copy button and its toast (a failed copy leaves the whole id selected
    in a read-only field, to copy by hand). `WidgetShell` pads 24 px (16 px below
@@ -288,7 +291,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    out when unknown;
    `Section`, `Th`/`Td`/`TableEmptyState`, the toolkit's `WidgetHeader` + `VersionChip`, its
    `KpiGrid`, `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
-   settings sections (form controls on the `--input` edge, `FIELD_CONTROL`); `useBpmnViewer`
+   settings sections (form controls on the `--input` edge, `FIELD_CONTROL`; an entry that is
+   not valid is said to be wrong inline, `SettingsField`'s `error`: a danger-ink line under
+   the control, `aria-invalid` and `aria-describedby`, never a silent clamp; a section that
+   cannot save says why ABOVE its disabled fields); `useBpmnViewer`
    (it owns the fixed light canvas: the container is a forced-light island,
    `data-theme-mode="light"`, on the paper token; its `height` is the diagram's height at
    the scale bpmn-js draws it, never past 1:1, 240–560 px, known on the first paint from the

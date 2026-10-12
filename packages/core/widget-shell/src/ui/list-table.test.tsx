@@ -150,3 +150,106 @@ describe("listTableCss", () => {
     expect(COLUMN_BREAKPOINTS).toEqual({ sm: "40rem", md: "48rem", lg: "64rem" })
   })
 })
+
+const GROUPED: ListTableColumn[] = [
+  { label: "Engine" },
+  { label: "Running", align: "right" },
+  { label: "Incidents", align: "right" },
+  { label: "Executable", align: "right" },
+  { label: "Definitions", align: "right", hideBelow: "md" },
+  { plain: true, sticky: true },
+]
+
+describe("ListTable: column groups (a head over adjacent columns)", () => {
+  function Grouped() {
+    return (
+      <ListTable
+        ariaLabel="Engines"
+        columns={GROUPED}
+        groups={[{}, { label: "Load", span: 2 }, { label: "Backlog" }, {}, {}]}
+      >
+        <tr>
+          <Td>prod</Td>
+          <Td align="right">1</Td>
+          <Td align="right">2</Td>
+          <Td align="right">3</Td>
+          <Td align="right">4</Td>
+          <Td align="right">
+            <button type="button">Compare</button>
+          </Td>
+        </tr>
+      </ListTable>
+    )
+  }
+
+  it("heads the groups in a row above the column heads, each over its columns", () => {
+    render(<Grouped />)
+    const rows = screen.getByRole("table").querySelectorAll("thead tr")
+    expect(rows).toHaveLength(2)
+    const groupRow = rows[0]
+    expect(groupRow.hasAttribute("data-list-table-groups")).toBe(true)
+    const load = screen.getByRole("columnheader", { name: "Load" })
+    expect(load.getAttribute("scope")).toBe("colgroup")
+    expect(load.getAttribute("colspan")).toBe("2")
+    expect(screen.getByRole("columnheader", { name: "Backlog" }).getAttribute("colspan")).toBe("1")
+    // A column in no group gets an empty cell, not an empty header.
+    expect(groupRow.querySelectorAll("td")).toHaveLength(3)
+  })
+
+  it("keeps the column rules off the group row and lets a group of one follow its column", () => {
+    const { container } = render(<Grouped />)
+    const scope = screen.getByRole("region").getAttribute("data-list-table")!
+    const at = `[data-list-table="${scope}"]`
+    const css = container.querySelector("style")?.textContent ?? ""
+    expect(css).toContain(
+      `${at} tr:not([data-list-table-groups]) > :nth-child(5) { display: none; }`,
+    )
+    // "Definitions" is column 5 and the group row's 4th cell.
+    expect(css).toContain(`${at} tr[data-list-table-groups] > :nth-child(4) { display: none; }`)
+    expect(css).toContain(
+      `${at} tr[data-list-table-groups] > :nth-child(5) { position: sticky; right: 0; z-index: 1; background-color: inherit; }`,
+    )
+  })
+
+  it("refuses groups that do not cover each column once, or a hidden column in a span", () => {
+    expect(() => listTableCss("s", GROUPED, [{ span: 2 }])).toThrow(/cover 2 columns.*has 6/)
+    expect(() => listTableCss("s", GROUPED, [{ span: 0 }, { span: 6 }])).toThrow(/spans 0/)
+    expect(() => listTableCss("s", GROUPED, [{}, {}, {}, { label: "Mixed", span: 2 }, {}])).toThrow(
+      /column 5 hides, but sits under a group of 2/,
+    )
+    const shown = GROUPED.map((column) => ({ ...column, hideBelow: undefined }))
+    expect(() => listTableCss("s", shown, [{}, {}, {}, {}, { label: "End", span: 2 }])).toThrow(
+      /pinned last column needs a group of its own/,
+    )
+  })
+})
+
+describe("ListTable: the sorted column", () => {
+  it("says the order in aria-sort and with a direction arrow", () => {
+    render(
+      <ListTable
+        ariaLabel="Activities"
+        columns={[
+          { label: "Activity" },
+          { label: "Total time", align: "right", sort: "descending" },
+          { label: "Name", sort: "ascending" },
+        ]}
+      >
+        <tr>
+          <Td>a</Td>
+          <Td align="right">1</Td>
+          <Td>n</Td>
+        </tr>
+      </ListTable>,
+    )
+    const total = screen.getByRole("columnheader", { name: "Total time" })
+    expect(total.getAttribute("aria-sort")).toBe("descending")
+    expect(total.querySelector("svg")?.getAttribute("class")).toContain("lucide-arrow-down")
+    expect(total.querySelector("span")?.className).toContain("flex-row-reverse")
+    const name = screen.getByRole("columnheader", { name: "Name" })
+    expect(name.querySelector("svg")?.getAttribute("class")).toContain("lucide-arrow-up")
+    expect(screen.getByRole("columnheader", { name: "Activity" }).hasAttribute("aria-sort")).toBe(
+      false,
+    )
+  })
+})

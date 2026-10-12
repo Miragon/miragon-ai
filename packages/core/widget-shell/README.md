@@ -24,7 +24,8 @@ package customers build their own connectors and composed servers on (see the
   (`WidgetShell`, tables, `ListTable` + `PagedRows`, the dual-mode data hooks, formatters,
   hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages.
   Layout, states and feedback: `ListTable` scrolls inside a named, keyboard-reachable region
-  (column priorities via `hideBelow`, the row actions pinned with `sticky`), `IdCell`/`IdText`
+  (column priorities via `hideBelow`, the row actions pinned with `sticky`, the sorted
+  column marked with `sort`, heads over adjacent columns with `groups`), `IdCell`/`IdText`
   show an id shortened in Geist Mono with a copy button, `describeError` turns an engine or
   transport failure into what happened and what you can do (the toolkit's `ErrorState` in
   `ViewDataState`, `QueryFallback`, `useDetailView`, raw text under "Details", retry

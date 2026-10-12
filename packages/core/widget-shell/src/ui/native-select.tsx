@@ -4,11 +4,12 @@ import { cn, FOCUS_RING } from "@miragon/mcp-toolkit-ui"
 /**
  * The form control look the kit's native inputs share (CI §8 "Eingabefelder"):
  * the `--input` edge (`--cd-kontur`, 3:1 against the card — the decorative
- * `--border` reaches 1.26:1), 14 px (the dense-controls step), the md radius
- * and the toolkit's opaque focus ring.
+ * `--border` reaches 1.26:1), the danger edge on an entry marked
+ * `aria-invalid` (with the field's error line, `SettingsField`), 14 px (the
+ * dense-controls step), the md radius and the toolkit's opaque focus ring.
  */
 export const FIELD_CONTROL = cn(
-  "border-input bg-background text-foreground text-dense h-9 rounded-md border px-2 disabled:cursor-not-allowed disabled:opacity-50",
+  "border-input bg-background text-foreground text-dense aria-invalid:border-danger h-9 rounded-md border px-2 disabled:cursor-not-allowed disabled:opacity-50",
   FOCUS_RING,
 )
 

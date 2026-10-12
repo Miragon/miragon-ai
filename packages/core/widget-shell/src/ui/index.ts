@@ -20,12 +20,20 @@ export {
   type ErrorSource,
 } from "./describe-error.js"
 export { Section } from "./section.js"
-export { Th, Td, TableEmptyState, VersionChip, type EmptyVariant } from "./table.js"
+export {
+  Th,
+  Td,
+  TableEmptyState,
+  VersionChip,
+  type ColumnSort,
+  type EmptyVariant,
+} from "./table.js"
 export {
   ListTable,
   COLUMN_BREAKPOINTS,
   type ColumnBreakpoint,
   type ListTableColumn,
+  type ListTableGroup,
 } from "./list-table.js"
 export { IdText, IdCell, shortId, copyText, ID_FULL_LENGTH } from "./id-text.js"
 export { ConfirmDialog, type ConfirmDialogProps, type ConfirmTarget } from "./confirm-dialog.js"

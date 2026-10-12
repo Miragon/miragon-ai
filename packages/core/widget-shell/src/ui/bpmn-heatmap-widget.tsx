@@ -122,6 +122,12 @@ export function BpmnHeatmapWidget({
   const [mode, setMode] = useState<Mode>("frequency")
   const kit = kitLabels(useLocale())
   const l = { ...DEFAULT_HEATMAP_LABELS, ...labels }
+  const xml = data?.bpmnXml ?? null
+  // The process's own name from its model (U13): the key stays as a quiet id next to it.
+  const processName = useMemo(
+    () => (xml && data ? (bpmnElementNames(xml)[data.processDefinitionKey] ?? null) : null),
+    [xml, data],
+  )
 
   if (!data) return <TableEmptyState>{l.noData}</TableEmptyState>
   if (!data.bpmnXml) return <TableEmptyState>{l.bpmnUnavailable}</TableEmptyState>
@@ -138,9 +144,20 @@ export function BpmnHeatmapWidget({
           as="h2"
           title={l.title}
           titleSuffix={
-            <Badge variant="outline" className="ml-2 align-middle font-mono">
-              {data.processDefinitionKey}
-            </Badge>
+            processName ? (
+              <>
+                <Badge variant="outline" className="ml-2 align-middle">
+                  {processName}
+                </Badge>
+                <span className="text-muted-foreground text-small ml-2 align-middle font-mono font-normal">
+                  {data.processDefinitionKey}
+                </span>
+              </>
+            ) : (
+              <Badge variant="outline" className="ml-2 align-middle font-mono">
+                {data.processDefinitionKey}
+              </Badge>
+            )
           }
           sub={
             meta ?? (

@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from "react"
-import { cn } from "@miragon/mcp-toolkit-ui"
-import { Th } from "./table.js"
+import { cn, MICRO_LABEL } from "@miragon/mcp-toolkit-ui"
+import { Th, type ColumnSort } from "./table.js"
 
 /**
  * The scroll region's focus ring, drawn INSIDE its box: the region usually
@@ -54,27 +54,98 @@ export interface ListTableColumn {
    * (e.g. `[--list-table-surface:var(--muted)]` on its wrapper).
    */
   sticky?: boolean
+  /** The rows are sorted by this column: `aria-sort` and a direction arrow on its head. */
+  sort?: ColumnSort
+}
+
+/**
+ * A head over adjacent columns, in a row above the column heads: what the
+ * columns under it have in common ("Job backlog, comparable across
+ * engines"). The groups cover the columns left to right, each `span` columns
+ * (default 1); a group without `label` is an empty cell over a column that
+ * belongs to none. A column under a group of several never hides (the span
+ * would not shrink with it): give `hideBelow` only to a column in a group of
+ * its own.
+ */
+export interface ListTableGroup {
+  label?: ReactNode
+  span?: number
+}
+
+/** Where each group sits: its position in the group row and the columns it covers. */
+function groupLayout(
+  columns: ReadonlyArray<ListTableColumn>,
+  groups: ReadonlyArray<ListTableGroup>,
+): Array<{ position: number; first: number; span: number }> {
+  let first = 0
+  const layout = groups.map((group, index) => {
+    const span = group.span ?? 1
+    if (!Number.isInteger(span) || span < 1) {
+      throw new Error(`ListTable: group ${index + 1} spans ${span} columns; a span is 1 or more`)
+    }
+    const entry = { position: index + 1, first, span }
+    first += span
+    return entry
+  })
+  if (first !== columns.length) {
+    throw new Error(
+      `ListTable: the groups cover ${first} columns, the table has ${columns.length}; cover each column once`,
+    )
+  }
+  for (const { first: start, span } of layout) {
+    if (span === 1) continue
+    const hidden = columns.slice(start, start + span).findIndex((c) => c.hideBelow)
+    if (hidden >= 0) {
+      throw new Error(
+        `ListTable: column ${start + hidden + 1} hides, but sits under a group of ${span}; a column under a group of several never hides`,
+      )
+    }
+  }
+  return layout
+}
+
+/** `display: none` below the breakpoint, a table cell from it on. */
+function hideRules(cell: string, below: ColumnBreakpoint): string[] {
+  const width = COLUMN_BREAKPOINTS[below]
+  return [
+    `${cell} { display: none; }`,
+    `@container (min-width: ${width}) { ${cell} { display: table-cell; } }`,
+  ]
 }
 
 /**
  * The scoped rules of one table: hidden columns per container width and the
  * pinned action column. Rows are hand-composed, so the rules address cell
  * POSITIONS (`tr > :nth-child(n)`) — one cell per column, as every list
- * renders them — and a row cannot drift from its header.
+ * renders them — and a row cannot drift from its header. The group row (if
+ * any) is addressed by its own positions: a group of one follows its column.
  */
-export function listTableCss(scope: string, columns: ReadonlyArray<ListTableColumn>): string {
+export function listTableCss(
+  scope: string,
+  columns: ReadonlyArray<ListTableColumn>,
+  groups?: ReadonlyArray<ListTableGroup>,
+): string {
   const at = `[data-list-table="${scope}"]`
+  const rows = groups ? `${at} tr:not([data-list-table-groups])` : `${at} tr`
+  const groupRow = `${at} tr[data-list-table-groups]`
+  const layout = groups ? groupLayout(columns, groups) : []
+  /** The group-row cell over column `index` when it heads that column alone. */
+  const ownGroupCell = (index: number) => {
+    const group = layout.find((g) => g.first === index && g.span === 1)
+    return group ? `${groupRow} > :nth-child(${group.position})` : undefined
+  }
   const rules: string[] = []
   columns.forEach((column, index) => {
-    const cell = `${at} tr > :nth-child(${index + 1})`
+    const cells = [`${rows} > :nth-child(${index + 1})`, ownGroupCell(index)].filter(
+      (cell): cell is string => cell !== undefined,
+    )
     if (column.hideBelow) {
-      const width = COLUMN_BREAKPOINTS[column.hideBelow]
-      rules.push(
-        `${cell} { display: none; }`,
-        `@container (min-width: ${width}) { ${cell} { display: table-cell; } }`,
-      )
+      for (const cell of cells) rules.push(...hideRules(cell, column.hideBelow))
     }
     if (column.sticky && index === columns.length - 1) {
+      if (groups && !ownGroupCell(index)) {
+        throw new Error("ListTable: the pinned last column needs a group of its own")
+      }
       // The pinned cell paints its ROW's background (`inherit`), so a row's
       // hover, selection or dimming covers it too. Rows get the surface as a
       // default of zero specificity (`:where`): a row's own class wins, and
@@ -82,11 +153,39 @@ export function listTableCss(scope: string, columns: ReadonlyArray<ListTableColu
       rules.push(
         `:where(${at} tbody tr) { background-color: var(--list-table-surface, var(--card)); }`,
         `:where(${at} thead tr) { background-color: var(--muted); }`,
-        `${cell} { position: sticky; right: 0; z-index: 1; background-color: inherit; }`,
+        ...cells.map(
+          (cell) =>
+            `${cell} { position: sticky; right: 0; z-index: 1; background-color: inherit; }`,
+        ),
       )
     }
   })
   return rules.join("\n")
+}
+
+/** The group row: a head per group (a `colgroup` header), an empty cell over a column in none. */
+function GroupRow({ groups }: { groups: ReadonlyArray<ListTableGroup> }) {
+  return (
+    <tr data-list-table-groups="">
+      {groups.map((group, index) =>
+        group.label === undefined ? (
+          <td key={index} colSpan={group.span ?? 1} className="border-border border-t" />
+        ) : (
+          <th
+            key={index}
+            scope="colgroup"
+            colSpan={group.span ?? 1}
+            className={cn(
+              "border-border text-foreground border-t border-l px-4 pt-2.5 pb-1 text-center",
+              MICRO_LABEL,
+            )}
+          >
+            {group.label}
+          </th>
+        ),
+      )}
+    </tr>
+  )
 }
 
 /**
@@ -105,11 +204,14 @@ export function listTableCss(scope: string, columns: ReadonlyArray<ListTableColu
  */
 export function ListTable({
   columns,
+  groups,
   ariaLabel,
   className,
   children,
 }: {
   columns: ReadonlyArray<ListTableColumn>
+  /** Heads over adjacent columns, in a row above the column heads ({@link ListTableGroup}). */
+  groups?: ReadonlyArray<ListTableGroup>
   /** Names the table and its scroll region ("Failed jobs"). */
   ariaLabel: string
   /** Merged into the `<table>` (e.g. the compact `[&_th]:border-t-0`). */
@@ -118,7 +220,7 @@ export function ListTable({
   children: ReactNode
 }) {
   const scope = useId()
-  const css = listTableCss(scope, columns)
+  const css = listTableCss(scope, columns, groups)
   return (
     // The frame does not scroll, so the ring laid over the region stays put
     // while the table scrolls under it.
@@ -137,12 +239,14 @@ export function ListTable({
           aria-label={ariaLabel}
         >
           <thead className="bg-muted">
+            {groups && <GroupRow groups={groups} />}
             <tr>
               {columns.map((column, index) => (
                 <Th
                   key={index}
                   align={column.align}
                   plain={column.plain}
+                  sort={column.sort}
                   className={column.className}
                 >
                   {column.label}

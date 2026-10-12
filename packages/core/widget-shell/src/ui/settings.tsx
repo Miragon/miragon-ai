@@ -1,5 +1,7 @@
 import { cloneElement, useId, type ComponentProps, type ReactElement, type ReactNode } from "react"
-import { Card, CardContent, cn } from "@miragon/mcp-toolkit-ui"
+import { Card, CardContent, cn, TONE_INK } from "@miragon/mcp-toolkit-ui"
+import { CircleAlert } from "lucide-react"
+import { Icon } from "./icon.js"
 import { FIELD_CONTROL } from "./native-select.js"
 
 /**
@@ -34,25 +36,43 @@ export function SettingsCard({
   )
 }
 
+/** The props a field hands its single control. */
+interface FieldControlProps {
+  id?: string
+  "aria-describedby"?: string
+  "aria-invalid"?: boolean
+}
+
 /**
  * A labelled form field with optional help text. Associates the label with its
  * single child control via `htmlFor`/`id`; checkbox groups (no single control)
  * set `group` and get a `role="group"` labelled by the text instead.
+ *
+ * `error` is the inline validation of the entry (CI §8/§9: say what is wrong
+ * where it is, never correct it silently): a line in the danger ink right
+ * under the control with an icon, the control marked `aria-invalid` and
+ * described by the line (and by the help text, which stays).
  */
 export function SettingsField({
   label,
   help,
+  error,
   group = false,
   children,
 }: {
   label: string
   help?: string
+  /** What is wrong with the entry, in words ("Enter a whole number of 1 or more."). */
+  error?: string
   /** Checkbox-group fields: labelled via role="group" (no single control to point htmlFor at). */
   group?: boolean
-  children: ReactElement<{ id?: string }>
+  children: ReactElement<FieldControlProps>
 }) {
   const id = useId()
   const labelId = `${id}-label`
+  const helpId = `${id}-help`
+  const errorId = `${id}-error`
+  const describedBy = [error ? errorId : null, help ? helpId : null].filter(Boolean).join(" ")
   return (
     <div className="flex flex-col gap-1.5">
       {group ? (
@@ -65,13 +85,27 @@ export function SettingsField({
         </label>
       )}
       {group ? (
-        <div role="group" aria-labelledby={labelId}>
+        <div role="group" aria-labelledby={labelId} aria-describedby={describedBy || undefined}>
           {children}
         </div>
       ) : (
-        cloneElement(children, { id })
+        cloneElement(children, {
+          id,
+          "aria-describedby": describedBy || undefined,
+          "aria-invalid": error ? true : undefined,
+        })
       )}
-      {help && <span className="text-muted-foreground text-small">{help}</span>}
+      {error && (
+        <span id={errorId} className={cn("text-small flex items-center gap-1.5", TONE_INK.danger)}>
+          <Icon icon={CircleAlert} dense />
+          {error}
+        </span>
+      )}
+      {help && (
+        <span id={helpId} className="text-muted-foreground text-small">
+          {help}
+        </span>
+      )}
     </div>
   )
 }
