@@ -1,9 +1,16 @@
 import { useMemo } from "react"
-import { Card, CardContent, Badge, Alert, AlertDescription } from "@miragon/mcp-toolkit-ui"
+import {
+  Card,
+  CardContent,
+  Badge,
+  Alert,
+  AlertDescription,
+  TONE_DOT,
+  PagedListFooter,
+} from "@miragon/mcp-toolkit-ui"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   HandOffButton,
-  TONE_DOT,
   ListTable,
   TableEmptyState,
   Td,
@@ -13,7 +20,6 @@ import {
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
-import { CockpitListFooter } from "./list-footer.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
 
@@ -397,7 +403,7 @@ export function PagedHistoryView({
         engineId={engine}
         totalActivities={paged.total}
       />
-      <CockpitListFooter paged={paged} noun={t("historyTimeline.footerNoun")} />
+      <PagedListFooter paged={paged} noun={t("historyTimeline.footerNoun")} />
     </div>
   )
 }

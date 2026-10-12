@@ -3,7 +3,7 @@ import {
   buildShowWidgetIntent,
   useHostActions,
   type HostActions,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/mcp-toolkit-ui/app"
 import {
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
   CAMUNDA7_SHOW_ENGINE_HEALTH,

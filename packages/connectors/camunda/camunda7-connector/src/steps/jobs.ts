@@ -2,6 +2,7 @@ import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { buildJobPanelData } from "../data/cockpit-data.js"
 import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 import { ENGINE_KEY, stepEngine } from "./shared.js"
+import { builderText } from "../builder-texts.js"
 
 /**
  * Jobs with the GLOBAL `/job/count` totals (all and failed) — adapter over
@@ -10,6 +11,7 @@ import { ENGINE_KEY, stepEngine } from "./shared.js"
  */
 export const loadJobsStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-jobs",
+  ...builderText("step.load-jobs"),
   description:
     "The engine's jobs (first page) with exact totals of all and of failed jobs (no retries left). Powers camunda7:job-panel.",
   dataType: "camunda7:jobPanel",

@@ -2,6 +2,7 @@ import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { buildCockpitDashboardData } from "../data/cockpit-data.js"
 import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 import { ENGINE_KEY, stepEngine } from "./shared.js"
+import { builderText } from "../builder-texts.js"
 
 /**
  * The process landscape, one row per definition key — adapter over
@@ -11,6 +12,7 @@ import { ENGINE_KEY, stepEngine } from "./shared.js"
  */
 export const loadCockpitDashboardStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-cockpit-dashboard",
+  ...builderText("step.load-cockpit-dashboard"),
   description:
     "The process landscape: one row per definition key with running instances, failed jobs and incidents summed over all versions. Powers camunda7:process-health-kpi and camunda7:process-definitions-table.",
   dataType: "camunda7:cockpitDashboard",

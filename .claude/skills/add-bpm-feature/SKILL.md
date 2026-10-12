@@ -179,25 +179,34 @@ Only when you created a new `src/tools/<domain>.ts`: add
 ## Step 4 — widget path (only for UI features)
 
 Widget components live in `packages/connectors/camunda/camunda7-connector/src/widgets/` and receive their data as
-a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widgets` —
-never re-inline these primitives:
+a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widgets` and the
+toolkit `@miragon/mcp-toolkit-ui` (its components, tone maps and `cn` come from the toolkit
+itself; widget-shell neither forks nor re-exports them) — never re-inline these primitives:
 
 - `ViewDataState` — the loading/error/no-data guard (no inline Alert/loading ternary)
 - Self-fetching widgets: skeleton + error via `QueryFallback` (+ `TableSkeleton`) — a
   missing `isError` branch means an eternal skeleton
+- A view that reads its feed directly calls the toolkit's `useViewData` with
+  `{ initialDataMode: "seed" }` as its last argument: the handed-in tool result seeds a
+  live query, so Refresh and a write's invalidation re-read it. Without the option the
+  toolkit returns the handed-in data forever (#341); `src/widget-actions.test.ts` fails
+  on a `useViewData` call that does not seed by a literal option
 - `formatTimestamp`/`formatDate`/`formatTime` (dates) and `formatNumber`/`formatPercent`/
   `formatPercentPoints`/`formatPeriod`/`formatDuration`/`truncate`: no local format
   helpers, no `toFixed`, no `toLocaleString()` without a locale, no hand-built
   `Intl.NumberFormat` (canonical duration style
   "3m 7s" / German "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage")
-- `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); `WidgetHeader`
-  (`badge`/`titleSuffix`/`size="detail"`, no icon tile) + `VersionChip` (hero/detail
-  headers); `KpiGrid` (KPI strips, incl. `variant="soft"`); `WidgetShell` (page
-  container, split into View + Shell only when the body is embedded elsewhere)
+- `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); the toolkit's
+  `WidgetHeader` (`badge`/`titleSuffix`/`size="detail"`/`as`, no icon tile) + `VersionChip`
+  (hero/detail headers); the toolkit's `KpiGrid` (KPI strips, incl. `variant="soft"`; a
+  clickable cell says what the click does in `actionHint`, never `ariaLabel`);
+  `WidgetShell` (page container, split into View + Shell only when the body is embedded
+  elsewhere)
 - Status: a `ToneVariant` (`danger`/`warning`/`success`/`info`/`neutral`; open incident or
   failed job without retries = `danger`, retries left or degraded = `warning`) shown via
-  `StatusBadge`/`CountPill`/`KpiCell.tone` or the `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/
-  `TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps, next to readable words; never a coloured
+  the toolkit's `StatusBadge` (tone and words required)/`CountPill`/`KpiCell.tone` or its
+  `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/`TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps (a tone
+  from the wire through `resolveTone`), next to readable words; never a coloured
   number, never a palette class or raw colour; text on a tint is black (`TONE_SOFT`), the
   `-ink` role is only for text in a tone directly on the card or page (an inline error)
 - Icons: Lucide via `Icon` (`import { FileSearch } from "lucide-react"`; the package pins
@@ -229,13 +238,17 @@ never re-inline these primitives:
    `/count` endpoint) so the footer is honest.
 2. Widget: `usePagedListView` (owns search state, 300 ms debounce, the server-side
    `searchArg`, and the drop-initialData-on-interaction rule; chips go into
-   `filtersActive` + the `args`) → `FilterBar` → `PagedRows` (marks the rows while they
+   `filtersActive` + the `args`) → `FilterBar` (with `searchAriaLabel`, the placeholder's
+   words without the ellipsis, and `chipsAriaLabel` for a chip row: the toolkit's default
+   name is a generic "Filter"; `src/widgets/search-labels.test.tsx` pins every search box
+   by its name) → `PagedRows` (marks the rows while they
    are the previous result) around `ListTable` (frame + `Th` header row;
    rows stay hand-composed `<tr>` + `Td`) or a `RowCard` stack → `TableEmptyState`
-   (distinguish "no match" when `interacted`) → `CockpitListFooter`
-   (`src/widgets/list-footer.tsx` — the stale page-0 error and the load-more error,
-   each with its own retry, + "Showing X of Y" + Load more; deliberately not infinite
-   scroll; rendered under an empty result too). Guard the whole view on
+   (distinguish "no match" when `interacted`) → the toolkit's `PagedListFooter`
+   (`paged` as is, `noun` from the catalog — the stale page-0 error and the load-more
+   error, each with its own retry and the raw reason under Details, + "Showing X of Y" in
+   the list's one live region + Load more; deliberately not infinite scroll; rendered
+   under an empty result too). Guard the whole view on
    `!paged.firstPage` only: a search keeps the previous rows (and the search box)
    mounted while its page 0 is in flight. While it does, `paged.stale` is true and
    `firstPage`/`total` are the PREVIOUS result's — a header count, the filters it
@@ -249,7 +262,15 @@ somewhere**:
    `"camunda7:my-widget": adaptDataWidget(MyWidget, "camunda7:myData")`
    (`adaptDataWidget` comes from `@miragon-ai/widget-shell/ui`).
 2. `src/definition.ts` — add the widget entry (`id`, `requires`, `size`, optional
-   `propsSchema`) to the `widgets` array.
+   `propsSchema`) to the `widgets` array, with `...builderText("widget.<slug>")` (the view
+   builder's title and summary for people: `builder.widget.<slug>.title|summary` in
+   `messages/{en,de}.builder.ts`) and `.meta(fieldText("<schema>.<field>"))` on every
+   top-level `propsSchema` field (never a nested one: the props sheet edits nested
+   objects and arrays as JSON, and the toolkit strips `x-display` from the top level
+   only, so a nested text would reach the model); a new pipeline step takes
+   `...builderText("step.<slug>")`. `description` stays the model's text;
+   `src/builder-texts.test.ts` fails on anything the builder would still show by its id
+   and on any builder text the model would read.
 3. `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map. It spreads
    `camunda7Widgets` from `src/widgets/index.ts`, which spreads the registry — verify
    your widget actually arrives in the host map.

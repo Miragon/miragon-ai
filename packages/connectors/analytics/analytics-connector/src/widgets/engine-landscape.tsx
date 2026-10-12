@@ -9,18 +9,18 @@ import {
   TableHeader,
   TableRow,
   useToolQuery,
-} from "@miragon/mcp-toolkit-ui"
-import {
-  HandOffButton,
   CountPill,
   KpiGrid,
   SectionHeading,
+  type KpiCell,
+} from "@miragon/mcp-toolkit-ui"
+import {
+  HandOffButton,
   TableEmptyState,
   TableSkeleton,
   ViewMeta,
   WidgetShell,
   formatNumber,
-  type KpiCell,
 } from "@miragon-ai/widget-shell/widgets"
 import type { EngineLandscapeResult } from "@miragon-ai/analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"

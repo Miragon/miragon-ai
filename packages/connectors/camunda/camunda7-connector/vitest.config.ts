@@ -45,8 +45,10 @@ export default mergeConfig(
         // (measured standalone 79.88 / 68.24 / 76.93 / 81.2) keep the higher
         // write-path floor. Raised 2026-10-11 with the brand gates, the
         // localized verdict and hand-off suites and the view-title tests
-        // (#322; measured 88.05 / 76.85 / 87.3 / 89.19).
-        thresholds: { statements: 86, branches: 74, functions: 85, lines: 87 },
+        // (#322; measured 88.05 / 76.85 / 87.3 / 89.19). Branches raised with
+        // the toolkit 2.8 review fixes (every search box rendered by its name,
+        // en and de): measured 88.27 / 77.51 / 87.47 / 89.4.
+        thresholds: { statements: 86, branches: 75, functions: 85, lines: 87 },
       },
     },
   }),

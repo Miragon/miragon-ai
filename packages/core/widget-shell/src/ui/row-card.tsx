@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { cn } from "./cn.js"
+import { cn } from "@miragon/mcp-toolkit-ui"
 
 /**
  * Bordered list-row card — truncating title/subtitle block on the left,

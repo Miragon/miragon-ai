@@ -58,8 +58,11 @@ describe("definition view — activities affected over the diagram", () => {
   it("counts only the diagram's activities in the fraction and names the older-version ones beside it", () => {
     render(<WidgetFixtureHost widget={Kpi} data={DATA as unknown as Record<string, unknown>} />)
 
-    // label span → label row → the cell (label row + value row + trend)
-    const cell = screen.getByText("Activities affected").parentElement!.parentElement!
+    // The toolkit KpiGrid's cell (label row + value row + trend): a direct
+    // child of the strip's grid.
+    const cell = screen
+      .getByText("Activities affected")
+      .closest<HTMLElement>('[data-slot="kpi-strip"] > div > *')!
     expect(within(cell).getByText("1")).toBeTruthy()
     expect(within(cell).getByText("/2")).toBeTruthy()
     expect(within(cell).getByText("+1 only in older versions")).toBeTruthy()

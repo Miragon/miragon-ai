@@ -166,7 +166,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 3. **Widget registration is a four-link chain** — a widget that misses a link is silently
    absent somewhere:
    - `packages/connectors/camunda/camunda7-connector/src/widgets/registry.ts` — component → dataType via `adaptDataWidget`
-   - `packages/connectors/camunda/camunda7-connector/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`)
+   - `packages/connectors/camunda/camunda7-connector/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`;
+     the view builder's `title`/`summary` and each field's `x-display` for people, from the
+     `builder.*` entries of the module's catalogs via `createBuilderTexts` — `description` stays
+     the model's text; each connector's `src/builder-texts.test.ts` runs `missingDisplayTexts`)
    - `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map (spreads
      `camunda7Widgets`/`analyticsWidgets`)
    - `packages/connectors/camunda/camunda7-connector/src/tool-names.ts` — the tool-name constant for every
@@ -201,8 +204,16 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    keys, never a silently stripped filter (`test/strict-input.e2e.test.ts` in the app).
    Parameter names follow the guide in the add-bpm-feature skill.
 
-6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) — never
-   re-inline its primitives.** `ViewDataState` for the loading/error/no-data guard;
+6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) and the
+   toolkit (`@miragon/mcp-toolkit-ui`) — never re-inline their primitives.** ONE kit: the
+   toolkit's components (`KpiGrid`/`KpiGridSkeleton`, `StatusBadge`/`LivePill`/`CountPill`,
+   `FilterBar`, `WidgetHeader` with `as`, `SectionHeading`, `GroupCard`, `DrillButton`,
+   `ListFooter`, `PagedListFooter`), its tone model (`TONE_*`, `resolveTone`, `MICRO_LABEL`)
+   and its `cn` (tailwind-merge that knows the type scale) are imported from the toolkit;
+   widget-shell exports only what it adds, never a fork or a re-export of the toolkit's
+   (`src/ui/toolkit-overlap.test.ts`: no `/widgets` export, value or type, shares a toolkit
+   name; `/ui`'s `adaptDataWidget` is the one listed pass-through).
+   `ViewDataState` for the loading/error/no-data guard;
    `QueryFallback` + `TableSkeleton` for self-fetching widgets (a missing `isError`
    branch means an eternal skeleton); `formatTimestamp`/`formatDate`/`formatTime` for dates
    and `formatNumber`/`formatPercent`/`formatPercentPoints`/`formatPeriod`/`formatDuration`/
@@ -221,38 +232,43 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `ViewMeta` (`formatLookback`, `formatViewMeta`) for the quiet reference line under a data
    view's title, "Letzte 7 Tage · 6 Engines (3 ohne Metriken) · Stand 14:32", every part left
    out when unknown;
-   `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetHeader` + `VersionChip`, `KpiGrid`,
-   `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
+   `Section`, `Th`/`Td`/`TableEmptyState`, the toolkit's `WidgetHeader` + `VersionChip`, its
+   `KpiGrid`, `WidgetShell` for structure; `SettingsCard`/`SettingsField`/`SettingsInput` for
    settings sections; `useBpmnViewer` (it owns the fixed light canvas, both themes) +
    `BpmnZoomControls` for BPMN, with highlight/legend colors from `HIGHLIGHT_COLORS`
    (`packages/connectors/camunda/camunda7-connector/src/widgets/bpmn-highlights.ts`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
-   previous rows mounted until it lands — `paged.stale`, so counts, filters and
+   previous rows of the same list mounted until it lands — TanStack's `placeholderData` on
+   the toolkit's seeded `useViewData`, bridged past a search that failed for good —
+   `paged.stale`, so counts, filters and
    model contexts read the payload ON SCREEN, never the request) + `ListTable` (the table
-   frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (marks stale rows) + `PagedListFooter` (a page-0
-   failure over rows on screen and a load-more failure, each with its own retry; in
-   camunda7 via the i18n-bound `CockpitListFooter`, `src/widgets/list-footer.tsx`,
-   rendered under an empty result too). Optimistic
+   frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (marks stale rows) + the toolkit's
+   `PagedListFooter` (a page-0 failure over rows on screen and a load-more failure, each an
+   inline `ErrorState` with its own retry and the raw reason under Details; its count line
+   is the list's ONE polite live region, kept mounted at zero rows; its words are the
+   toolkit's en/de catalog; rendered under an empty result too). Optimistic
    local state (resolved marks, variable shadows, form baselines) is dropped with
    `useResetOnChange(data, reset)` — React's render-phase "adjust state when a prop
    changes"; `useEffect(reset, [data])` is the shape `react-hooks/set-state-in-effect`
    rejects, and it commits the stale shadow once before correcting it. Refs are never
    written during render (`react-hooks/refs`): a discarded render still mutates them,
    so anything a guard reads belongs in state — see `usePagedViewData`'s generation.
-   **A status is a tone, never a coloured word** (`widget-shell/src/ui/tone-utils.ts`, see
+   **A status is a tone, never a coloured word** (the toolkit's `TONE_*` maps, see
    "Design-System"): `ToneVariant` is `danger | warning | success | info | neutral`. There is
-   no `critical`: an open incident or a failed job without retries is `danger`, a failed job
+   no `critical` (a retired name from the wire resolves through `resolveTone`): an open incident or a failed job without retries is `danger`, a failed job
    with retries left or a degraded engine is `warning`, a count without a state is `neutral`.
    Each tone has three roles, theme variables of the toolkit's Miragon theme
    (`@miragon/mcp-toolkit-ui/theme.css`, light + dark): `--<tone>` is the fill, dot, edge or icon
    (`TONE_DOT`, `TONE_BORDER`, `TONE_ICON`), `--<tone>-soft` the tint (`TONE_TINT`, or
    `TONE_SOFT` = tint + black text, paired with `TONE_BORDER`) and `--<tone>-ink` the text of
    a tone directly on the card or page (`TONE_INK`, an inline error line; never on a tint,
-   never a number). Numbers stay neutral: `StatusBadge`/`CountPill`/`LivePill` put black text
-   on the tint with the edge and dot in the tone, `KpiGrid` shows a cell's `tone` as a dot
-   next to the label (strip) or as tint + edge (soft) and its trend as a Lucide direction icon
-   or dot beside neutral words, never as a coloured digit, and `PagedRows` marks stale rows
+   never a number). Numbers stay neutral: `StatusBadge` (tone and words required)/`CountPill`/
+   `LivePill` put black text on the tint with the edge and dot in the tone, `KpiGrid` shows a
+   cell's `tone` as a dot next to the label (strip) or as tint + edge (soft) and its trend as a
+   Lucide direction icon or dot beside neutral words, never as a coloured digit; a clickable
+   cell is named by its visible label and value and says what the click does in
+   `actionHint` (WCAG 2.5.3, never `ariaLabel`), and `PagedRows` marks stale rows
    with a bar instead of dimming them. A selection (`FilterBar` chip, `SegmentedControl`) is
    the info tint and contour around black text. Components use role names only
    (`text-danger-ink`, `bg-info-soft`, `text-link`, `ring-focus` …), never Tailwind palette
@@ -284,8 +300,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    pins devDependency `0.562.0`, the version mcp-use's graph peers on: any other version
    resolves a second mcp-use/toolkit instance for that package and splits the React contexts
    between it and widget-shell in tests. A host BUNDLE (the app, the template's server) pins a
-   1.x `lucide-react` instead: it dedupes the toolkit's icons onto its copy, and toolkit 2.7
-   imports `LucideProvider`, which 0.x lacks. A chat hand-off is the kit's `HandOffButton`
+   1.x `lucide-react` instead: it dedupes the toolkit's icons onto its copy, and the toolkit (2.7
+   and later) imports `LucideProvider`, which 0.x lacks. A chat hand-off is the kit's `HandOffButton`
    (`action` from `HAND_OFF_ACTIONS`, `widget-shell/src/ui/hand-off-button.tsx`): ONE
    vocabulary for the product, each function with one Lucide icon and one verb that names the
    chat (`kitLabels().handOff`, de + en: "Ursache im Chat klären" / "Find cause in chat",
@@ -551,8 +567,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    renamed or aliased callers included —, every write listed, every invalidated
    namespace a real query key), and `widgets/action-gating.test.tsx` renders every call site
    against a feed that excludes its write. Standalone views refresh after a write
-   because their tool result is the SEED of a live feed query (`useViewData`/
-   `useDetailView`/`usePagedViewData` in widget-shell), scoped to the seed's own echoed
+   because their tool result is the SEED of a live feed query (the toolkit's `useViewData`
+   in `initialDataMode: "seed"`, also under widget-shell's `useDetailView`/`usePagedViewData`;
+   `viewRefreshState` says when shown data is unconfirmed), scoped to the seed's own echoed
    engine and target. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
    `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
@@ -605,14 +622,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   consumer-shared libraries are published as RANGED `peerDependencies` so a downstream
   React + zod app dedupes them against its own copy instead of getting a second
   instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
-  `~2.7.0` (2.7.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
+  `~2.8.0` (2.8.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
   appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
   version. **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`) — a
   duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
   on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
   `mcp-use` version in each package README and the release changelog. Toolkit updates are
   still deliberate version bumps across all packages — never bump a single package in
-  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.7.0` → `mcp-use@2.7.3`;
+  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.8.0` → `mcp-use@2.7.3`;
   `zod`/`react` it peers as ranges), so a toolkit MAJOR/MINOR bump is a joint toolkit + `mcp-use` bump across
   every package incl. `templates/composed-server` — `scripts/test-template.sh` fails if
   the template is left behind.
@@ -687,8 +704,8 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
-  exactly pinned (`save-exact`, currently `2.7.0`); in the published surface it is a
-  ranged `peerDependency` (`~2.7.0`) so consumers dedupe it. Toolkit changes arrive here
+  exactly pinned (`save-exact`, currently `2.8.0`); in the published surface it is a
+  ranged `peerDependency` (`~2.8.0`) so consumers dedupe it. Toolkit changes arrive here
   as a deliberate, repo-wide version bump — since 1.0 the toolkit follows semver
   (breaking changes arrive as major bumps).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,

@@ -1,16 +1,15 @@
 import {
   HandOffButton,
-  KpiGrid,
   ViewDataState,
-  WidgetHeader,
   WidgetShell,
   formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
+import { KpiGrid, WidgetHeader } from "@miragon/mcp-toolkit-ui"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
-import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -66,6 +65,7 @@ export function ProcessHealthKpiView({
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
     { engine: feedEngine },
     !!feedEngine,
+    { initialDataMode: "seed" },
   )
   const t = useT()
   const { ask } = useHandOff()
@@ -114,7 +114,9 @@ export function ProcessHealthKpiView({
             label: t("cockpitHealth.cellTotalProcesses"),
             value: formatNumber(summary.totalDefinitions),
             onClick: () => go({ type: "process-list" }),
-            ariaLabel: t("cockpitHealth.cellTotalProcessesAria"),
+            // Named by its visible label and value (WCAG 2.5.3); the hint
+            // says what the click does.
+            actionHint: t("cockpitHealth.cellTotalProcessesAria"),
           },
           {
             label: t("cockpitHealth.cellHealthy"),
@@ -133,7 +135,7 @@ export function ProcessHealthKpiView({
             value: formatNumber(summary.totalIncidents),
             tone: summary.totalIncidents > 0 ? "danger" : undefined,
             onClick: () => go({ type: "incidents" }),
-            ariaLabel: t("cockpitHealth.cellOpenIncidentsAria"),
+            actionHint: t("cockpitHealth.cellOpenIncidentsAria"),
           },
         ]}
       />

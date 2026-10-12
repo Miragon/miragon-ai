@@ -2,6 +2,7 @@ import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
 import { buildProcessListData } from "../data/cockpit-data.js"
 import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 import { ENGINE_KEY, stepEngine, stringKey } from "./shared.js"
+import { builderText } from "../builder-texts.js"
 
 /**
  * The deployed process definitions (latest version each, first page, exact
@@ -10,6 +11,7 @@ import { ENGINE_KEY, stepEngine, stringKey } from "./shared.js"
  */
 export const loadProcessDefinitionsStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-process-definitions",
+  ...builderText("step.load-process-definitions"),
   description:
     "Deployed process definitions (latest version of each, first page, exact total). Powers camunda7:process-list.",
   dataType: "camunda7:processDefinitionList",

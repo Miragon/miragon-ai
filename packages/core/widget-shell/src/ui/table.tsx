@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { cn } from "./cn.js"
-import { MICRO_LABEL } from "./tone-utils.js"
+import { cn, MICRO_LABEL } from "@miragon/mcp-toolkit-ui"
 
 /**
  * Cockpit table primitives — the `th`/`td` class strings and the bordered

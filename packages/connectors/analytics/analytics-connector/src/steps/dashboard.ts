@@ -8,6 +8,7 @@ import {
   stepProcessKey,
   type AnalyticsAppConfig,
 } from "./app-config.js"
+import { builderText } from "../builder-texts.js"
 
 /** The period a caller without a saved default gets — the settings schema's default. */
 const MODULE_DEFAULT_PERIOD = analyticsSettingsSchema.shape.defaultPeriod.parse(undefined)
@@ -22,6 +23,7 @@ const MODULE_DEFAULT_PERIOD = analyticsSettingsSchema.shape.defaultPeriod.parse(
  */
 export const loadDashboardStep: PipelineStepDefinition<AnalyticsAppConfig> = {
   id: "analytics:load-dashboard",
+  ...builderText("step.load-dashboard"),
   description:
     "Process metrics: what happened within a time window (instances started/completed, incidents created/resolved, durations of the instances that ended) plus the live state right now (instances running, incidents open), per process definition and per (process, activity). Powers the four dashboard widgets (execution-summary-kpi, execution-performance-kpi, process-definition-breakdown, activity-bottleneck-table).",
   dataType: "analytics:dashboard",

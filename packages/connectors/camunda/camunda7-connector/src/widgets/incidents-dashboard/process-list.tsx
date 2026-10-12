@@ -1,5 +1,14 @@
 import { useMemo, useState } from "react"
 
+import {
+  DrillButton,
+  FilterBar,
+  GroupCard,
+  SectionHeading,
+  type FilterChip,
+  type ToneVariant,
+} from "@miragon/mcp-toolkit-ui"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type {
   IncidentsDashboardActivity,
   IncidentsDashboardData,
@@ -9,7 +18,6 @@ import type {
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
-import { useViewData } from "../use-view-data.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
@@ -17,18 +25,12 @@ import { dashboardScope, incidentsFeed } from "./scope.js"
 
 import {
   HandOffButton,
-  DrillButton,
-  FilterBar,
-  GroupCard,
   OpenInCockpitLink,
-  SectionHeading,
   TableEmptyState,
   ViewDataState,
   WidgetShell,
   formatNumber,
   formatTimestamp,
-  type FilterChip,
-  type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
 
 const TYPE_ALL = "all"
@@ -276,6 +278,7 @@ export function IncidentProcessListView({
     CAMUNDA7_INCIDENTS_DATA,
     feed.args,
     feed.ready,
+    { initialDataMode: "seed" },
   )
 
   const [search, setSearch] = useState("")
@@ -332,7 +335,9 @@ export function IncidentProcessListView({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("incidentsList.searchPlaceholder")}
+        searchAriaLabel={t("incidentsList.searchLabel")}
         chips={chips}
+        chipsAriaLabel={t("incidentsList.chipsLabel")}
         onChipToggle={(id) => setActiveChip(id === activeChip ? TYPE_ALL : (id as IncidentChip))}
       />
 

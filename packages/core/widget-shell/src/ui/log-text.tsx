@@ -1,4 +1,4 @@
-import { cn } from "./cn.js"
+import { cn } from "@miragon/mcp-toolkit-ui"
 import { truncate } from "./format.js"
 
 /**

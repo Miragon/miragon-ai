@@ -1,5 +1,5 @@
+import { cn } from "@miragon/mcp-toolkit-ui"
 import type { Locale } from "../profile-constants.js"
-import { cn } from "./cn.js"
 import { formatDate, formatNumber, formatPeriod, formatTime, getFormatLocale } from "./format.js"
 
 /**

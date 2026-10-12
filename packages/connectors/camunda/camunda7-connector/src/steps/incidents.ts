@@ -3,6 +3,7 @@ import { buildIncidentsDashboardData } from "../data/incidents-dashboard-data.js
 import { buildProcessIncidentsData } from "../data/process-incidents-data.js"
 import type { Camunda7StepAppConfig } from "../lib/resolve-engine.js"
 import { ENGINE_KEY, requiredKey, stepEngine, stringKey } from "./shared.js"
+import { builderText } from "../builder-texts.js"
 
 /**
  * The open-incidents overview across process definitions — adapter over
@@ -14,6 +15,7 @@ import { ENGINE_KEY, requiredKey, stepEngine, stringKey } from "./shared.js"
  */
 export const loadIncidentsDashboardStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-incidents-dashboard",
+  ...builderText("step.load-incidents-dashboard"),
   description:
     "Open incidents across process definitions: exact totals, one card per definition key (all versions) with an activity breakdown. Powers camunda7:incident-overview-kpi and camunda7:incident-process-list.",
   dataType: "camunda7:incidentsDashboard",
@@ -60,6 +62,7 @@ export const loadIncidentsDashboardStep: PipelineStepDefinition<Camunda7StepAppC
  */
 export const loadProcessIncidentsStep: PipelineStepDefinition<Camunda7StepAppConfig> = {
   id: "camunda7:load-process-incidents",
+  ...builderText("step.load-process-incidents"),
   description:
     "One process definition key across all its versions: running instances, incidents, failed jobs, per-activity incident groups, the latest diagram. Powers the definition-view widgets (process-detail-header, process-definition-kpi, process-definition-flow, activity-incident-list).",
   dataType: "camunda7:processIncidents",

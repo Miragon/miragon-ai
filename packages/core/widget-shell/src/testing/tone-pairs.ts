@@ -1,3 +1,5 @@
+// The toolkit's tone model (one vocabulary, three roles per tone) — the maps
+// every kit component and widget draws a state with.
 import {
   TONE_BORDER,
   TONE_DOT,
@@ -6,7 +8,7 @@ import {
   TONE_SOFT,
   TONE_VARIANTS,
   type ToneVariant,
-} from "../ui/tone-utils.js"
+} from "@miragon/mcp-toolkit-ui"
 import type { ContrastPair } from "./contrast.js"
 
 /** `bg-danger-soft text-danger-ink` + `"text"` → `--color-danger-ink` (the Tailwind theme variable). */

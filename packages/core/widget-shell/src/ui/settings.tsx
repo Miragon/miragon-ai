@@ -1,6 +1,5 @@
 import { cloneElement, useId, type ComponentProps, type ReactElement, type ReactNode } from "react"
-import { Card, CardContent } from "@miragon/mcp-toolkit-ui"
-import { cn } from "./cn.js"
+import { Card, CardContent, cn } from "@miragon/mcp-toolkit-ui"
 
 /**
  * Shared building blocks for settings sections. The settings page composes one

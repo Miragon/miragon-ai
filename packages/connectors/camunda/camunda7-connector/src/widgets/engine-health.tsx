@@ -1,23 +1,28 @@
-import { Alert, AlertDescription, Button } from "@miragon/mcp-toolkit-ui"
 import {
-  HandOffButton,
+  Alert,
+  AlertDescription,
+  Button,
   DrillButton,
-  Icon,
   KpiGrid,
-  RowCard,
   StatusBadge,
   WidgetHeader,
+  type ToneVariant,
+} from "@miragon/mcp-toolkit-ui"
+import {
+  HandOffButton,
+  Icon,
+  RowCard,
   WidgetShell,
   formatNumber,
   formatTime,
-  type ToneVariant,
+  viewRefreshState,
 } from "@miragon-ai/widget-shell/widgets"
 import { RefreshCw } from "lucide-react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "../view-models.js"
 import { useNav, type OnNavigate } from "./navigation.js"
 import { CAMUNDA7_ENGINE_HEALTH_DATA } from "../tool-names.js"
-import { useViewData } from "./use-view-data.js"
 import { remediationHandOff, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
@@ -237,7 +242,9 @@ function HealthKpis({
           // The engine-wide instances list — NOT the definitions list: the
           // KPI counts instances, so the drill must land on instances.
           onClick: () => go({ type: "process-instances" }),
-          ariaLabel: t("engineHealth.kpiRunningInstancesAria"),
+          // Named by its visible label and value (WCAG 2.5.3); the hint
+          // says what the click does.
+          actionHint: t("engineHealth.kpiRunningInstancesAria"),
         },
         {
           label: t("engineHealth.kpiOpenIncidents"),
@@ -252,7 +259,7 @@ function HealthKpis({
                 : undefined,
           tone: summary.totalIncidents > 0 ? status.tone : undefined,
           onClick: () => go({ type: "incidents" }),
-          ariaLabel: t("engineHealth.kpiOpenIncidentsAria"),
+          actionHint: t("engineHealth.kpiOpenIncidentsAria"),
         },
         {
           label: t("engineHealth.kpiAffectedActivities"),
@@ -344,13 +351,16 @@ export function EngineHealthView({
   // `!!engine` would leave a composed render without props stuck on
   // "No data available" forever.
   const feedEngine = engine ?? initialData?.engineId
-  const { data, loading, error, refreshError, refreshing, refetch } = useViewData<EngineHealthData>(
+  const view = useViewData<EngineHealthData>(
     initialData,
     ["camunda7:engine-health", feedEngine ?? null],
     CAMUNDA7_ENGINE_HEALTH_DATA,
     { engine: feedEngine },
     true,
+    { initialDataMode: "seed" },
   )
+  const { data, loading, error, refetch } = view
+  const { refreshError, refreshing } = viewRefreshState(view)
 
   if (!data) {
     return <HealthUnavailable engine={engine} loading={loading} error={error} onRetry={refetch} />

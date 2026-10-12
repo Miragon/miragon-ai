@@ -1,5 +1,4 @@
-import { useToolQuery } from "@miragon/mcp-toolkit-ui"
-import type { ToneVariant } from "@miragon-ai/widget-shell/widgets"
+import { useToolQuery, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
 import { severityTone } from "../cockpit-dashboard/lib.js"

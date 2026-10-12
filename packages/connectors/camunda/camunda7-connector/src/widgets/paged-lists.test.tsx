@@ -30,7 +30,7 @@ import { widgetActionsFeedFor } from "./lib/hand-off.test-support.js"
  *   lands — the list, and the search box the operator is typing into, must
  *   stay mounted with the previous rows meanwhile;
  * - N130: a page-0 failure over rows on screen is its own error with a retry
- *   that re-runs page 0 — never "Could not load more entries".
+ *   that re-runs page 0 — never "Couldn't load more entries".
  */
 
 const toolkitDefaults = queryClient.getDefaultOptions()
@@ -144,7 +144,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     const Widget = () => <ProcessListWidget data={DEFINITIONS} />
     host(Widget, { [CAMUNDA7_PROCESS_LIST_DATA]: feed.handler })
 
-    const search = screen.getByPlaceholderText("Filter by name…")
+    const search = screen.getByRole("searchbox", { name: "Filter by name" })
     search.focus()
     fireEvent.change(search, { target: { value: "inv" } })
     // The debounced, server-side search reaches the feed …
@@ -160,7 +160,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     feed.calls[0].resolve({ ...DEFINITIONS, definitions: [DEFINITIONS.definitions[0]] })
     await waitFor(() => expect(screen.queryByText("Order Process")).toBeNull())
     expect(screen.getByText("Invoice Process")).toBeTruthy()
-    expect(screen.getByPlaceholderText("Filter by name…")).toBe(search)
+    expect(screen.getByRole("searchbox", { name: "Filter by name" })).toBe(search)
   })
 
   it("process instances (search and chip)", async () => {
@@ -168,7 +168,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     const Widget = () => <ProcessInstancesWidget data={instances(["pi-1", "pi-2"], 2)} />
     host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed.handler })
 
-    const search = screen.getByPlaceholderText("Search by business key…")
+    const search = screen.getByRole("searchbox", { name: "Search by business key" })
     fireEvent.click(screen.getByRole("button", { name: "With incidents" }))
     await waitFor(() => expect(feed.calls).toHaveLength(1))
     expect(feed.calls[0].args).toMatchObject({ withIncidents: true })
@@ -190,7 +190,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     const Widget = () => <ClusterDetailWidget data={CLUSTER} />
     host(Widget, { [CAMUNDA7_CLUSTER_DETAIL_DATA]: feed.handler })
 
-    const search = screen.getByPlaceholderText("Filter by business key…")
+    const search = screen.getByRole("searchbox", { name: "Filter by business key" })
     fireEvent.change(search, { target: { value: "4711" } })
     await waitFor(() => expect(feed.calls).toHaveLength(1), { timeout: 2_000 })
     expect(feed.calls[0].args).toMatchObject({ businessKeyLike: "4711" })
@@ -235,10 +235,13 @@ describe("a page-0 failure over rows on screen is not a load-more failure (N130)
     state.failPage0 = true
     await queryClient.invalidateQueries({ queryKey: ["camunda7:process-list"] })
 
+    // The toolkit's footer (2.8): what happened and what you can do in its
+    // catalog words, the raw reason under Details.
     const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain("Could not update the list")
-    expect(alert.textContent).toContain("engine down")
-    expect(alert.textContent).not.toContain("Could not load more entries")
+    expect(alert.textContent).toContain("Couldn't update the list")
+    expect(alert.textContent).toContain("You're seeing the previous result.")
+    expect(alert.querySelector("details pre")?.textContent).toBe("engine down")
+    expect(alert.textContent).not.toContain("Couldn't load more entries")
     expect(screen.getByText("Invoice Process")).toBeTruthy()
 
     state.failPage0 = false
@@ -256,8 +259,10 @@ describe("a page-0 failure over rows on screen is not a load-more failure (N130)
     state.failMore = true
     fireEvent.click(screen.getByRole("button", { name: "Load more" }))
     const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain("Could not load more entries (page 2 timed out)")
-    expect(alert.textContent).not.toContain("Could not update the list")
+    expect(alert.textContent).toContain("Couldn't load more entries")
+    expect(alert.textContent).toContain("The entries above are current.")
+    expect(alert.querySelector("details pre")?.textContent).toBe("page 2 timed out")
+    expect(alert.textContent).not.toContain("Couldn't update the list")
 
     state.failMore = false
     fireEvent.click(within(alert).getByRole("button", { name: "Try again" }))
@@ -365,9 +370,9 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     control[0].reject(new Error("engine timeout"))
 
     const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toContain(
-      "Could not update the list (engine timeout). You are seeing the previous result.",
-    )
+    expect(alert.textContent).toContain("Couldn't update the list")
+    expect(alert.textContent).toContain("You're seeing the previous result.")
+    expect(alert.querySelector("details pre")?.textContent).toBe("engine timeout")
     const context = modelContexts.at(-1)!
     expect(context).toContain("PREVIOUS result")
     expect(context).toContain("matchingInstances=120")
@@ -384,7 +389,7 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed })
     await screen.findByText("No running instances for this process definition.")
 
-    fireEvent.change(screen.getByPlaceholderText("Search by business key…"), {
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search by business key" }), {
       target: { value: "ORD" },
     })
     await waitFor(() => expect(held.calls).toHaveLength(1), { timeout: 2_000 })

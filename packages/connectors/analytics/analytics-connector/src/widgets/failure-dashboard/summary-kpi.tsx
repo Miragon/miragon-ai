@@ -1,13 +1,11 @@
 import {
   HandOffButton,
-  KpiGrid,
-  KpiGridSkeleton,
   ViewMeta,
-  WidgetHeader,
   WidgetShell,
   formatNumber,
 } from "@miragon-ai/widget-shell/widgets"
 import type { FailureDashboardData } from "@miragon-ai/analytics-client"
+import { KpiGrid, KpiGridSkeleton, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import { useFailureDashboardSelfFetch, type FailureScopeProps } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT } from "../../messages/use-t.js"

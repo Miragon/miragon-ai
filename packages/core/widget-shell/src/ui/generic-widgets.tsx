@@ -1,7 +1,7 @@
 import type { WidgetProps } from "@miragon/mcp-toolkit-core"
-import { KpiGrid, type KpiCell } from "./kpi-grid.js"
+import { KpiGrid, resolveTone, type KpiCell } from "@miragon/mcp-toolkit-ui"
+import { humanizeKey } from "./humanize-key.js"
 import { TableEmptyState, Td, Th } from "./table.js"
-import { TONE_VARIANTS, type ToneVariant } from "./tone-utils.js"
 
 /**
  * Module-agnostic widgets — the standard composition targets for
@@ -14,8 +14,6 @@ import { TONE_VARIANTS, type ToneVariant } from "./tone-utils.js"
  * `../shell-catalogue.ts`, exported via `@miragon-ai/widget-shell/server`). All texts arrive via props —
  * the shell carries no module i18n.
  */
-
-const TONES: ReadonlySet<string> = new Set(TONE_VARIANTS)
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
@@ -44,7 +42,9 @@ function coerceKpiCells(raw: unknown): KpiCell[] {
       .map((r) => ({
         label: r.label as string,
         value: cellValue(r.value),
-        tone: typeof r.tone === "string" && TONES.has(r.tone) ? (r.tone as ToneVariant) : undefined,
+        // A tone from the wire: the five tones as is, a retired name
+        // (`critical`) onto its tone, anything else neutral (no dot).
+        tone: typeof r.tone === "string" ? resolveTone(r.tone) : undefined,
         fraction: typeof r.fraction === "string" ? r.fraction : undefined,
       }))
   }
@@ -88,6 +88,11 @@ interface ColumnSpec {
   align: "left" | "right"
 }
 
+/**
+ * The table's columns: the `columns` prop as given, else the first row's
+ * primitive fields. A header nobody wrote is the key in words ("Total
+ * incidents" for `totalIncidents`); a written `label` stays as it is.
+ */
 function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpec[] {
   if (Array.isArray(raw)) {
     const cols = raw
@@ -95,7 +100,7 @@ function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpe
       .filter((c) => typeof c.key === "string" && c.key.length > 0)
       .map((c) => ({
         key: c.key as string,
-        label: typeof c.label === "string" ? c.label : (c.key as string),
+        label: typeof c.label === "string" ? c.label : humanizeKey(c.key as string),
         align: c.align === "right" ? ("right" as const) : ("left" as const),
       }))
     if (cols.length > 0) return cols
@@ -108,7 +113,7 @@ function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpe
     .slice(0, 8)
     .map((key) => ({
       key,
-      label: key,
+      label: humanizeKey(key),
       align: typeof first[key] === "number" ? ("right" as const) : ("left" as const),
     }))
 }
@@ -117,7 +122,7 @@ function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpe
  * `shell:data-table` — renders `keys[props.dataKey]` (an array of records, or
  * `{ rows: [...] }`) as a cockpit-style table. widgetProps: `dataKey`
  * (required), `columns?` (`[{ key, label?, align? }]`, derived from the first
- * row when omitted), `emptyText?`.
+ * row when omitted; a missing `label` is the key in words), `emptyText?`.
  */
 export function GenericDataTableWidget({ keys, widgetProps }: WidgetProps) {
   const dataKey = typeof widgetProps?.dataKey === "string" ? widgetProps.dataKey : undefined

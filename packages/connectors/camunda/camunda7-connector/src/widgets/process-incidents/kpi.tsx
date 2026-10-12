@@ -1,10 +1,5 @@
-import {
-  KpiGrid,
-  ViewDataState,
-  WidgetShell,
-  formatNumber,
-  type KpiCell,
-} from "@miragon-ai/widget-shell/widgets"
+import { ViewDataState, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { KpiGrid, type KpiCell } from "@miragon/mcp-toolkit-ui"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useT } from "../../messages/use-t.js"
@@ -67,7 +62,9 @@ export function ProcessDefinitionKpi({
       tone: data.runningInstances > 0 ? "success" : undefined,
       onClick: () =>
         go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey }),
-      ariaLabel: t("procIncKpi.runningAria", { name: title }),
+      // Named by its visible label and value (WCAG 2.5.3); the hint says
+      // what the click does.
+      actionHint: t("procIncKpi.runningAria", { name: title }),
     },
     {
       label: t("procIncKpi.openIncidents"),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { useLocale } from "@miragon/mcp-toolkit-ui"
-import { Icon, TONE_DOT, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { useLocale, TONE_DOT } from "@miragon/mcp-toolkit-ui"
+import { Icon, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { ArrowLeftRight, ArrowRight, ChevronLeft, LayoutDashboard } from "lucide-react"
 import { DEFAULT_ENVIRONMENT_ID, groupEnginesByEnvironment } from "../../lib/environments.js"
 import { translator } from "../../messages/index.js"

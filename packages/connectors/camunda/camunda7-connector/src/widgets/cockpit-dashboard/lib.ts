@@ -1,4 +1,4 @@
-import type { ToneVariant } from "@miragon-ai/widget-shell/widgets"
+import { type ToneVariant } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData, DefinitionStat } from "../../view-models.js"
 
 export interface DefinitionRow extends DefinitionStat {

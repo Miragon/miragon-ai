@@ -20,6 +20,7 @@ export type {
 } from "@miragon/mcp-toolkit-core"
 export { withToolErrors } from "@miragon/mcp-toolkit-core/tools"
 export { createShellPlugin, shellDefinition } from "./shell-catalogue.js"
+export { createBuilderTexts, type BuilderTexts } from "./builder-texts.js"
 export {
   ANONYMOUS_PROFILE_KEY,
   resolveAuthUserId,

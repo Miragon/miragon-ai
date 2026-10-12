@@ -1,21 +1,15 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { act, cleanup, renderHook } from "@testing-library/react"
-import { queryClient } from "@miragon/mcp-toolkit-ui"
+import type { ReactNode } from "react"
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
+import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { usePagedListView } from "./use-paged-list-view.js"
 
-// Same stubbing approach as use-paged-view-data.test.tsx: only the toolkit
-// hooks' observable surface is needed.
-const mocks = vi.hoisted(() => ({
-  useToolQuery: vi.fn(),
-  callTool: vi.fn(),
-}))
-
-vi.mock("@miragon/mcp-toolkit-ui", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useToolQuery: mocks.useToolQuery,
-  useCallTool: () => mocks.callTool,
-}))
+/**
+ * usePagedListView on the real toolkit query stack (like
+ * use-paged-view-data.test.tsx): one fake tool transport, retries off, the
+ * 300 ms search debounce on real timers.
+ */
 
 interface Page {
   items: string[]
@@ -23,6 +17,17 @@ interface Page {
 }
 
 const PAGE: Page = { items: ["a", "b"], total: 10 }
+const toolResult = (p: Page) => ({ structuredContent: p })
+
+const callTool = vi.fn()
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <AppQueryProvider callTool={callTool}>{children}</AppQueryProvider>
+}
+
+/** The list's filter args: a chip (`suspended`) is part of them, as in the real lists. */
+const argsFor = (filtersActive: boolean) =>
+  filtersActive ? { scope: "s1", suspended: true } : { scope: "s1" }
 
 function setup(opts?: { initialData?: Page | null; filtersActive?: boolean }) {
   return renderHook(
@@ -31,7 +36,7 @@ function setup(opts?: { initialData?: Page | null; filtersActive?: boolean }) {
         initialData: opts?.initialData ?? null,
         key: ["test:list"],
         tool: "test_list_data",
-        args: { scope: "s1" },
+        args: argsFor(filtersActive),
         searchArg: "nameLike",
         filtersActive,
         pageSize: 2,
@@ -39,46 +44,65 @@ function setup(opts?: { initialData?: Page | null; filtersActive?: boolean }) {
         selectItems: (d) => d.items,
         selectTotal: (d) => d.total,
       }),
-    { initialProps: { filtersActive: opts?.filtersActive ?? false } },
+    { wrapper, initialProps: { filtersActive: opts?.filtersActive ?? false } },
   )
 }
 
+/** The page-0 reads sent with exactly these filter args. */
+const page0Calls = (args: Record<string, unknown>) =>
+  callTool.mock.calls.filter(
+    ([, sent]) =>
+      JSON.stringify(sent) === JSON.stringify({ ...args, firstResult: 0, maxResults: 2 }),
+  )
+
+/** A tool answer that waits until the test lands it. */
+function deferred() {
+  let land!: (value: unknown) => void
+  const promise = new Promise((resolve) => (land = resolve))
+  return { promise, land }
+}
+
+/** Past the search box's 300 ms debounce. */
+const debounce = () => act(() => new Promise((resolve) => setTimeout(resolve, 350)))
+
+const toolkitDefaults = queryClient.getDefaultOptions()
+
 beforeEach(() => {
-  vi.useFakeTimers()
-  mocks.useToolQuery.mockReset()
-  mocks.useToolQuery.mockReturnValue({ data: undefined, isError: false, error: null })
-  mocks.callTool.mockReset()
+  callTool.mockReset()
+  queryClient.setDefaultOptions({
+    ...toolkitDefaults,
+    queries: { ...toolkitDefaults.queries, retry: false },
+  })
 })
 
 afterEach(() => {
   cleanup()
-  vi.useRealTimers()
   queryClient.clear()
+  queryClient.setDefaultOptions(toolkitDefaults)
 })
 
 describe("usePagedListView", () => {
-  it("adds the debounced, trimmed search value as the server-side search arg", () => {
+  it("adds the debounced, trimmed search value as the server-side search arg", async () => {
+    callTool.mockResolvedValue(toolResult(PAGE))
     const { result } = setup()
+    await waitFor(() => expect(result.current.paged.items).toEqual(["a", "b"]))
 
     act(() => result.current.setSearch("  ORDER-1 "))
     // Before the debounce elapses the feed still sees the base args.
-    let lastArgs = mocks.useToolQuery.mock.lastCall?.[2] as Record<string, unknown>
-    expect(lastArgs.nameLike).toBeUndefined()
+    expect(callTool.mock.calls.some(([, sent]) => "nameLike" in (sent as object))).toBe(false)
     expect(result.current.interacted).toBe(false)
 
-    act(() => void vi.advanceTimersByTime(300))
-    lastArgs = mocks.useToolQuery.mock.lastCall?.[2] as Record<string, unknown>
-    expect(lastArgs).toMatchObject({ scope: "s1", nameLike: "ORDER-1" })
-    expect(result.current.interacted).toBe(true)
+    await debounce()
+    await waitFor(() => expect(page0Calls({ scope: "s1", nameLike: "ORDER-1" })).toHaveLength(1))
+    await waitFor(() => expect(result.current.interacted).toBe(true))
     expect(result.current.debouncedSearch).toBe("ORDER-1")
   })
 
-  it("drops the handed-in page 0 once a search or filter is active", () => {
+  it("drops the handed-in page 0 once a search or filter is active", async () => {
     const { result, rerender } = setup({ initialData: PAGE })
     // Unfiltered: the handed-in page renders — as the seed of the unfiltered
     // page-0 query, which stays live for a write's refetch.
     expect(result.current.paged.items).toEqual(["a", "b"])
-    expect(mocks.useToolQuery.mock.lastCall?.[3]).toMatchObject({ enabled: true })
     expect(
       queryClient.getQueryData([
         "test:list",
@@ -87,11 +111,13 @@ describe("usePagedListView", () => {
         { scope: "s1", firstResult: 0, maxResults: 2 },
       ]),
     ).toBe(PAGE)
+    expect(callTool).not.toHaveBeenCalled()
 
+    callTool.mockReturnValue(deferred().promise)
     act(() => result.current.setSearch("x"))
-    act(() => void vi.advanceTimersByTime(300))
+    await debounce()
     // The filtered view must come from the feed, not the unfiltered page …
-    expect(mocks.useToolQuery.mock.lastCall?.[3]).toMatchObject({ enabled: true })
+    await waitFor(() => expect(page0Calls({ scope: "s1", nameLike: "x" })).toHaveLength(1))
     // … but until it answers, the handed-in rows stay on screen (#341 N123):
     // the list — and the search box above it — never unmounts mid-search.
     expect(result.current.paged.firstPage).toBe(PAGE)
@@ -100,46 +126,54 @@ describe("usePagedListView", () => {
 
     // Chips (filtersActive) drop the handed-in page the same way.
     act(() => result.current.setSearch(""))
-    act(() => void vi.advanceTimersByTime(300))
+    await debounce()
     rerender({ filtersActive: true })
-    expect(mocks.useToolQuery.mock.lastCall?.[3]).toMatchObject({ enabled: true })
+    await waitFor(() => expect(page0Calls({ scope: "s1", suspended: true })).toHaveLength(1))
+    expect(result.current.paged.firstPage).toBe(PAGE)
+    expect(result.current.paged.stale).toBe(true)
   })
 
-  it("`interacted` describes the rows on screen, not a filter that has not answered", () => {
+  it("`interacted` describes the rows on screen, not a filter that has not answered", async () => {
     const EMPTY: Page = { items: [], total: 0 }
     const { result, rerender } = setup({ initialData: EMPTY })
     expect(result.current.interacted).toBe(false)
 
     // A chip is in flight: the unfiltered (empty) result stays on screen, and
     // its empty state must not read "no match" for a filter nobody answered.
+    const chip = deferred()
+    callTool.mockReturnValueOnce(chip.promise)
     rerender({ filtersActive: true })
+    await waitFor(() => expect(page0Calls({ scope: "s1", suspended: true })).toHaveLength(1))
     expect(result.current.paged.stale).toBe(true)
     expect(result.current.interacted).toBe(false)
 
     // The filtered page lands: the rows on screen are now the filtered set.
-    mocks.useToolQuery.mockReturnValue({ data: EMPTY, isError: false, error: null })
-    rerender({ filtersActive: true })
-    expect(result.current.paged.stale).toBe(false)
+    act(() => chip.land(toolResult({ items: [], total: 0 })))
+    await waitFor(() => expect(result.current.paged.stale).toBe(false))
     expect(result.current.interacted).toBe(true)
   })
 
-  it("a filtered result on screen still reads as filtered while the unfiltered one loads", () => {
+  it("a filtered result on screen still reads as filtered while the unfiltered one loads", async () => {
     const ALL: Page = { items: ["a"], total: 1 }
     const FILTERED: Page = { items: [], total: 0 }
-    mocks.useToolQuery.mockReturnValue({ data: ALL, isError: false, error: null })
+    callTool.mockResolvedValueOnce(toolResult(ALL))
     const { result, rerender } = setup({ initialData: null })
+    await waitFor(() => expect(result.current.paged.firstPage).toEqual(ALL))
     expect(result.current.interacted).toBe(false)
 
-    // The chip's page lands at once (cached): the filtered set is on screen.
-    mocks.useToolQuery.mockReturnValue({ data: FILTERED, isError: false, error: null })
+    // The chip's page lands: the filtered set is on screen.
+    callTool.mockResolvedValueOnce(toolResult(FILTERED))
     rerender({ filtersActive: true })
+    await waitFor(() => expect(result.current.paged.firstPage).toEqual(FILTERED))
     expect(result.current.paged.stale).toBe(false)
     expect(result.current.interacted).toBe(true)
 
-    // The chip is cleared; the self-fetched unfiltered page 0 is in flight.
-    mocks.useToolQuery.mockReturnValue({ data: undefined, isError: false, error: null })
+    // The chip is cleared; the unfiltered page 0 (gone from the cache) is in flight.
+    queryClient.removeQueries({ queryKey: ["test:list", JSON.stringify({ scope: "s1" })] })
+    callTool.mockReturnValueOnce(deferred().promise)
     rerender({ filtersActive: false })
-    expect(result.current.paged.firstPage).toBe(FILTERED)
+    await waitFor(() => expect(page0Calls({ scope: "s1" })).toHaveLength(2))
+    expect(result.current.paged.firstPage).toEqual(FILTERED)
     expect(result.current.paged.stale).toBe(true)
     expect(result.current.interacted).toBe(true)
   })

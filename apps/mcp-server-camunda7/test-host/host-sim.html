@@ -77,6 +77,8 @@
         // The view sent ui/initialize (answered `initDelayMs` later).
         initializeRequested: false,
         initialized: false,
+        // Date.now() when the view sent `initialized` — the clock `resultDelayMs` runs on.
+        initializedAt: null,
         // "result" | "cancelled" once the host finished the rendering call.
         delivered: null,
         // The rendering call's own result as the server returned it.
@@ -246,6 +248,7 @@
             return
           case "ui/notifications/initialized":
             log.initialized = true
+            log.initializedAt = Date.now()
             void deliverLifecycle()
             return
           case "tools/call":

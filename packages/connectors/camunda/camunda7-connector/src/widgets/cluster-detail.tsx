@@ -1,15 +1,10 @@
 import {
   HandOffButton,
-  DrillButton,
-  FilterBar,
-  KpiGrid,
   LogText,
   PagedRows,
   RowCard,
-  StatusBadge,
   TableEmptyState,
   ViewDataState,
-  WidgetHeader,
   WidgetShell,
   formatNumber,
   formatTimestamp,
@@ -17,9 +12,16 @@ import {
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
+import {
+  DrillButton,
+  FilterBar,
+  KpiGrid,
+  StatusBadge,
+  WidgetHeader,
+  PagedListFooter,
+} from "@miragon/mcp-toolkit-ui"
 import type { ClusterDetailData, ClusterIncidentRow } from "../view-models.js"
 import { DetailPage } from "./detail-page.js"
-import { CockpitListFooter } from "./list-footer.js"
 import { useNav } from "./navigation.js"
 import { CAMUNDA7_CLUSTER_DETAIL_DATA } from "../tool-names.js"
 import {
@@ -323,6 +325,7 @@ export function ClusterDetailView({
               search={search}
               onSearchChange={setSearch}
               searchPlaceholder={t("clusterDetail.searchPlaceholder")}
+              searchAriaLabel={t("clusterDetail.searchLabel")}
               chips={[]}
               onChipToggle={() => undefined}
             />
@@ -341,7 +344,7 @@ export function ClusterDetailView({
                 </TableEmptyState>
               )}
             </PagedRows>
-            <CockpitListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
+            <PagedListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
             {listCapped(data) && (
               <p className="text-muted-foreground text-xs">
                 {t("clusterDetail.listCapped", { count: formatNumber(data.scannedIncidentCount) })}

@@ -1,5 +1,6 @@
-import { KpiGrid, formatDate, formatNumber, formatTime } from "@miragon-ai/widget-shell/widgets"
+import { formatDate, formatNumber, formatTime } from "@miragon-ai/widget-shell/widgets"
 
+import { KpiGrid } from "@miragon/mcp-toolkit-ui"
 import type { IncidentDetailData } from "../../view-models.js"
 
 import { useT } from "../../messages/use-t.js"

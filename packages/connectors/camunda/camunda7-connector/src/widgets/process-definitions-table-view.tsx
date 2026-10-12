@@ -1,14 +1,12 @@
 import type { ReactNode } from "react"
 import {
-  CountPill,
   ListTable,
-  TONE_DOT,
   TableEmptyState,
   Td,
   formatNumber,
   type ListTableColumn,
-  type ToneVariant,
 } from "@miragon-ai/widget-shell/widgets"
+import { CountPill, TONE_DOT, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 import { useT } from "../messages/use-t.js"
 
 /**

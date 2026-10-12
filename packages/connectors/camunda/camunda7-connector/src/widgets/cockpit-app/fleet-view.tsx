@@ -1,13 +1,7 @@
 import { WidgetRenderer, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import {
-  HandOffButton,
-  CountPill,
-  Icon,
-  SectionHeading,
-  TONE_DOT,
-  formatNumber,
-} from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, Icon, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { ArrowRight } from "lucide-react"
+import { CountPill, SectionHeading, TONE_DOT } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
 import {
   enginesByEnvironment,

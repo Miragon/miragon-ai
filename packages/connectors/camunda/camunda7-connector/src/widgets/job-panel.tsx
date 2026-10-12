@@ -1,10 +1,9 @@
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
-import { Badge, Button } from "@miragon/mcp-toolkit-ui"
+import { Badge, Button, KpiGrid, PagedListFooter } from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "../view-models.js"
 import {
   HandOffButton,
-  KpiGrid,
   ListTable,
   LogText,
   TableEmptyState,
@@ -16,7 +15,6 @@ import {
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
-import { CockpitListFooter } from "./list-footer.js"
 import { useEngineAction } from "./lib/engine-action.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
@@ -337,7 +335,7 @@ export function JobPanelWidget({
               )
             })}
           </ListTable>
-          <CockpitListFooter paged={paged} noun={t("jobPanel.footerNoun")} />
+          <PagedListFooter paged={paged} noun={t("jobPanel.footerNoun")} />
         </>
       )}
     </WidgetShell>

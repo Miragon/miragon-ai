@@ -1,14 +1,12 @@
 import {
   HandOffButton,
-  DrillButton,
   OpenInCockpitLink,
-  StatusBadge,
   ViewDataState,
-  WidgetHeader,
   WidgetShell,
   formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
+import { DrillButton, StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"

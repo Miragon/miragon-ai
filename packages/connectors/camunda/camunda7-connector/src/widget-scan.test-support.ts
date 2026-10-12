@@ -37,6 +37,11 @@ export interface WidgetScan {
   callerHolders: Set<string>
   /** The first segment of every query key a read site uses. */
   keyRoots: Set<string>
+  /**
+   * Every direct `useViewData(…)` read, and whether it seeds its query with the
+   * handed-in data (`{ initialDataMode: "seed" }` written as a literal option).
+   */
+  viewDataReads: { file: string; line: number; seeded: boolean }[]
 }
 
 function emptyScan(): WidgetScan {
@@ -46,7 +51,30 @@ function emptyScan(): WidgetScan {
     canRunCalls: [],
     callerHolders: new Set(),
     keyRoots: new Set(),
+    viewDataReads: [],
   }
+}
+
+/** Which positional argument of `useViewData` holds its options. */
+const VIEW_DATA_OPTIONS_ARG = 5
+
+/**
+ * The read seeds its query: its options are an object literal whose
+ * `initialDataMode` is the string `"seed"`. Anything the scan cannot read as
+ * that — no options, a variable, a spread, another mode — does not count.
+ */
+function seedsViewData(call: ts.CallExpression): boolean {
+  const arg = call.arguments[VIEW_DATA_OPTIONS_ARG]
+  const options = arg ? bare(arg) : undefined
+  if (!options || !ts.isObjectLiteralExpression(options)) return false
+  return options.properties.some(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === "initialDataMode" &&
+      ts.isStringLiteral(p.initializer) &&
+      p.initializer.text === "seed",
+  )
 }
 
 /** A file's top-level `const NAME = "value"` declarations. */
@@ -79,7 +107,6 @@ const POSITIONAL_TOOL_ARG = new Map<string, { via: Via; index: number }>([
   ["callTool", { via: "callTool", index: 0 }],
   ["useToolQuery", { via: "read", index: 1 }],
   ["useViewToolQuery", { via: "read", index: 1 }],
-  ["useSeededToolQuery", { via: "read", index: 1 }],
   ["useViewData", { via: "read", index: 2 }],
 ])
 
@@ -87,7 +114,6 @@ const POSITIONAL_TOOL_ARG = new Map<string, { via: Via; index: number }>([
 const KEY_ARG = new Map<string, number>([
   ["useToolQuery", 0],
   ["useViewToolQuery", 0],
-  ["useSeededToolQuery", 0],
   ["useViewData", 1],
 ])
 
@@ -284,6 +310,10 @@ function scanSource(
       }
       const ref = positionalTool(node, callers)
       if (ref) record(node, ref)
+      if (calleeName(node) === "useViewData") {
+        const { line } = source.getLineAndCharacterOfPosition(node.getStart(source))
+        scan.viewDataReads.push({ file, line: line + 1, seeded: seedsViewData(node) })
+      }
     }
     const option = toolOption(node)
     if (option) record(node, option)

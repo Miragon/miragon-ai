@@ -22,13 +22,13 @@
     "@miragon-ai/analytics-connector": "0.18.0",
     "@miragon-ai/camunda7-connector": "0.18.0",
     "@miragon-ai/widget-shell": "0.18.0",
-    "@miragon/mcp-toolkit-core": "2.7.0",
+    "@miragon/mcp-toolkit-core": "2.8.0",
     "mcp-use": "2.7.3",
     "zod": "4.5.4"
   },
   "devDependencies": {
     "@mcp-use/client": "2.4.2",
-    "@miragon/mcp-toolkit-ui": "2.7.0",
+    "@miragon/mcp-toolkit-ui": "2.8.0",
     "@modelcontextprotocol/client": "2.2.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "22.19.15",

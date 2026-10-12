@@ -1,19 +1,17 @@
 import { useState } from "react"
+import { ViewDataState, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import {
   DrillButton,
   FilterBar,
   ListFooter,
   SectionHeading,
-  ViewDataState,
-  WidgetShell,
-  formatNumber,
   useDebouncedValue,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/mcp-toolkit-ui"
+import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
-import { useViewData } from "../use-view-data.js"
 import { useT } from "../../messages/use-t.js"
 import {
   ProcessDefinitionsTableView,
@@ -62,6 +60,7 @@ export function ProcessDefinitionsSection({
     CAMUNDA7_COCKPIT_OVERVIEW_DATA,
     { engine: feedEngine },
     !!feedEngine,
+    { initialDataMode: "seed" },
   )
 
   if (!data) {
@@ -106,6 +105,7 @@ export function ProcessDefinitionsSection({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("cockpitDefs.searchPlaceholder")}
+        searchAriaLabel={t("cockpitDefs.searchLabel")}
         chips={[]}
         onChipToggle={() => undefined}
         className="mb-2"

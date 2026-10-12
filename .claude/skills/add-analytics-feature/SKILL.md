@@ -176,7 +176,13 @@ The widget chain mirrors the camunda7 module:
    `adaptDataWidget(MyWidget, "analytics:<dataType>")` (from
    `@miragon-ai/widget-shell/ui`).
 3. Add the widget entry (`id`, `description`, `requires`/`consumes`, `size`, optional
-   `propsSchema`) to `src/definition.ts`.
+   `propsSchema`) to `src/definition.ts`, with `...builderText("widget.<slug>")` — the view
+   builder's title and one-line summary for people, `builder.widget.<slug>.title|summary`
+   in `messages/{en,de}.builder.ts` — and `.meta(fieldText("<schema>.<field>"))` on every
+   top-level `propsSchema` field (`builder.field.*`, the props sheet's label and help
+   line; never a nested one, whose text the toolkit would hand to the model);
+   `description` stays the model's text. `src/builder-texts.test.ts` fails on anything
+   the builder would still show by its id and on any builder text the model would read.
 4. The host map `apps/mcp-server-camunda7/src/ui/widget-registry.ts` spreads
    `analyticsWidgets` — verify your widget arrives there.
 5. Register an `analytics_show_*` tool in `src/widget-tools.ts` with
@@ -198,16 +204,18 @@ The widget chain mirrors the camunda7 module:
 
 Rules while building:
 
-- Compose the component from `@miragon-ai/widget-shell/widgets` — `ViewDataState` for
-  the loading/error/no-data guard, `Section`, `Th`/`Td`/`TableEmptyState`,
-  `WidgetHeader` (no icon tile), `KpiGrid` (incl. `variant="soft"`), `WidgetShell`;
+- Compose the component from `@miragon-ai/widget-shell/widgets` and the toolkit
+  `@miragon/mcp-toolkit-ui` — `ViewDataState` for the loading/error/no-data guard,
+  `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetShell` from the kit; `WidgetHeader` (no
+  icon tile, `as` for the heading level), `KpiGrid` (incl. `variant="soft"`),
+  `StatusBadge`/`CountPill`, the `TONE_*` maps and `cn` from the toolkit;
   formatting via `formatTimestamp`/`formatNumber`/`formatPercent`/`formatPercentPoints`/
   `formatPeriod`/`formatDuration`/`truncate` (canonical duration style "3m 7s", German
   "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage"). Never re-inline these primitives, write
   local format helpers, or call `toFixed`, a `toLocaleString()` without a locale or a
   hand-built `Intl.NumberFormat`.
-- Status and comparison colour come from the tone model (`ToneVariant`, `TONE_*` maps,
-  CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
+- Status and comparison colour come from the toolkit's tone model (`ToneVariant`, `TONE_*`
+  maps, `resolveTone` for a tone from the wire, CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
   volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
   incidents/failures. No palette classes or raw colours.

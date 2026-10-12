@@ -1,22 +1,17 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { ReactNode } from "react"
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
-import { queryClient } from "@miragon/mcp-toolkit-ui"
+import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { usePagedViewData } from "./use-paged-view-data.js"
 
-// The toolkit hooks need the host bridge + query provider; the pagination
-// logic under test only needs their observable surface, so both are stubbed.
-const mocks = vi.hoisted(() => ({
-  useToolQuery: vi.fn(),
-  callTool: vi.fn(),
-}))
-
-vi.mock("@miragon/mcp-toolkit-ui", async (importOriginal) => ({
-  // Keep the real module (notably parseToolResult) and stub only the hooks.
-  ...(await importOriginal<object>()),
-  useToolQuery: mocks.useToolQuery,
-  useCallTool: () => mocks.callTool,
-}))
+/**
+ * usePagedViewData on the real toolkit query stack (the toolkit's
+ * `useViewData` in seed mode with TanStack's placeholderData since 2.8), with
+ * one fake tool transport answering both page 0 and the Load-more offsets.
+ * Retries are off, so a failure is final at once; the backoff cases run in
+ * `use-paged-view-data.seeded.test.tsx` under the production defaults.
+ */
 
 interface Page {
   items: string[]
@@ -29,6 +24,12 @@ const toolResult = (p: Page) => ({ structuredContent: p })
 
 const selectItems = (data: Page) => data.items
 const selectTotal = (data: Page) => data.total
+
+const callTool = vi.fn()
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <AppQueryProvider callTool={callTool}>{children}</AppQueryProvider>
+}
 
 interface HarnessProps {
   initialData: Page | null
@@ -50,24 +51,50 @@ function setup(props: HarnessProps) {
         selectItems,
         selectTotal,
       }),
-    { initialProps: props },
+    { wrapper, initialProps: props },
   )
 }
 
+/** The page-0 reads sent for `args`. */
+const page0Calls = (args: Record<string, unknown>) =>
+  callTool.mock.calls.filter(
+    ([, sent]) =>
+      JSON.stringify(sent) === JSON.stringify({ ...args, firstResult: 0, maxResults: 2 }),
+  )
+
+/** A tool answer that waits until the test lands it. */
+function deferred() {
+  let land!: (value: unknown) => void
+  let fail!: (error: Error) => void
+  const promise = new Promise((resolve, reject) => {
+    land = resolve
+    fail = reject
+  })
+  return { promise, land, fail }
+}
+
+const toolkitDefaults = queryClient.getDefaultOptions()
+
 beforeEach(() => {
-  mocks.useToolQuery.mockReset()
-  mocks.useToolQuery.mockReturnValue({ data: undefined, isError: false, error: null })
-  mocks.callTool.mockReset()
+  callTool.mockReset()
+  queryClient.setDefaultOptions({
+    ...toolkitDefaults,
+    queries: { ...toolkitDefaults.queries, retry: false },
+  })
 })
 
 afterEach(() => {
   cleanup()
   // The seed lands in the toolkit's singleton client — never across tests.
   queryClient.clear()
+  queryClient.setDefaultOptions(toolkitDefaults)
 })
 
+const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 20)))
+const invalidate = () => act(() => queryClient.invalidateQueries({ queryKey: ["test:list"] }))
+
 describe("usePagedViewData", () => {
-  it("serves page 0 from handed-in initialData — as the SEED of a live page-0 query", () => {
+  it("serves page 0 from handed-in initialData — as the SEED of a live page-0 query", async () => {
     const initialData = page(["a", "b"], 5)
     const { result } = setup({ initialData, args: {} })
     expect(result.current.items).toEqual(["a", "b"])
@@ -75,33 +102,36 @@ describe("usePagedViewData", () => {
     expect(result.current.hasMore).toBe(true)
     expect(result.current.loading).toBe(false)
     expect(result.current.stale).toBe(false)
-    // Never switched off: a write's invalidation refetches a standalone list.
-    const opts = mocks.useToolQuery.mock.calls[0][3] as { enabled: boolean }
-    expect(opts.enabled).toBe(true)
     const page0Key = ["test:list", "list-1", "{}", "page0", { firstResult: 0, maxResults: 2 }]
     expect(queryClient.getQueryData(page0Key)).toBe(initialData)
+    // A fresh seed is not refetched on mount …
+    await settle()
+    expect(callTool).not.toHaveBeenCalled()
+    // … and never switched off: a write's invalidation refetches a standalone list.
+    callTool.mockResolvedValue(toolResult(page(["a2", "b2"], 5)))
+    await invalidate()
+    await waitFor(() => expect(result.current.items).toEqual(["a2", "b2"]))
+    expect(page0Calls({})).toHaveLength(1)
   })
 
-  it("self-fetches page 0 when no initialData is handed in", () => {
-    const { result, rerender } = setup({ initialData: null, args: {} })
+  it("self-fetches page 0 when no initialData is handed in", async () => {
+    callTool.mockResolvedValue(toolResult(page(["a", "b"], 3)))
+    const { result } = setup({ initialData: null, args: {} })
     expect(result.current.loading).toBe(true)
     expect(result.current.items).toEqual([])
-    expect((mocks.useToolQuery.mock.calls[0][3] as { enabled: boolean }).enabled).toBe(true)
-
-    mocks.useToolQuery.mockReturnValue({ data: page(["a", "b"], 3), isError: false, error: null })
-    rerender({ initialData: null, args: {} })
+    await waitFor(() => expect(result.current.items).toEqual(["a", "b"]))
     expect(result.current.loading).toBe(false)
-    expect(result.current.items).toEqual(["a", "b"])
+    expect(page0Calls({})).toHaveLength(1)
   })
 
   it("appends the next offset on loadMore", async () => {
-    mocks.callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 5)))
+    callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 5)))
     const { result } = setup({ initialData: page(["a", "b"], 5), args: {} })
 
     act(() => result.current.loadMore())
     expect(result.current.loadingMore).toBe(true)
     await waitFor(() => expect(result.current.items).toEqual(["a", "b", "c", "d"]))
-    expect(mocks.callTool).toHaveBeenCalledWith("test_list_data", {
+    expect(callTool).toHaveBeenCalledWith("test_list_data", {
       firstResult: 2,
       maxResults: 2,
     })
@@ -110,7 +140,7 @@ describe("usePagedViewData", () => {
   })
 
   it("drops accumulated pages when args change", async () => {
-    mocks.callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 5)))
+    callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 5)))
     const initialData = page(["a", "b"], 5)
     const { result, rerender } = setup({ initialData, args: {} })
     act(() => result.current.loadMore())
@@ -122,21 +152,22 @@ describe("usePagedViewData", () => {
 
   it("drops accumulated pages when the self-fetched page 0 refetches", async () => {
     // Self-fetch mode: page 0 from the query, one page appended.
-    mocks.useToolQuery.mockReturnValue({ data: page(["a", "b"], 4), isError: false, error: null })
-    mocks.callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 4)))
-    const { result, rerender } = setup({ initialData: null, args: {} })
+    callTool.mockResolvedValueOnce(toolResult(page(["a", "b"], 4)))
+    const { result } = setup({ initialData: null, args: {} })
+    await waitFor(() => expect(result.current.items).toEqual(["a", "b"]))
+    callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 4)))
     act(() => result.current.loadMore())
     await waitFor(() => expect(result.current.items).toEqual(["a", "b", "c", "d"]))
 
     // A mutation invalidated the cache: page 0 refetches with shifted rows
     // (one row resolved away). Keeping the appended page would duplicate "c".
-    mocks.useToolQuery.mockReturnValue({ data: page(["b", "c"], 3), isError: false, error: null })
-    rerender({ initialData: null, args: {} })
-    expect(result.current.items).toEqual(["b", "c"])
+    callTool.mockResolvedValueOnce(toolResult(page(["b", "c"], 3)))
+    await invalidate()
+    await waitFor(() => expect(result.current.items).toEqual(["b", "c"]))
   })
 
   it("drops accumulated pages when a fresh initialData identity is handed in", async () => {
-    mocks.callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 5)))
+    callTool.mockResolvedValueOnce(toolResult(page(["c", "d"], 5)))
     const { result, rerender } = setup({ initialData: page(["a", "b"], 5), args: {} })
     act(() => result.current.loadMore())
     await waitFor(() => expect(result.current.items).toEqual(["a", "b", "c", "d"]))
@@ -147,12 +178,8 @@ describe("usePagedViewData", () => {
   })
 
   it("discards an in-flight page across an A→B→A args round-trip", async () => {
-    let resolveCall!: (value: unknown) => void
-    mocks.callTool.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveCall = resolve
-      }),
-    )
+    const more = deferred()
+    callTool.mockReturnValueOnce(more.promise)
     const initialData = page(["a", "b"], 5)
     const { result, rerender } = setup({ initialData, args: {} })
 
@@ -164,7 +191,7 @@ describe("usePagedViewData", () => {
 
     // Resolves at a stale offset for the pre-round-trip filter — must not append.
     await act(async () => {
-      resolveCall(toolResult(page(["z1", "z2"], 5)))
+      more.land(toolResult(page(["z1", "z2"], 5)))
       await Promise.resolve()
     })
     expect(result.current.items).toEqual(["a", "b"])
@@ -172,7 +199,7 @@ describe("usePagedViewData", () => {
   })
 
   it("surfaces a loadMore error as loadMoreError and clears it on retry", async () => {
-    mocks.callTool.mockRejectedValueOnce(new Error("boom"))
+    callTool.mockRejectedValueOnce(new Error("boom"))
     const { result } = setup({ initialData: page(["a", "b"], 5), args: {} })
 
     act(() => result.current.loadMore())
@@ -180,18 +207,14 @@ describe("usePagedViewData", () => {
     // A load-more failure is not a page-0 failure: the rows above are current.
     expect(result.current.error).toBeNull()
 
-    let resolveCall!: (value: unknown) => void
-    mocks.callTool.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveCall = resolve
-      }),
-    )
+    const retry = deferred()
+    callTool.mockReturnValueOnce(retry.promise)
     act(() => result.current.loadMore())
     // Cleared eagerly, before the retry resolves.
     expect(result.current.loadMoreError).toBeNull()
 
     await act(async () => {
-      resolveCall(toolResult(page(["c", "d"], 5)))
+      retry.land(toolResult(page(["c", "d"], 5)))
       await Promise.resolve()
     })
     expect(result.current.items).toEqual(["a", "b", "c", "d"])
@@ -199,7 +222,7 @@ describe("usePagedViewData", () => {
   })
 
   it("stops paging after a short page even when the reported total claims more", async () => {
-    mocks.callTool.mockResolvedValueOnce(toolResult(page(["c"], 10)))
+    callTool.mockResolvedValueOnce(toolResult(page(["c"], 10)))
     const { result } = setup({ initialData: page(["a", "b"], 10), args: {} })
 
     act(() => result.current.loadMore())
@@ -211,32 +234,33 @@ describe("usePagedViewData", () => {
 /**
  * A new page 0 — a changed search or filter, or a refetch — must never unmount
  * the list (#341 N123): the previous result stays on screen until the new one
- * lands, so the search box above it keeps its focus and keystrokes. A page-0
- * failure is reported as one, with a retry that re-runs page 0 — never as
- * "Failed to load more" with a retry that fetches the next offset (N130).
+ * lands (TanStack's placeholderData, scoped to the list), so the search box
+ * above it keeps its focus and keystrokes. A page-0 failure is reported as
+ * one, with a retry that re-runs page 0 — never as "Failed to load more" with
+ * a retry that fetches the next offset (N130).
  */
 describe("usePagedViewData — page-0 fetch states", () => {
   const A = page(["a", "b"], 3)
+  const SEARCH = { q: "x" }
+
   /** Self-fetch mode with page 0 for `{}` settled to A. */
-  function settledOnA() {
-    mocks.useToolQuery.mockReturnValue({ data: A, isError: false, error: null, isFetching: false })
-    return setup({ initialData: null, args: {} })
+  async function settledOnA() {
+    callTool.mockResolvedValueOnce(toolResult(A))
+    const hook = setup({ initialData: null, args: {} })
+    await waitFor(() => expect(hook.result.current.firstPage).toEqual(A))
+    return hook
   }
 
-  it("keeps the previous result while a changed filter's page 0 is in flight", () => {
-    const { result, rerender } = settledOnA()
-    expect(result.current.firstPage).toBe(A)
+  it("keeps the previous result while a changed filter's page 0 is in flight", async () => {
+    const { result, rerender } = await settledOnA()
     expect(result.current.stale).toBe(false)
 
-    mocks.useToolQuery.mockReturnValue({
-      data: undefined,
-      isError: false,
-      error: null,
-      isFetching: true,
-    })
-    rerender({ initialData: null, args: { q: "x" } })
+    const search = deferred()
+    callTool.mockReturnValueOnce(search.promise)
+    rerender({ initialData: null, args: SEARCH })
+    await waitFor(() => expect(page0Calls(SEARCH)).toHaveLength(1))
 
-    expect(result.current.firstPage).toBe(A)
+    expect(result.current.firstPage).toEqual(A)
     expect(result.current.items).toEqual(["a", "b"])
     expect(result.current.total).toBe(3)
     // … and says so: the page and its total are the previous filter's.
@@ -246,71 +270,60 @@ describe("usePagedViewData — page-0 fetch states", () => {
     expect(result.current.error).toBeNull()
     // The rows on screen belong to the previous filter: no next page of them.
     expect(result.current.hasMore).toBe(false)
+    const sent = callTool.mock.calls.length
     act(() => result.current.loadMore())
-    expect(mocks.callTool).not.toHaveBeenCalled()
+    expect(callTool).toHaveBeenCalledTimes(sent)
 
     // The new page lands and replaces it.
     const B = page(["x1"], 1)
-    mocks.useToolQuery.mockReturnValue({ data: B, isError: false, error: null, isFetching: false })
-    rerender({ initialData: null, args: { q: "x" } })
-    expect(result.current.firstPage).toBe(B)
+    act(() => search.land(toolResult(B)))
+    await waitFor(() => expect(result.current.firstPage).toEqual(B))
     expect(result.current.items).toEqual(["x1"])
     expect(result.current.refreshing).toBe(false)
     expect(result.current.stale).toBe(false)
   })
 
-  it("keeps a handed-in page while the first filtered page 0 is in flight", () => {
-    mocks.useToolQuery.mockReturnValue({
-      data: undefined,
-      isError: false,
-      error: null,
-      isFetching: true,
-    })
+  it("keeps a handed-in page while the first filtered page 0 is in flight", async () => {
+    callTool.mockReturnValue(deferred().promise)
     const { result, rerender } = setup({ initialData: A, args: {} })
     // Standalone: the search drops the handed-in page, the feed answers it.
-    rerender({ initialData: null, args: { q: "x" } })
+    rerender({ initialData: null, args: SEARCH })
+    await waitFor(() => expect(page0Calls(SEARCH)).toHaveLength(1))
     expect(result.current.firstPage).toBe(A)
     expect(result.current.stale).toBe(true)
     expect(result.current.loading).toBe(false)
   })
 
-  it("keeps a page that landed AFTER mount (cockpit self-fetch: pending first)", () => {
-    const pending = { data: undefined, isError: false, error: null, isFetching: true }
-    mocks.useToolQuery.mockReturnValue(pending)
+  it("keeps a page that landed AFTER mount (cockpit self-fetch: pending first)", async () => {
+    const first = deferred()
+    callTool.mockReturnValueOnce(first.promise)
     const { result, rerender } = setup({ initialData: null, args: {} })
     expect(result.current.loading).toBe(true)
 
-    mocks.useToolQuery.mockReturnValue({ data: A, isError: false, error: null, isFetching: false })
-    rerender({ initialData: null, args: {} })
-    mocks.useToolQuery.mockReturnValue(pending)
-    rerender({ initialData: null, args: { q: "x" } })
-    expect(result.current.firstPage).toBe(A)
+    act(() => first.land(toolResult(A)))
+    await waitFor(() => expect(result.current.firstPage).toEqual(A))
+    callTool.mockReturnValue(deferred().promise)
+    rerender({ initialData: null, args: SEARCH })
+    await waitFor(() => expect(page0Calls(SEARCH)).toHaveLength(1))
+    expect(result.current.firstPage).toEqual(A)
   })
 
-  it("keeps the page the list SHOWS: a handed-in page carried into a new key scope", () => {
-    mocks.useToolQuery.mockReturnValue({
-      data: undefined,
-      isError: false,
-      error: null,
-      isFetching: true,
-    })
+  it("keeps the page the list SHOWS: a handed-in page carried into a new key scope", async () => {
+    callTool.mockReturnValue(deferred().promise)
     const { result, rerender } = setup({ initialData: A, args: {}, scope: "list-1" })
     // The same handed-in page, now rendered under another scope …
     rerender({ initialData: A, args: {}, scope: "list-2" })
     // … is what that list shows, so its first search keeps it.
-    rerender({ initialData: null, args: { q: "x" }, scope: "list-2" })
+    rerender({ initialData: null, args: SEARCH, scope: "list-2" })
+    await waitFor(() => expect(page0Calls(SEARCH)).toHaveLength(1))
     expect(result.current.firstPage).toBe(A)
   })
 
-  it("never carries a result over into another list (a changed key scope)", () => {
-    const { result, rerender } = settledOnA()
-    mocks.useToolQuery.mockReturnValue({
-      data: undefined,
-      isError: false,
-      error: null,
-      isFetching: true,
-    })
+  it("never carries a result over into another list (a changed key scope)", async () => {
+    const { result, rerender } = await settledOnA()
+    callTool.mockReturnValue(deferred().promise)
     rerender({ initialData: null, args: {}, scope: "list-2" })
+    await waitFor(() => expect(page0Calls({})).toHaveLength(2))
     expect(result.current.firstPage).toBeNull()
     expect(result.current.items).toEqual([])
     expect(result.current.loading).toBe(true)
@@ -319,63 +332,79 @@ describe("usePagedViewData — page-0 fetch states", () => {
   })
 
   it("a failed filtered page 0 keeps the previous rows, reports a page-0 error and retries page 0", async () => {
-    const { result, rerender } = settledOnA()
-    const refetch = vi.fn()
-    mocks.useToolQuery.mockReturnValue({
-      data: undefined,
-      isError: true,
-      error: new Error("engine down"),
-      isFetching: false,
-      refetch,
-    })
-    rerender({ initialData: null, args: { q: "x" } })
+    const { result, rerender } = await settledOnA()
+    callTool.mockRejectedValueOnce(new Error("engine down"))
+    rerender({ initialData: null, args: SEARCH })
 
-    expect(result.current.firstPage).toBe(A)
+    // The failure is final (no retries here): TanStack drops its placeholder,
+    // the rows the failure line refers to stay.
+    await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
+    expect(result.current.firstPage).toEqual(A)
     expect(result.current.stale).toBe(true)
-    expect(result.current.error?.message).toBe("engine down")
     expect(result.current.loadMoreError).toBeNull()
-    // Without data under the new key the retry first cancels the running
-    // chain (see useSeededToolQuery), so the refetch lands a tick later.
+
+    const again = deferred()
+    callTool.mockReturnValueOnce(again.promise)
     act(() => result.current.retry())
-    await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1))
-    expect(mocks.callTool).not.toHaveBeenCalled()
+    // The retry re-runs page 0 of the search — never the next offset.
+    await waitFor(() => expect(page0Calls(SEARCH)).toHaveLength(2))
+    expect(
+      callTool.mock.calls.some(([, sent]) => (sent as { firstResult: number }).firstResult > 0),
+    ).toBe(false)
+    // While it runs the previous rows stay, marked.
+    expect(result.current.firstPage).toEqual(A)
+    expect(result.current.stale).toBe(true)
+    act(() => again.land(toolResult(page(["x1"], 1))))
+    await waitFor(() => expect(result.current.items).toEqual(["x1"]))
+    expect(result.current.error).toBeNull()
+    expect(result.current.stale).toBe(false)
   })
 
   it("a failed background refetch is a page-0 error over the stale rows — never a load-more error", async () => {
-    const { result, rerender } = settledOnA()
-    const refetch = vi.fn()
+    const { result } = await settledOnA()
     // React Query keeps the last data and sets the error.
-    mocks.useToolQuery.mockReturnValue({
-      data: A,
-      isError: true,
-      error: new Error("timeout"),
-      isFetching: false,
-      refetch,
-    })
-    rerender({ initialData: null, args: {} })
+    callTool.mockRejectedValueOnce(new Error("timeout"))
+    await invalidate()
 
+    await waitFor(() => expect(result.current.error?.message).toBe("timeout"))
     expect(result.current.items).toEqual(["a", "b"])
     // The last good page is still THIS filter's: rows on screen, not stale.
     expect(result.current.stale).toBe(false)
-    expect(result.current.error?.message).toBe("timeout")
     expect(result.current.loadMoreError).toBeNull()
+
+    callTool.mockResolvedValueOnce(toolResult(A))
     act(() => result.current.retry())
-    // The stubbed query keeps no cache entry: the retry takes the cancel-first path.
-    await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1))
-    expect(mocks.callTool).not.toHaveBeenCalled()
+    await waitFor(() => expect(page0Calls({})).toHaveLength(3))
+    await waitFor(() => expect(result.current.error).toBeNull())
   })
 
-  it("an initial page-0 failure has nothing to keep: no rows, the error for the caller's guard", () => {
-    mocks.useToolQuery.mockReturnValue({
-      data: undefined,
-      isError: true,
-      error: new Error("engine down"),
-      isFetching: false,
-    })
+  it("an initial page-0 failure has nothing to keep: no rows, the error for the caller's guard", async () => {
+    callTool.mockRejectedValueOnce(new Error("engine down"))
     const { result } = setup({ initialData: null, args: {} })
+    await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
     expect(result.current.firstPage).toBeNull()
     expect(result.current.stale).toBe(false)
     expect(result.current.loading).toBe(false)
-    expect(result.current.error?.message).toBe("engine down")
+  })
+
+  it("never bridges a failure into another list", async () => {
+    const { result, rerender } = await settledOnA()
+    callTool.mockRejectedValueOnce(new Error("engine down"))
+    rerender({ initialData: null, args: {}, scope: "list-2" })
+    await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
+    expect(result.current.firstPage).toBeNull()
+    expect(result.current.stale).toBe(false)
+  })
+
+  it("bridges a failed search over the page the list SHOWS, also one carried into a new scope", async () => {
+    const { result, rerender } = setup({ initialData: A, args: {}, scope: "list-1" })
+    // The same handed-in page, now this list's (scope list-2) …
+    rerender({ initialData: A, args: {}, scope: "list-2" })
+    callTool.mockRejectedValueOnce(new Error("engine down"))
+    // … so when its first search fails for good, the rows it keeps are this page.
+    rerender({ initialData: null, args: SEARCH, scope: "list-2" })
+    await waitFor(() => expect(result.current.error?.message).toBe("engine down"))
+    expect(result.current.firstPage).toBe(A)
+    expect(result.current.stale).toBe(true)
   })
 })

@@ -13,6 +13,10 @@
  *    `ROLE_CONTRAST_PAIRS` — WCAG contrast of the theme, light and dark,
  *    over the toolkit's Miragon theme (`toolkitThemeStylesheets()`) plus a
  *    consumer's role overrides;
+ *  - `missingDisplayTexts` + `displayTextCatalog` — the view builder names
+ *    every widget, step and top-level props field in en and de, in the brand
+ *    voice; `displayTextsSentToModel` — and none of those texts reaches the
+ *    model through `get-framework-manifest`;
  *  - `setFormatLocale` — render numbers and dates in a language in a test.
  * `scanGlyphs`, `scanIconSizes` and `scanColors` parse sources with
  * `typescript` (an optional peer).
@@ -62,6 +66,11 @@ export {
   type ThemeVariables,
 } from "./contrast.js"
 export { ROLE_CONTRAST_PAIRS, toneContrastPairs } from "./tone-pairs.js"
+export {
+  displayTextCatalog,
+  displayTextsSentToModel,
+  missingDisplayTexts,
+} from "./display-texts.js"
 /**
  * The format locale the shell's ProfileGate publishes, for tests that render
  * a widget's numbers and dates in a given language without booting the gate

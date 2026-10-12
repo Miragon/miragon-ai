@@ -1,12 +1,11 @@
-import { Button } from "@miragon/mcp-toolkit-ui"
 import {
-  HandOffButton,
+  Button,
   KpiGrid,
   StatusBadge,
   WidgetHeader,
-  formatNumber,
   type ToneVariant,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/mcp-toolkit-ui"
+import { HandOffButton, formatNumber } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData } from "../../view-models.js"
 import { type T, useT } from "../../messages/use-t.js"

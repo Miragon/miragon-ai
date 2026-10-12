@@ -1,8 +1,15 @@
-import { Alert, AlertDescription, Badge, Button, Card, CardContent } from "@miragon/mcp-toolkit-ui"
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  SectionHeading,
+} from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
   LogText,
-  SectionHeading,
   formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"

@@ -5,10 +5,10 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  CountPill,
 } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
-  CountPill,
   Section,
   TableEmptyState,
   TableSkeleton,

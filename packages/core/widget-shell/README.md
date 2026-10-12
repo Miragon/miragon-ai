@@ -20,9 +20,14 @@ package customers build their own connectors and composed servers on (see the
   always-on generic `shell:kpi-grid` / `shell:data-table` widgets (components in `./widgets`), the
   standard `render-view`/builder composition targets fed via `props.dataKey`. Apps own no domain UI,
   so the catalogue lives here.
-- **Shared UI primitives** (`./widgets`) — common components (`WidgetShell`, tables, formatters,
-  `useApplyTheme`, …) and `with-tool-errors` handling reused across both widget packages. Status
-  is a tone (`TONE_*` maps over the `--<tone>`, `--<tone>-soft` and `--<tone>-ink` roles: a dot,
+- **Shared UI primitives** (`./widgets`) — what the kit adds on top of `@miragon/mcp-toolkit-ui`
+  (`WidgetShell`, tables, `ListTable` + `PagedRows`, the dual-mode data hooks, formatters,
+  hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages. The
+  toolkit's own components and helpers (`KpiGrid`, `StatusBadge`/`LivePill`/`CountPill`,
+  `FilterBar`, `WidgetHeader`, `PagedListFooter`, `SectionHeading`, the `TONE_*` maps,
+  `resolveTone`, `MICRO_LABEL`, `cn`, `useDebouncedValue`, …) are imported from the toolkit:
+  the kit neither forks nor re-exports them. Status
+  is a tone (the toolkit's `TONE_*` maps over the `--<tone>`, `--<tone>-soft` and `--<tone>-ink` roles: a dot,
   edge or icon next to black text, black text on a tint, never a coloured number), function
   icons are Lucide via `Icon`, and numbers, percentages, periods and durations render in the
   view's locale (`formatNumber`, `formatPercent`, `formatPercentPoints`, `formatPeriod`,
@@ -83,20 +88,20 @@ oauth? })` is the one boot sequence every composed server shares: env-typo warni
 
 ## Exports
 
-| Subpath     | Contents                                                                                                                                                                                                                                                                                                                                                          |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, `createComposedServer` and its edge pieces, `oauthFromEnv`, caller identity (`resolveProfileKey`), the profile + dashboard stores and the Postgres client/migration runner |
-| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                                                                                                                                 |
-| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and the host app shell (`AppShellProviders`: the language as explicit profile > host context > English, the theme as host context > OS)                                                                                                                                                        |
-| `./testing` | The brand gates for your widget package's tests: `catalogTextFindings`, `scanGlyphs`, `scanColors`, `stylesheetColorFindings`, `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` / `ROLE_CONTRAST_PAIRS` over `toolkitThemeStylesheets()`                                                                                                     |
+| Subpath     | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./server`  | `buildSingleWidgetView` / `buildComposedView` / `buildDataFeedResult`, `shellDefinition`/`createShellPlugin`, `createBuilderTexts` (the view builder's en/de names from a module's catalogs), `composeModules` / `frameworkWritesAllowed` / `createToolsetVocabulary`, `createComposedServer` and its edge pieces, `oauthFromEnv`, caller identity (`resolveProfileKey`), the profile + dashboard stores and the Postgres client/migration runner                      |
+| `./ui`      | `adaptDataWidget` — the data-aware widget wrapper                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `./widgets` | Shared widget UI primitives incl. the generic `shell:*` components and the host app shell (`AppShellProviders`: the language as explicit profile > host context > English, the theme as host context > OS)                                                                                                                                                                                                                                                             |
+| `./testing` | The brand gates for your widget package's tests: `catalogTextFindings`, `missingDisplayTexts` + `displayTextCatalog` (every widget, step and top-level props field named for the view builder in en and de) + `displayTextsSentToModel` (none of those names reaches the model), `scanGlyphs`, `scanColors`, `stylesheetColorFindings`, `parseThemeVariables` + `contrastFindings` with `toneContrastPairs()` / `ROLE_CONTRAST_PAIRS` over `toolkitThemeStylesheets()` |
 
 The `@miragon/mcp-toolkit-*`, `react`/`react-dom`, `zod` and `@tanstack/react-query` deps are
 **peer dependencies** — they must resolve to a single instance across the host bundle (see the
 `dedupe` array in the server app's `vite.config.ts`), otherwise the React contexts diverge and
 in-widget queries hang. They are published as ranges (`react`/`react-dom` `^19.2.0`, `zod`
-`^4.4.0`, `@miragon/mcp-toolkit-*` `~2.7.0`, `lucide-react` `^0.562.0 || ^1.0.0`) so they dedupe
+`^4.4.0`, `@miragon/mcp-toolkit-*` `~2.8.0`, `lucide-react` `^0.562.0 || ^1.0.0`) so they dedupe
 against your app's copy; add `lucide-react` to your `dedupe` list too. **A host bundle that dedupes
-`lucide-react` needs 1.47.0 or newer** (the version `@miragon/mcp-toolkit-ui` 2.7 depends on): the
+`lucide-react` needs 1.47.0 or newer** (the version `@miragon/mcp-toolkit-ui` 2.8 depends on): the
 toolkit's chrome imports `LucideProvider`, which 0.x does not export, so a deduped 0.x copy fails
 the bundle build with a missing export. The peer range still admits 0.562 only for this repo's own
 test graph; no package manager warns you about it.

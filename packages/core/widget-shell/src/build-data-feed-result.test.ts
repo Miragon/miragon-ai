@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { parseViewToolResult } from "@miragon/mcp-toolkit-ui"
 import { buildDataFeedResult } from "./server.js"
-import { parseViewToolResult } from "./ui/parse-tool-result.js"
 
 /**
  * The app-only `*_data` feed result (architecture invariant 5): the payload on

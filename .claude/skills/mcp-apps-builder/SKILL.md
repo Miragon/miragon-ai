@@ -16,7 +16,7 @@ description: |
 ---
 
 > **⚠️ mcp-use 2.x (since 2026-08):** this repo now runs `mcp-use@2.7.3` /
-> `@miragon/mcp-toolkit-*@2.7.0`. Several idioms taught below are 1.x-only and
+> `@miragon/mcp-toolkit-*@2.8.0`. Several idioms taught below are 1.x-only and
 > NO LONGER APPLY here: `mcp-use/server` imports (use the `mcp-use` root),
 > `schema:` on `server.tool` (use `inputSchema:`), `McpUseProvider`/`useWidget`
 > (use `bootstrapView` + the toolkit `HostBridge`), and any hand-stamped
