@@ -162,16 +162,19 @@ describe("engineHealth PromQL", () => {
     const { ch, instant } = mockClient()
     await engineHealth(ch, { engine: "prod-a" })
     const sel = '{engine_id="prod-a"}'
+    // Every gauge folded over its own labels first: a clustered engine's nodes
+    // report the same engine-wide rows.
+    const perKey = "max by (process_definition_key, engine_id)"
     expect(instant.mock.calls.map(([q]) => q)).toEqual([
-      `sum by (process_definition_key)(camunda_process_instances_running${sel})`,
-      `sum by (incident_type)(camunda_incidents_open${sel})`,
-      `sum(camunda_jobs_failed${sel})`,
-      `sum by (engine_id)(camunda_jobs_executable${sel})`,
-      `sum(camunda_jobs_suspended${sel})`,
-      `sum(camunda_usertasks_open{status="total",engine_id="prod-a"})`,
-      `sum(camunda_usertasks_open{status="unassigned",engine_id="prod-a"})`,
-      `sum by (engine_id)(camunda_external_tasks_open${sel})`,
-      `count(count by (process_definition_key)(camunda_process_definitions_deployed${sel}))`,
+      `sum by (process_definition_key)(${perKey}(camunda_process_instances_running${sel}))`,
+      `sum by (incident_type)(max by (process_definition_key, incident_type, engine_id)(camunda_incidents_open${sel}))`,
+      `sum(${perKey}(camunda_jobs_failed${sel}))`,
+      `max by (engine_id)(camunda_jobs_executable${sel})`,
+      `sum(max by (engine_id)(camunda_jobs_suspended${sel}))`,
+      `sum(max by (status, engine_id)(camunda_usertasks_open{status="total",engine_id="prod-a"}))`,
+      `sum(max by (status, engine_id)(camunda_usertasks_open{status="unassigned",engine_id="prod-a"}))`,
+      `max by (engine_id)(camunda_external_tasks_open${sel})`,
+      `count(count by (process_definition_key)(${perKey}(camunda_process_definitions_deployed${sel})))`,
       // One engine named: only alerts carrying its engine_id — an unrelated
       // alert in a shared Prometheus cannot turn its verdict critical.
       `ALERTS{alertstate="firing",engine_id="prod-a"}`,

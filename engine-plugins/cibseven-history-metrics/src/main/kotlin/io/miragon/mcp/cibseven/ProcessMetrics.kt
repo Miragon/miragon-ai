@@ -18,13 +18,22 @@ import io.micrometer.core.instrument.Tags
  * Both export paths converge on the same Prometheus series: the OTEL
  * Collector's Prometheus exporter and Micrometer's own Prometheus registry
  * lowercase, replace `.` with `_`, append the unit and `_total` to monotonic
- * counters. So `camunda.process.instance.duration` (base unit `seconds`)
- * surfaces as `camunda_process_instance_duration_seconds{_bucket,_sum,_count}`
+ * counters. So `camunda.process.instance.duration` (base unit `milliseconds`)
+ * surfaces as `camunda_process_instance_duration_milliseconds{_bucket,_sum,_count}`
  * and `camunda.process.instance.started` as
  * `camunda_process_instance_started_total`. The base unit is deliberately the
- * spelled-out `seconds` (not UCUM `s`) because both exporters append it
- * verbatim; durations are recorded as plain seconds (a [DistributionSummary],
- * not a Micrometer `Timer`, whose base time unit would vary per registry).
+ * spelled-out `milliseconds` (not UCUM `ms`) because both exporters append it
+ * verbatim.
+ *
+ * ## Why whole milliseconds
+ * Durations are a [DistributionSummary] of the engine's own `durationInMillis`,
+ * not a Micrometer `Timer` (whose base time unit varies per registry). Micrometer
+ * rounds a summary observation UP to a whole base unit before it picks the
+ * histogram bucket, so in seconds every sub-second duration landed in the 1 s
+ * bucket; in milliseconds the rounding is a no-op. The bucket bounds reach 30
+ * days, so a long process or a slow user task stays below the top bucket instead
+ * of capping every quantile at it. Both bucket lists are part of the metric
+ * contract (`buckets` in `metrics-contract.json`).
  *
  * ## Cardinality contract
  * Only model-bounded tags are attached (definition key/version, activity
@@ -39,25 +48,24 @@ class ProcessMetrics(private val registry: MeterRegistry) {
 
     fun processEnded(tags: Tags) = counter("camunda.process.instance.ended", "Process instances ended, by terminal state", tags)
 
-    fun processDuration(seconds: Double, tags: Tags) =
-        durationSummary("camunda.process.instance.duration", "End-to-end process instance duration", DURATION_BUCKETS_SECONDS, tags)
-            .record(seconds)
+    fun processDuration(millis: Long, tags: Tags) =
+        durationSummary("camunda.process.instance.duration", "End-to-end process instance duration", FLOW_BUCKETS_MS, tags)
+            .record(millis.toDouble())
 
     // --- Activity instance (heatmap + bottleneck) ---
     fun activityEnded(tags: Tags) = counter("camunda.activity.ended", "Activity instances completed", tags)
 
-    fun activityDuration(seconds: Double, tags: Tags) =
-        durationSummary("camunda.activity.duration", "Activity instance execution time", DURATION_BUCKETS_SECONDS, tags)
-            .record(seconds)
+    fun activityDuration(millis: Long, tags: Tags) =
+        durationSummary("camunda.activity.duration", "Activity instance execution time", FLOW_BUCKETS_MS, tags)
+            .record(millis.toDouble())
 
     // --- User task ---
     fun taskCreated(tags: Tags) = counter("camunda.usertask.created", "User tasks created", tags)
 
     fun taskCompleted(tags: Tags) = counter("camunda.usertask.completed", "User tasks completed", tags)
 
-    fun taskDuration(seconds: Double, tags: Tags) =
-        durationSummary("camunda.usertask.duration", "User task cycle time", TASK_BUCKETS_SECONDS, tags)
-            .record(seconds)
+    fun taskDuration(millis: Long, tags: Tags) = durationSummary("camunda.usertask.duration", "User task cycle time", TASK_BUCKETS_MS, tags)
+        .record(millis.toDouble())
 
     // --- Incident (failure analysis) ---
     fun incidentCreated(tags: Tags) = counter("camunda.incident.created", "Incidents created", tags)
@@ -75,7 +83,7 @@ class ProcessMetrics(private val registry: MeterRegistry) {
     private fun durationSummary(name: String, description: String, buckets: DoubleArray, tags: Tags): DistributionSummary =
         DistributionSummary.builder(name)
             .description(description)
-            .baseUnit("seconds")
+            .baseUnit("milliseconds")
             // SLOs materialise as explicit histogram buckets on every export
             // path (Micrometer's OTLP registry never falls back to an
             // exponential histogram when SLOs are set).
@@ -84,12 +92,26 @@ class ProcessMetrics(private val registry: MeterRegistry) {
             .register(registry)
 
     private companion object {
-        /** Process/activity durations: sub-second activities up to multi-hour processes. */
-        val DURATION_BUCKETS_SECONDS =
-            doubleArrayOf(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1800.0, 3600.0)
+        const val SECOND = 1_000.0
+        const val MINUTE = 60 * SECOND
+        const val HOUR = 60 * MINUTE
+        const val DAY = 24 * HOUR
 
-        /** Human task cycle times: minutes to weeks. */
-        val TASK_BUCKETS_SECONDS =
-            doubleArrayOf(60.0, 300.0, 900.0, 1800.0, 3600.0, 14400.0, 43200.0, 86400.0, 259200.0, 604800.0)
+        /** Process/activity durations: a 10 ms service task up to a month-long process. */
+        val FLOW_BUCKETS_MS = doubleArrayOf(
+            10.0, 50.0, 100.0, 250.0, 500.0,
+            SECOND, 2.5 * SECOND, 5 * SECOND, 10 * SECOND, 30 * SECOND,
+            MINUTE, 5 * MINUTE, 15 * MINUTE,
+            HOUR, 4 * HOUR, 12 * HOUR,
+            DAY, 3 * DAY, 7 * DAY, 30 * DAY,
+        )
+
+        /** Human task cycle times: seconds to a month. */
+        val TASK_BUCKETS_MS = doubleArrayOf(
+            10 * SECOND,
+            MINUTE, 5 * MINUTE, 15 * MINUTE, 30 * MINUTE,
+            HOUR, 4 * HOUR, 12 * HOUR,
+            DAY, 3 * DAY, 7 * DAY, 14 * DAY, 30 * DAY,
+        )
     }
 }

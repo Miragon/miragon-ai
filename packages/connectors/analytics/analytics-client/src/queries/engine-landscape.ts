@@ -5,8 +5,12 @@ import {
   type PrometheusClient,
   type PromSample,
 } from "../prometheus.js"
-import { METRIC_NAMES as M } from "../metric-names.js"
-import { asOfNow } from "./helpers.js"
+import { METRIC_NAMES as M, type GaugeName } from "../metric-names.js"
+import { asOfNow, engineState } from "./helpers.js"
+
+/** A per-key gauge summed per (engine, key) — `incidents_open` also carries a type. */
+const byKey = (gauge: GaugeName, sel: string) =>
+  `sum by (engine_id, process_definition_key)(${engineState(gauge, sel)})`
 
 /**
  * Per-engine row of the landscape. Absolute counts only — see the module note.
@@ -119,8 +123,8 @@ export async function engineLandscape(
   const asOf = asOfNow()
   const sel = selector(engineMatcher(params.engine))
 
-  // Flat `sum by (…)` per metric — the joining happens in TS. Nesting the
-  // by-clauses would also defeat the contract test's grouping-label scan.
+  // One `sum by (…)` per gauge over its node-folded rows — the joining
+  // happens in TS.
   const [
     deployed,
     running,
@@ -131,14 +135,14 @@ export async function engineLandscape(
     dueFuture,
     externalTasks,
   ] = await Promise.all([
-    ch.instant(`sum by (engine_id, process_definition_key)(${M.processDefinitionsDeployed}${sel})`),
-    ch.instant(`sum by (engine_id, process_definition_key)(${M.processInstancesRunning}${sel})`),
-    ch.instant(`sum by (engine_id, process_definition_key)(${M.incidentsOpen}${sel})`),
-    ch.instant(`sum by (engine_id, process_definition_key)(${M.jobsFailed}${sel})`),
-    ch.instant(`sum by (engine_id)(${M.jobsExecutable}${sel})`),
-    ch.instant(`sum by (engine_id)(${M.jobsSuspended}${sel})`),
-    ch.instant(`sum by (engine_id)(${M.jobsDueFuture}${sel})`),
-    ch.instant(`sum by (engine_id)(${M.externalTasksOpen}${sel})`),
+    ch.instant(byKey(M.processDefinitionsDeployed, sel)),
+    ch.instant(byKey(M.processInstancesRunning, sel)),
+    ch.instant(byKey(M.incidentsOpen, sel)),
+    ch.instant(byKey(M.jobsFailed, sel)),
+    ch.instant(engineState(M.jobsExecutable, sel)),
+    ch.instant(engineState(M.jobsSuspended, sel)),
+    ch.instant(engineState(M.jobsDueFuture, sel)),
+    ch.instant(engineState(M.externalTasksOpen, sel)),
   ])
 
   const deployedCells = cells(deployed)

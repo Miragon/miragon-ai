@@ -4,7 +4,7 @@ import type { PrometheusClient, PromSample } from "../prometheus.js"
 
 const v = (value: number): PromSample => ({ metric: {}, value })
 
-/** Mock Prometheus client that dispatches canned samples by the PromQL it sees. */
+/** Mock Prometheus client that dispatches canned samples by the PromQL it sees (durations in ms). */
 function mockClient() {
   const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
     if (q.includes("camunda_activity_ended_total")) {
@@ -13,28 +13,28 @@ function mockClient() {
         { metric: { activity_id: "B", activity_type: "userTask" }, value: 4 },
       ]
     }
-    if (q.includes("camunda_activity_duration_seconds_sum")) {
+    if (q.includes("camunda_activity_duration_milliseconds_sum")) {
       return [
-        { metric: { activity_id: "A" }, value: 100 },
-        { metric: { activity_id: "B" }, value: 10 },
+        { metric: { activity_id: "A" }, value: 100_000 },
+        { metric: { activity_id: "B" }, value: 10_000 },
       ]
     }
     if (q.includes("histogram_quantile(0.5, sum by (activity_id, le)")) {
       // B's buckets did not move: no median for it.
-      return [{ metric: { activity_id: "A" }, value: 9 }]
+      return [{ metric: { activity_id: "A" }, value: 9_000 }]
     }
     if (q.includes("activity_id, le")) {
       return [
-        { metric: { activity_id: "A" }, value: 15 },
-        { metric: { activity_id: "B" }, value: 5 },
+        { metric: { activity_id: "A" }, value: 15_000 },
+        { metric: { activity_id: "B" }, value: 5_000 },
       ]
     }
-    if (q.includes("histogram_quantile(0.5")) return [v(8)]
-    if (q.includes("histogram_quantile(0.95")) return [v(20)]
+    if (q.includes("histogram_quantile(0.5")) return [v(8_000)]
+    if (q.includes("histogram_quantile(0.95")) return [v(20_000)]
     if (q.includes("incident_created")) return [v(5)]
     if (q.includes('state="COMPLETED"')) return [v(40)]
     if (q.includes("started_total")) return [v(50)]
-    if (q.includes("duration_seconds_sum")) return [v(10.04)] // avg = sum/count expression
+    if (q.includes("duration_milliseconds_sum")) return [v(10_040)] // avg = sum/count expression
     return []
   })
   const ch: PrometheusClient = { instant }
@@ -99,7 +99,11 @@ describe("analyzePerformance", () => {
 
   it("keeps the KPI when instances ended but none started, with an unmeasured rate", async () => {
     const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
-      q.includes('state="COMPLETED"') ? [v(3)] : q.includes("duration_seconds_sum") ? [v(60)] : [],
+      q.includes('state="COMPLETED"')
+        ? [v(3)]
+        : q.includes("duration_milliseconds_sum")
+          ? [v(60_000)]
+          : [],
     )
     const res = await analyzePerformance(
       { instant },
@@ -153,8 +157,9 @@ describe("comparePeriods", () => {
   it("labels both windows and resolves each KPI from its own historical window", async () => {
     const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
       const count = q.includes(AT_A) ? 10 : 30
-      if (q.includes("histogram_quantile")) return [v(count / 10)]
-      if (q.includes("duration_seconds_sum")) return [v(count / 10)]
+      // count / 10 seconds, in ms
+      if (q.includes("histogram_quantile")) return [v(count * 100)]
+      if (q.includes("duration_milliseconds_sum")) return [v(count * 100)]
       if (q.includes("incident_created")) return [v(1)]
       if (q.includes('state="COMPLETED"')) return [v(count - 2)]
       return [v(count)]
@@ -264,11 +269,11 @@ describe("comparePeriods", () => {
           { metric: { activity_id: "A" }, value: 4 },
         ]
       }
-      if (q.includes("camunda_activity_duration_seconds_sum")) {
-        return [{ metric: { activity_id: "A" }, value: 8 }]
+      if (q.includes("camunda_activity_duration_milliseconds_sum")) {
+        return [{ metric: { activity_id: "A" }, value: 8_000 }]
       }
       if (q.includes("activity_id, le")) {
-        return [{ metric: { activity_id: "A" }, value: 3 }]
+        return [{ metric: { activity_id: "A" }, value: 3_000 }]
       }
       return []
     })

@@ -123,6 +123,10 @@ describe("Prometheus config reaches the wire", () => {
     // named.
     const args = {
       processDefinitionKey: "order",
+      // Handlers called directly get no schema defaults: the compare windows.
+      windowDays: 7,
+      windowBeforeDays: 3,
+      windowAfterDays: 3,
       // Relative to now: compare windows are held inside the retention.
       deploymentTimestamp: new Date(Date.now() - 3 * 86_400_000).toISOString(),
       engineA: "prod-a",

@@ -16,7 +16,7 @@ export function registerVersionCompareTools(
     name: "analytics_version_compare",
     category: "analytics",
     description:
-      "Compare KPIs between two deployed process definition versions of the same processDefinitionKey over a shared rolling window, from metrics. The version is an exact label on the process-instance series, so instance counts, completed counts and durations (avg, p95) per version plus their deltas are precise. incident_count, incident_rate_pct, the element_incident_* fields and the incident-rate deltas are null — NOT zero: the incident metric carries no version label, so incidents cannot be split by version (see `notes`); for incident figures per process key (all versions together) use analytics_analyze_process_performance or analytics_element_bottleneck. Flagged `suppressed` when either version has fewer than minBucketSize started or completed instances. Pair with camunda7_list_process_definitions to discover versions.",
+      "Compare KPIs between two deployed process definition versions of the same processDefinitionKey over a shared rolling window, from metrics. The version is an exact label on the process-instance and incident series, so instance counts, completed counts, incidents, the incident rate and durations (avg, p95) per version plus their deltas are precise. Process-wide: the element_incident_* fields stay null. Flagged `suppressed` when either version has fewer than minBucketSize started or completed instances. Pair with camunda7_list_process_definitions to discover versions.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     inputSchema: { ...schemas.versionCompareInput.shape, minBucketSize: optionalMinBucketSize },
     handler: async (ch, args, ctx) =>

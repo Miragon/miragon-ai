@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { METRIC_NAMES } from "./metric-names.js"
+import { GAUGE_LABELS, METRIC_NAMES } from "./metric-names.js"
 
 /**
  * TS side of the Kotlin↔TS metric contract (`metrics-contract.json`):
@@ -12,8 +12,11 @@ import { METRIC_NAMES } from "./metric-names.js"
  * - query sources use `METRIC_NAMES` only — no raw `camunda_*` literals
  * - label values consumers hardcode (`state="COMPLETED"`, `status=~"total|…"`)
  *   in queries, alert rules and dashboards are declared as `knownValues`
- * - PromQL grouping labels (`sum by (…)`) are declared on the metric they
- *   group, not merely somewhere in the contract's label union
+ * - PromQL grouping labels (`sum by (…)`) in alert rules and dashboards are
+ *   declared on the metric they group, not merely somewhere in the
+ *   contract's label union (the queries' PromQL is built at runtime: the
+ *   behavioural `metrics-contract-labels.test.ts` checks what they send)
+ * - `GAUGE_LABELS` mirrors each gauge's contract labels exactly
  * - every contract metric has at least one consumer (dead-entry guard)
  *
  * Paths are resolved relative to this file (`import.meta.url`), so the test
@@ -27,6 +30,7 @@ interface ContractMetric {
   unit: string
   labels: string[]
   knownValues?: Record<string, string[]>
+  buckets?: number[]
 }
 
 const here = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
@@ -57,16 +61,20 @@ const stripComments = (src: string) =>
     .join("\n")
 
 /**
- * Replace `${M.foo}` / `${METRIC_NAMES.foo}` interpolations with the real
- * series name, so the queries' PromQL can be scanned by the same plain-text
- * parsers as the alert rules and dashboards.
+ * Replace `${M.foo}` / `${METRIC_NAMES.foo}` interpolations and bare
+ * `M.foo` arguments (`engineState(M.foo, sel)`) with the real series name, so
+ * the plain-text scans below see which series the queries read.
  */
 const resolveMetricInterpolations = (code: string) =>
-  code.replace(/\$\{(?:M|METRIC_NAMES)\.([A-Za-z0-9_]+)\}/g, (_, key: string) => {
-    const name = (METRIC_NAMES as Record<string, string>)[key]
-    if (name === undefined) throw new Error(`unknown METRIC_NAMES key "${key}"`)
-    return name
-  })
+  code.replace(
+    /\$\{(?:M|METRIC_NAMES)\.([A-Za-z0-9_]+)\}|\b(?:M|METRIC_NAMES)\.([A-Za-z0-9_]+)/g,
+    (_, braced?: string, bare?: string) => {
+      const key = braced ?? bare ?? ""
+      const name = (METRIC_NAMES as Record<string, string>)[key]
+      if (name === undefined) throw new Error(`unknown METRIC_NAMES key "${key}"`)
+      return name
+    },
+  )
 
 /**
  * Every string value in a JSON document — Grafana dashboards keep their PromQL
@@ -133,6 +141,30 @@ describe("metrics contract", () => {
       for (const label of Object.keys(m.knownValues ?? {})) {
         expect(m.labels, `knownValues key ${label} of ${m.promName}`).toContain(label)
       }
+      if (m.type === "histogram") {
+        // Whole milliseconds (contract rule 1), with explicit ascending bounds.
+        expect(m.unit, `${m.promName} unit`).toBe("ms")
+        expect(m.promName, m.otelName).toMatch(/_milliseconds$/)
+        const buckets = m.buckets ?? []
+        expect(buckets.length, `${m.promName} declares its buckets`).toBeGreaterThan(0)
+        expect(
+          buckets.every((b, i) => Number.isInteger(b) && b > 0 && (i === 0 || b > buckets[i - 1])),
+          `${m.promName} buckets are ascending whole ms`,
+        ).toBe(true)
+      } else {
+        expect(m.unit, `${m.promName} unit`).toBe("")
+        expect(m.buckets, `${m.promName} is no histogram`).toBeUndefined()
+      }
+    }
+  })
+
+  it("GAUGE_LABELS mirrors every gauge's contract labels exactly", () => {
+    const gauges = contract.metrics.filter((m) => m.type === "gauge")
+    expect(Object.keys(GAUGE_LABELS).sort()).toEqual(gauges.map((m) => m.promName).sort())
+    for (const m of gauges) {
+      expect([...GAUGE_LABELS[m.promName as keyof typeof GAUGE_LABELS]].sort(), m.promName).toEqual(
+        [...m.labels].sort(),
+      )
     }
   })
 
@@ -229,7 +261,7 @@ describe("metrics contract", () => {
     expect(regexChecked).toBeGreaterThan(0)
   })
 
-  it("PromQL grouping labels are declared on the metric they group", () => {
+  it("PromQL grouping labels in alert rules and dashboards are declared on the metric they group", () => {
     const seriesToMetric = new Map<string, ContractMetric>()
     for (const m of contract.metrics) {
       seriesToMetric.set(m.promName, m)
@@ -240,20 +272,21 @@ describe("metrics contract", () => {
       }
     }
 
-    // `sum by (a, b)(increase(camunda_x{…}[7d]))` — a by-clause plus the first
-    // camunda_* series of the aggregated expression (possibly behind nested
-    // calls such as rate()/increase()).
-    const grouped =
-      /\bby\s*\(([^)]*)\)\s*\(\s*(?:[A-Za-z_][A-Za-z0-9_]*\s*\(\s*)*(camunda_[A-Za-z0-9_]+)/g
+    // `sum by (a, b)(max by (…)(camunda_x{…}))` — each by-clause attributed to
+    // the first camunda_* series after it (the aggregated expression's, behind
+    // any nested calls, parentheses and inner by-clauses). Two flat regexes and
+    // a slice, not one nested pattern: that one backtracked (CodeQL js/redos).
+    const byClause = /\bby\s*\(([^)]*)\)/g
+    const firstSeries = /camunda_[A-Za-z0-9_]+/
 
     let checked = 0
-    for (const { name, text } of allConsumerSources()) {
-      const byClauses = text.match(/\bby\s*\(/g) ?? []
-      const matches = [...text.matchAll(grouped)]
-      // Every by-clause must be attributable to a camunda_* series; if a new
-      // query shape defeats the regex, extend it rather than losing coverage.
-      expect(matches.length, `unattributable "by (…)" clause in ${name}`).toBe(byClauses.length)
-      for (const [, labelList, series] of matches) {
+    for (const { name, text } of [alertsSource(), ...dashboardSources()]) {
+      for (const clause of text.matchAll(byClause)) {
+        const labelList = clause[1]
+        const series = firstSeries.exec(text.slice(clause.index + clause[0].length))?.[0]
+        // Every by-clause must be attributable to a camunda_* series.
+        expect(series, `unattributable "${clause[0]}" clause in ${name}`).toBeDefined()
+        if (series === undefined) continue
         const metric = seriesToMetric.get(series)
         expect(metric, `${series} (${name}) missing from contract`).toBeDefined()
         if (!metric) continue

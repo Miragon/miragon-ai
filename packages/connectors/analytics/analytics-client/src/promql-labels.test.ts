@@ -173,6 +173,12 @@ describe("parsePromql", () => {
       name: "inc_total",
       matchers: [],
     })
+    // Grafana interpolates its interval variables as durations, offsets included.
+    expect(parsePromql("inc_total[1h] @ 1700000000 offset $__range")).toEqual({
+      type: "selector",
+      name: "inc_total",
+      matchers: [],
+    })
   })
 
   it("parses grouping after the aggregation body and binds ^ right-associatively", () => {

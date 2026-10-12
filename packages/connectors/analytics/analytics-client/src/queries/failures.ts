@@ -7,6 +7,7 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
+import { engineState } from "./helpers.js"
 
 /**
  * One group of currently-open incidents. Only what the `camunda_incidents_open`
@@ -29,7 +30,7 @@ export interface FailedInstancesResult {
  * Currently-open incident groups, from the `camunda_incidents_open` state
  * gauge — grouped by `incident_type` + definition. Point-in-time ("what is
  * failing now"), so it is robust regardless of how the data arrived (live or
- * a backdated/bulk import, where `increase()` over a rate window reads zero).
+ * a backdated/bulk import, which no counter window sees).
  *
  * The gauge carries no incident message, activity id, timestamps or instance
  * ids, so the rows carry none either. For the actual failed instances drill
@@ -54,7 +55,7 @@ export async function findFailedInstances(
   )
 
   const samples = await ch.instant(
-    `sum by (process_definition_key, incident_type)(${M.incidentsOpen}${sel})`,
+    `sum by (process_definition_key, incident_type)(${engineState(M.incidentsOpen, sel)})`,
   )
 
   const patterns = samples

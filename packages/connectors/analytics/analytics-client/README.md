@@ -62,7 +62,18 @@ against the contract:
   every exported query function and checks each label its PromQL names (matchers, `by`/`without`,
   `on`/`ignoring`/`group_*`) against the labels the contract declares for that series, alert
   rules and Grafana dashboards included
-- Kotlin: `MetricsContractTest.kt` (Gradle)
+- Kotlin: `MetricsContractTest.kt` (Gradle), incl. the millisecond bucket bounds each histogram
+  registers
+
+The contract also sets how a series is READ, and the same tests check every query, alert rule and
+dashboard panel against it. PromQL of your own uses the exported helpers:
+
+- `increaseIn(series, window)` for a counter or histogram: a series is created on its first event,
+  and `increase()`/`rate()` never count a series' first sample, so the first incident of a type at
+  an activity would read 0. A series born inside the window counts with its whole value.
+- `engineState(gauge, selector)` for a gauge: every node of a clustered engine reports the same
+  engine-wide rows, folded with `max by (<its labels>)` before anything sums them.
+- Durations are whole milliseconds (`*_duration_milliseconds`).
 
 A rename that skips the contract — or a consumer (queries, alert rules, Grafana dashboards) — fails
 one of these tests. Only attach model-bounded labels (definition key, activity id, engine id);

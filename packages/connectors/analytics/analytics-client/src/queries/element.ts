@@ -8,7 +8,7 @@ import {
   type PrometheusClient,
 } from "../prometheus.js"
 import { METRIC_NAMES as M } from "../metric-names.js"
-import { asOfNow, byLabel, ratePct, round1, round1OrNull } from "./helpers.js"
+import { asOfNow, byLabel, increaseIn, ratePct, secondsOf, secondsOrNull } from "./helpers.js"
 
 export interface ElementBottleneckRow {
   activity_id: string
@@ -64,14 +64,16 @@ export async function elementBottleneck(
     engineMatcher(params.engine),
   )
 
+  const inWindow = (series: string) => increaseIn(series, { range })
+
   const [counts, sums, p95, incidents, types] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
-    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.activityEnded}${sel}`)})`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.activityDuration}_sum${sel}`)})`),
     ch.instant(
-      `histogram_quantile(0.95, sum by (activity_id, le)(increase(${M.activityDuration}_bucket${sel}[${range}])))`,
+      `histogram_quantile(0.95, sum by (activity_id, le)(${inWindow(`${M.activityDuration}_bucket${sel}`)}))`,
     ),
-    ch.instant(`sum by (activity_id)(increase(${M.incidentCreated}${sel}[${range}]))`),
-    ch.instant(`sum by (activity_id, activity_type)(increase(${M.activityEnded}${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.incidentCreated}${sel}`)})`),
+    ch.instant(`sum by (activity_id, activity_type)(${inWindow(`${M.activityEnded}${sel}`)})`),
   ])
 
   const sumBy = byLabel(sums, "activity_id")
@@ -86,21 +88,21 @@ export async function elementBottleneck(
   const all: ElementBottleneckRow[] = counts.map((c) => {
     const id = c.metric.activity_id ?? ""
     const count = Math.round(c.value)
-    const totalSec = sumBy[id] ?? 0
+    const totalMs = sumBy[id] ?? 0
     const incidentCount = Math.round(incidentBy[id] ?? 0)
     return {
       activity_id: id,
       activity_name: null,
       activity_type: typeBy[id] ?? "",
       execution_count: count,
-      avg_duration_sec: count > 0 && sumBy[id] !== undefined ? round1(totalSec / count) : null,
-      p95_duration_sec: round1OrNull(p95By[id] ?? null),
-      total_time_sec: round1(totalSec),
+      avg_duration_sec: count > 0 && sumBy[id] !== undefined ? secondsOf(totalMs / count) : null,
+      p95_duration_sec: secondsOrNull(p95By[id] ?? null),
+      total_time_sec: secondsOf(totalMs),
       avg_wait_sec: null,
       total_wait_sec: null,
       incident_count: incidentCount,
       incident_rate_pct: ratePct(incidentCount, count),
-      bottleneck_score_sec: round1(totalSec),
+      bottleneck_score_sec: secondsOf(totalMs),
     }
   })
 
@@ -133,7 +135,7 @@ export interface ElementHeatResult {
 /**
  * Per-element heat values for the BPMN heatmap, from OTEL metrics: traversal
  * frequency (`camunda_activity_ended_total`) and average duration
- * (`camunda_activity_duration_seconds_sum` / count) per `activity_id`, for one
+ * (`camunda_activity_duration_milliseconds_sum` / count) per `activity_id`, for one
  * process definition. Returns full maps (no top-N / min-bucket filtering — every
  * element gets a value). Node-level only; metrics carry no per-instance path, so
  * sequence-flow/edge heat is not available. Activity metrics have no version
@@ -150,9 +152,11 @@ export async function elementHeat(
     engineMatcher(params.engine),
   )
 
+  const inWindow = (series: string) => increaseIn(series, { range })
+
   const [counts, sums] = await Promise.all([
-    ch.instant(`sum by (activity_id)(increase(${M.activityEnded}${sel}[${range}]))`),
-    ch.instant(`sum by (activity_id)(increase(${M.activityDuration}_sum${sel}[${range}]))`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.activityEnded}${sel}`)})`),
+    ch.instant(`sum by (activity_id)(${inWindow(`${M.activityDuration}_sum${sel}`)})`),
   ])
 
   const countBy = byLabel(counts, "activity_id")
@@ -164,8 +168,7 @@ export async function elementHeat(
     const c = Math.round(count)
     if (c <= 0) continue
     frequency[id] = c
-    const totalSec = sumBy[id] ?? 0
-    durationSec[id] = round1(totalSec / c)
+    durationSec[id] = secondsOf((sumBy[id] ?? 0) / c)
   }
   return { frequency, durationSec, asOf }
 }

@@ -19,7 +19,8 @@ const act = (key: string, id: string, value: number, type?: string): PromSample 
 const BY_KEY = "by (process_definition_key)"
 
 /**
- * Ordered dispatch table for the mock client: first predicate match wins, so
+ * Ordered dispatch table for the mock client (durations in seconds; the mock
+ * answers them in ms, the histogram's unit): first predicate match wins, so
  * the specific rules (activity-level, then definition-level breakdowns, then
  * the live gauges) sit before the global-KPI fallbacks.
  */
@@ -35,7 +36,7 @@ const CANNED_SAMPLES: Array<[(q: string) => boolean, PromSample[]]> = [
     ],
   ],
   [
-    (q) => q.includes("camunda_activity_duration_seconds_sum"),
+    (q) => q.includes("camunda_activity_duration_milliseconds_sum"),
     [act("order", "Task_A", 100), act("order", "Task_B", 20), act("invoice", "StartEvent_1", 4)],
   ],
   [(q) => q.includes("activity_id, le"), [act("order", "Task_A", 15), act("order", "Task_B", 6)]],
@@ -50,11 +51,11 @@ const CANNED_SAMPLES: Array<[(q: string) => boolean, PromSample[]]> = [
     [def("order", 60), def("invoice", 40)],
   ],
   [
-    (q) => q.includes(BY_KEY) && q.includes("duration_seconds_sum"),
+    (q) => q.includes(BY_KEY) && q.includes("duration_milliseconds_sum"),
     [def("order", 600), def("invoice", 80)],
   ],
   [
-    (q) => q.includes(BY_KEY) && q.includes("duration_seconds_count"),
+    (q) => q.includes(BY_KEY) && q.includes("duration_milliseconds_count"),
     [def("order", 50), def("invoice", 20)],
   ],
   // A long-running process with no start in the window still runs NOW.
@@ -74,14 +75,15 @@ const CANNED_SAMPLES: Array<[(q: string) => boolean, PromSample[]]> = [
   [(q) => q.includes("incident_created"), [v(10)]],
   [(q) => q.includes('state="COMPLETED"'), [v(70)]],
   [(q) => q.includes("started_total"), [v(100)]],
-  [(q) => q.includes("duration_seconds_sum"), [v(12)]], // avg = sum/count expression
+  [(q) => q.includes("duration_milliseconds_sum"), [v(12)]], // avg = sum/count expression
 ]
 
 /** Mock Prometheus client that dispatches canned samples by the PromQL it sees. */
 function mockClient() {
   const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
     const hit = CANNED_SAMPLES.find(([matches]) => matches(q))
-    return hit ? hit[1] : []
+    const ms = /duration_milliseconds_sum|histogram_quantile/.test(q) ? 1000 : 1
+    return hit ? hit[1].map((s) => ({ ...s, value: s.value * ms })) : []
   })
   const ch: PrometheusClient = { instant }
   return { ch, instant }
@@ -215,7 +217,8 @@ describe("dashboardData", () => {
     const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
       q.includes("camunda_jobs_executable")
         ? [{ metric: { engine_id: "prod-a" }, value: 0 }]
-        : q === 'sum(camunda_process_instances_running{engine_id="prod-a"})'
+        : q ===
+            'sum(max by (process_definition_key, engine_id)(camunda_process_instances_running{engine_id="prod-a"}))'
           ? [v(156)]
           : [],
     )
@@ -269,17 +272,17 @@ describe("dashboardData", () => {
     expect(queries.every((q) => q.includes('engine_id="prod-a"'))).toBe(true)
     // The presence probe asks whether the ENGINE reports — its gauge carries
     // engine_id only; every other query is scoped to the process.
-    const probe = 'sum by (engine_id)(camunda_jobs_executable{engine_id="prod-a"})'
+    const probe = 'max by (engine_id)(camunda_jobs_executable{engine_id="prod-a"})'
     expect(queries.filter((q) => q === probe)).toHaveLength(1)
     expect(
       queries.filter((q) => q !== probe).every((q) => q.includes('process_definition_key="myKey"')),
     ).toBe(true)
-    // The live gauges are point-in-time: no range at all.
+    // The live gauges are point-in-time (no range at all), each node-folded.
     const gauges = queries.filter((q) => !q.includes("increase("))
     expect(gauges).toEqual([
-      'sum(camunda_process_instances_running{process_definition_key="myKey",engine_id="prod-a"})',
-      'sum(camunda_incidents_open{process_definition_key="myKey",engine_id="prod-a"})',
-      'sum by (process_definition_key)(camunda_process_instances_running{process_definition_key="myKey",engine_id="prod-a"})',
+      'sum(max by (process_definition_key, engine_id)(camunda_process_instances_running{process_definition_key="myKey",engine_id="prod-a"}))',
+      'sum(max by (process_definition_key, incident_type, engine_id)(camunda_incidents_open{process_definition_key="myKey",engine_id="prod-a"}))',
+      'sum by (process_definition_key)(max by (process_definition_key, engine_id)(camunda_process_instances_running{process_definition_key="myKey",engine_id="prod-a"}))',
       probe,
     ])
     const flows = queries.filter((q) => q.includes("increase("))
@@ -357,10 +360,10 @@ describe("dashboardData — the top list and the previous period", () => {
 
   it("keeps the top 20 activities by total time and says how many there were", async () => {
     const rows = Array.from({ length: 23 }, (_, i) => act("order", `Task_${i}`, 1, "serviceTask"))
-    const sums = rows.map((r, i) => ({ ...r, value: i + 1 }))
+    const sums = rows.map((r, i) => ({ ...r, value: (i + 1) * 1000 }))
     const instant = vi.fn((q: string): Promise<PromSample[]> => {
       if (q.includes("camunda_activity_ended_total")) return Promise.resolve(rows)
-      if (q.includes("camunda_activity_duration_seconds_sum")) return Promise.resolve(sums)
+      if (q.includes("camunda_activity_duration_milliseconds_sum")) return Promise.resolve(sums)
       return Promise.resolve([])
     })
     const res = await dashboardData({ instant }, { period: "7d" })
@@ -376,7 +379,7 @@ describe("dashboardData — the top list and the previous period", () => {
 describe("failureDashboardData", () => {
   it("builds incident groups and the per-process breakdown from the live gauges", async () => {
     const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
-      if (q.includes("incident_type")) {
+      if (q.includes("sum by (process_definition_key, incident_type)")) {
         return [
           {
             metric: { process_definition_key: "order", incident_type: "failedJob" },
@@ -447,7 +450,7 @@ describe("failureDashboardData", () => {
   it("computes totals over ALL patterns while capping the list at the top 50", async () => {
     // 60 distinct patterns, counts 60..1 — the KPI must not stop at the cap.
     const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
-      if (q.includes("incident_type")) {
+      if (q.includes("sum by (process_definition_key, incident_type)")) {
         return Array.from({ length: 60 }, (_, i) => ({
           metric: { process_definition_key: `proc-${i}`, incident_type: `type-${i}` },
           value: 60 - i,

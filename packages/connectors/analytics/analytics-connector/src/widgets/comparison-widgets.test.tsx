@@ -72,8 +72,8 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
   bucket: version === 1 ? "versionA" : "versionB",
   instance_count: 576,
   completed_count: 500,
-  incident_count: null,
-  incident_rate_pct: null,
+  incident_count: 12,
+  incident_rate_pct: 2.1,
   element_incident_count: null,
   element_incident_rate_pct: null,
   avg_duration_sec: 8340,
@@ -84,7 +84,8 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
 const DELTA: CompareKpiDelta = {
   // Traffic moved to v2: a volume, never a verdict.
   started_per_day_delta_pct: -84.7,
-  incident_rate_delta_pp: null,
+  // Past the 1-per-100-starts threshold: worse.
+  incident_rate_delta_pp: 1.4,
   element_incident_rate_delta_pp: null,
   // Slower by 25 %: past the 5 % duration threshold.
   avg_duration_delta_pct: 25,
@@ -102,7 +103,6 @@ const VERSION: VersionCompareResult = {
   suppressed: false,
   kpis: [versionKpi(1), versionKpi(2, { instance_count: 88 })],
   delta: DELTA,
-  notes: [],
   asOf: AS_OF,
 }
 
@@ -124,8 +124,11 @@ describe("VersionCompareWidget in German", () => {
     expect(avg.icon).toContain("text-danger")
 
     expect(deltaCell("P95-Dauer")).toEqual({ verdict: "none", text: "+3 %", icon: null })
-    // The incident rates are not measured per version.
-    expect(screen.getAllByText("nicht gemessen")).toHaveLength(2)
+    // Incidents are measured per version; a process-wide comparison has no element row.
+    expect(deltaCell("Incidents je 100 Starts").verdict).toBe("worse")
+    expect(deltaCell("Incidents je 100 Starts").text).toBe("+1,4schlechter")
+    expect(screen.queryAllByText("nicht gemessen")).toHaveLength(0)
+    expect(screen.queryByText("Incidents je 100 Starts am Element")).toBeNull()
   })
 
   it("states the reference frame and hands off with a verb that names the chat", () => {

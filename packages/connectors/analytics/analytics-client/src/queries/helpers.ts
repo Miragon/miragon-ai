@@ -1,11 +1,73 @@
 import type { PrometheusClient, PromSample } from "../prometheus.js"
-import { METRIC_NAMES as M } from "../metric-names.js"
+import { GAUGE_LABELS, METRIC_NAMES as M, type GaugeName } from "../metric-names.js"
+import { RETENTION_DAYS } from "../prometheus.js"
+import { DAY_SECONDS, nowSeconds, rangeSeconds, type CountWindow } from "./windows.js"
 
 /** Round to one decimal place (KPI seconds / percentages). */
 export const round1 = (n: number) => Math.round(n * 10) / 10
 
-/** {@link round1} that passes `null` (not measured) through. */
-export const round1OrNull = (n: number | null) => (n === null ? null : round1(n))
+/** Milliseconds (the duration histograms' unit) as seconds, one decimal. */
+export const secondsOf = (ms: number) => round1(ms / 1000)
+
+/** {@link secondsOf} that passes `null` (not measured) through. */
+export const secondsOrNull = (ms: number | null) => (ms === null ? null : secondsOf(ms))
+
+/**
+ * How long a series must have been silent before a window for it to count as
+ * born inside that window. Long enough that a scrape gap at the window's start
+ * does not pass an old series off as new (its whole history would then count).
+ */
+const BORN_LOOKBACK = "1h"
+const BORN_LOOKBACK_SECONDS = 3600
+
+/**
+ * What a counter or histogram series recorded inside `w`, per series — the
+ * ONE way every query reads a counter (contract rule 2). The plugin creates a
+ * series on its first event, and `increase()` never counts a series' first
+ * sample: a rare event such as the first incident of a type at an activity
+ * would read 0. So a series that existed before the window counts its
+ * `increase()`, and a series born inside it counts its whole value.
+ * `series` is a metric name plus its selector, e.g. `camunda_x{engine_id="a"}`.
+ *
+ * The check looks at the hour before the window. Where that hour lies past
+ * the retention (the 30-day period), Prometheus has deleted it and every
+ * series would pass for new, counting its whole history; there it looks at
+ * the window's own first hour instead: a series silent then was born later.
+ * Only a window of an hour or less at the retention edge has no hour to look
+ * at and reads plain `increase()`, which can miss a series' first sample but
+ * never counts what happened before the window.
+ */
+export function increaseIn(series: string, w: CountWindow): string {
+  const at = w.at === undefined ? "" : ` @ ${w.at}`
+  const plain = `increase(${series}[${w.range}]${at})`
+  const offset = bornCheckOffset(w)
+  if (offset === null) return plain
+  const silent = `present_over_time(${series}[${BORN_LOOKBACK}]${at} offset ${offset})`
+  return (
+    `((${plain} and ${silent})` +
+    ` or (max_over_time(${series}[${w.range}]${at}) unless ${silent}))`
+  )
+}
+
+/**
+ * How far back from the window's end the born check's hour ends: the window's
+ * start (the hour before it), or, where that hour lies past the retention,
+ * the end of the window's first hour; `null` when the window has none.
+ */
+function bornCheckOffset(w: CountWindow, now: number = nowSeconds()): string | null {
+  const seconds = rangeSeconds(w.range)
+  const start = (w.at ?? now) - seconds
+  if (start - BORN_LOOKBACK_SECONDS >= now - RETENTION_DAYS * DAY_SECONDS) return w.range
+  return seconds > BORN_LOOKBACK_SECONDS ? `${seconds - BORN_LOOKBACK_SECONDS}s` : null
+}
+
+/**
+ * An engine-state gauge with one row per engine-wide figure (contract rule 3):
+ * every node of a clustered engine reports the same rows, so the nodes are
+ * folded with `max` over the gauge's contract labels before anything sums them.
+ */
+export const engineState = (gauge: GaugeName, sel: string) =>
+  `max by (${GAUGE_LABELS[gauge].join(", ")})(${gauge}${sel})`
 
 /**
  * Parse an ISO datetime into epoch seconds. Throws a caller-readable error
@@ -51,8 +113,7 @@ export const firstOrNull = (s: PromSample[]) => (s.length ? s[0].value : null)
  * reported" only while it does not. `engineSel` must hold the engine matcher
  * alone — the gauge has no other label to match.
  */
-export const reportingEnginesQuery = (engineSel: string) =>
-  `sum by (engine_id)(${M.jobsExecutable}${engineSel})`
+export const reportingEnginesQuery = (engineSel: string) => engineState(M.jobsExecutable, engineSel)
 
 /** The engine ids the {@link reportingEnginesQuery} probe answered for, ascending. */
 export const reportingEngineIds = (samples: PromSample[]): string[] =>
@@ -113,26 +174,26 @@ export interface KpiScope {
 
 /**
  * The shared instance-KPI PromQL block used by the dashboard, performance and
- * compare modules: counts via `increase()` over the range window, durations
+ * compare modules: counts via {@link increaseIn} over the window, durations
  * from the histogram (`histogram_quantile` for p50/p95, sum/count for the
- * mean). `rangeExpr` is the full PromQL range suffix, e.g. `[7d]` or
- * `[86400s] @ 1700000000`. Callers pick the strings they need.
+ * mean), in MILLISECONDS — the histogram's unit; callers convert. Callers pick
+ * the strings they need.
  *
  * The duration histogram is recorded when an instance ENDS (any end state), so
  * every duration covers the instances that ended inside the window only —
  * still-running long instances are not in it (survivorship), and an empty
  * window yields no value at all.
  */
-export function kpiQueries(scope: KpiScope, rangeExpr: string) {
+export function kpiQueries(scope: KpiScope, w: CountWindow) {
   const { sel, completedSel } = scope
-  const r = rangeExpr
+  const duration = M.processInstanceDuration
   return {
-    started: `sum(increase(${M.processInstanceStarted}${sel}${r}))`,
-    completed: `sum(increase(${M.processInstanceEnded}${completedSel}${r}))`,
-    incidents: `sum(increase(${M.incidentCreated}${sel}${r}))`,
-    avgDuration: `sum(increase(${M.processInstanceDuration}_sum${sel}${r})) / sum(increase(${M.processInstanceDuration}_count${sel}${r}))`,
-    medianDuration: `histogram_quantile(0.5, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
-    p95Duration: `histogram_quantile(0.95, sum by (le)(increase(${M.processInstanceDuration}_bucket${sel}${r})))`,
+    started: `sum(${increaseIn(`${M.processInstanceStarted}${sel}`, w)})`,
+    completed: `sum(${increaseIn(`${M.processInstanceEnded}${completedSel}`, w)})`,
+    incidents: `sum(${increaseIn(`${M.incidentCreated}${sel}`, w)})`,
+    avgDuration: `sum(${increaseIn(`${duration}_sum${sel}`, w)}) / sum(${increaseIn(`${duration}_count${sel}`, w)})`,
+    medianDuration: `histogram_quantile(0.5, sum by (le)(${increaseIn(`${duration}_bucket${sel}`, w)}))`,
+    p95Duration: `histogram_quantile(0.95, sum by (le)(${increaseIn(`${duration}_bucket${sel}`, w)}))`,
   }
 }
 
@@ -167,9 +228,9 @@ export interface CompareKpis {
 export async function queryCompareKpis(
   ch: PrometheusClient,
   scope: KpiScope,
-  rangeExpr: string,
+  w: CountWindow,
 ): Promise<CompareKpis> {
-  const q = kpiQueries(scope, rangeExpr)
+  const q = kpiQueries(scope, w)
   const element = scope.elementIncidentSel
   const [total, completed, incidents, avg, p95, elementIncidents] = await Promise.all([
     ch.instant(q.started),
@@ -179,7 +240,7 @@ export async function queryCompareKpis(
     ch.instant(q.p95Duration),
     element === undefined
       ? Promise.resolve(null)
-      : ch.instant(`sum(increase(${M.incidentCreated}${element}${rangeExpr}))`),
+      : ch.instant(`sum(${increaseIn(`${M.incidentCreated}${element}`, w)})`),
   ])
   const instances = Math.round(first(total))
   const incidentCount = Math.round(first(incidents))
@@ -191,8 +252,8 @@ export async function queryCompareKpis(
     incident_rate_pct: ratePct(incidentCount, instances),
     element_incident_count: elementCount,
     element_incident_rate_pct: elementCount === null ? null : ratePct(elementCount, instances),
-    avg_duration_sec: round1OrNull(firstOrNull(avg)),
-    p95_duration_sec: round1OrNull(firstOrNull(p95)),
+    avg_duration_sec: secondsOrNull(firstOrNull(avg)),
+    p95_duration_sec: secondsOrNull(firstOrNull(p95)),
   }
 }
 

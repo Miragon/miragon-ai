@@ -98,8 +98,8 @@ const versionKpi = (version: number, over: Partial<VersionCompareKpi> = {}): Ver
   bucket: version === 1 ? "versionA" : "versionB",
   instance_count: 100,
   completed_count: 90,
-  incident_count: null,
-  incident_rate_pct: null,
+  incident_count: 2,
+  incident_rate_pct: 2,
   element_incident_count: null,
   element_incident_rate_pct: null,
   avg_duration_sec: 10,
@@ -121,31 +121,22 @@ const versionCompare = (
   kpis,
   delta: {
     started_per_day_delta_pct: 0,
-    incident_rate_delta_pp: null,
+    incident_rate_delta_pp: 0,
     element_incident_rate_delta_pp: null,
     avg_duration_delta_pct: 25,
     p95_duration_delta_pct: null,
   },
-  notes: [],
 })
 
-/** Version KPIs once the incident metric carries a version label (#337). */
-const measured = {
-  incident_count: 1,
-  incident_rate_pct: 1,
-} as unknown as Partial<VersionCompareKpi>
-
 describe("describeVersionCompare", () => {
-  it("names the measured delta and flags the incident rates as unknown, not zero (#327)", () => {
+  it("names the measured deltas, the incident rate per version included", () => {
     const text = describeVersionCompare(versionCompare([versionKpi(1), versionKpi(2)]), {})
 
     expect(text).toContain("avgDurationDeltaPct=25")
+    expect(text).toContain("incidentRateDeltaPp=0")
     expect(text).toContain('largestDelta="avgDurationDeltaPct"')
-    expect(text).toContain("incidentRatesMeasured=false")
-    expect(text).toContain("not measured per version")
-    expect(text).toContain("unknown, not zero")
-    // An unmeasured rate is left out — never sent as 0.
-    expect(text).not.toContain("incidentRateDeltaPp")
+    // An unmeasured delta is left out — never sent as 0.
+    expect(text).not.toContain("p95DurationDeltaPct")
     expect(text).not.toMatch(/failure/i)
   })
 
@@ -167,15 +158,6 @@ describe("describeVersionCompare", () => {
     )
     expect(text).toContain('Ids: engine=["prod-a","prod-b"]')
     expect(text).toContain("(aggregated)")
-  })
-
-  it("drops the caveat once the incident rates are measured", () => {
-    const text = describeVersionCompare(
-      versionCompare([versionKpi(1, measured), versionKpi(2, measured)]),
-      {},
-    )
-    expect(text).not.toContain("not measured per version")
-    expect(text).not.toContain("incidentRatesMeasured")
   })
 })
 

@@ -20,7 +20,7 @@ import {
   daysOf,
   isoOf,
   nowSeconds,
-  rangeAt,
+  windowAt,
   type ClampedWindow,
 } from "./windows.js"
 
@@ -156,7 +156,7 @@ async function windowKpi(
         ? selector(keyMatcher, `activity_id="${escapeLabelValue(params.activityId)}"`, engine)
         : undefined,
     },
-    rangeAt(win),
+    windowAt(win),
   )
   return {
     period,

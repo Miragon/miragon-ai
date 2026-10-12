@@ -238,8 +238,6 @@ export const deSweep: MessageCatalog = {
     "Für eine Version fehlen die Kennzahlen. Prüf die Versionsnummern oder wähl einen längeren Zeitraum.",
   "aVersionCompare.emptyNoData":
     "Für diese Versionen gibt es in diesem Zeitraum keine Instanzen. Prüf die Versionsnummern oder wähl einen längeren Zeitraum.",
-  "aVersionCompare.incidentKpisUnavailable":
-    "Die Engine meldet Incidents ohne Version, deshalb fehlen die Incident-Zahlen je Version. Instanzzahlen und Dauern stimmen exakt.",
   "aVersionCompare.tableLabel": "Kennzahlen zweier Prozessversionen",
   "aVersionCompare.title": "Versionsvergleich",
   "aVersionCompare.versionsBadge": "v{versionA} → v{versionB}",

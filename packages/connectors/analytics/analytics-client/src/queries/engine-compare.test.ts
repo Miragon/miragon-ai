@@ -24,8 +24,10 @@ function mockClient(
   const instant = vi.fn(async (q: string): Promise<PromSample[]> => {
     const engine = q.includes('engine_id="prod-a"') ? byEngine["prod-a"] : byEngine["prod-b"]
     const maybe = (value: number | null) => (value === null ? [] : [v(value)])
-    if (q.includes("histogram_quantile")) return maybe(engine.p95)
-    if (q.includes("duration_seconds_sum")) return maybe(engine.avg)
+    // Canned durations are seconds; the histogram answers in ms.
+    const ms = (sec: number | null) => (sec === null ? null : sec * 1000)
+    if (q.includes("histogram_quantile")) return maybe(ms(engine.p95))
+    if (q.includes("duration_milliseconds_sum")) return maybe(ms(engine.avg))
     if (q.includes("incident_created") && q.includes("activity_id")) {
       return [v(engine.elementIncidents ?? 0)]
     }

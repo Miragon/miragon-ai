@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import type { PrometheusClient } from "@miragon-ai/analytics-client"
+import { increaseIn, type PrometheusClient } from "@miragon-ai/analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import { createEngineScope } from "../engine-ids.js"
 import { registerEngineCompareTools } from "./engine-compare.js"
@@ -44,12 +44,14 @@ function recordingClient(): { client: PrometheusClient; queries: string[] } {
 
 /** The five KPI queries per engine — no duplicate incident query without an element (N85). */
 function kpiQueries(sel: string, completedSel: string, range: string) {
+  const count = (series: string) => increaseIn(series, { range })
+  const duration = "camunda_process_instance_duration_milliseconds"
   return [
-    `sum(increase(camunda_process_instance_started_total${sel}[${range}]))`,
-    `sum(increase(camunda_process_instance_ended_total${completedSel}[${range}]))`,
-    `sum(increase(camunda_incident_created_total${sel}[${range}]))`,
-    `sum(increase(camunda_process_instance_duration_seconds_sum${sel}[${range}])) / sum(increase(camunda_process_instance_duration_seconds_count${sel}[${range}]))`,
-    `histogram_quantile(0.95, sum by (le)(increase(camunda_process_instance_duration_seconds_bucket${sel}[${range}])))`,
+    `sum(${count(`camunda_process_instance_started_total${sel}`)})`,
+    `sum(${count(`camunda_process_instance_ended_total${completedSel}`)})`,
+    `sum(${count(`camunda_incident_created_total${sel}`)})`,
+    `sum(${count(`${duration}_sum${sel}`)}) / sum(${count(`${duration}_count${sel}`)})`,
+    `histogram_quantile(0.95, sum by (le)(${count(`${duration}_bucket${sel}`)}))`,
   ]
 }
 
@@ -99,10 +101,9 @@ describe("analytics_engine_compare PromQL", () => {
     expect(queries).toHaveLength(12)
     expect(queries.every((q) => q.includes(key))).toBe(true)
     const elementScoped = queries.filter((q) => q.includes('activity_id="Task_check"'))
-    expect(elementScoped).toEqual([
-      `sum(increase(camunda_incident_created_total{${key},activity_id="Task_check",engine_id="prod-a"}[7d]))`,
-      `sum(increase(camunda_incident_created_total{${key},activity_id="Task_check",engine_id="prod-b"}[7d]))`,
-    ])
+    const incidents = (engine: string) =>
+      `sum(${increaseIn(`camunda_incident_created_total{${key},activity_id="Task_check",engine_id="${engine}"}`, { range: "7d" })})`
+    expect(elementScoped).toEqual([incidents("prod-a"), incidents("prod-b")])
   })
 
   it("refuses an engine this server is not configured for, before any query (N138)", async () => {
@@ -127,9 +128,9 @@ describe("analytics_engine_compare PromQL", () => {
     const client: PrometheusClient = {
       instant: (q) =>
         Promise.resolve(
-          q.includes("duration_seconds") && q.includes("prod-b")
+          q.includes("duration_milliseconds") && q.includes("prod-b")
             ? []
-            : [{ metric: {}, value: q.includes("duration_seconds") ? 30 : 40 }],
+            : [{ metric: {}, value: q.includes("duration_milliseconds") ? 30_000 : 40 }],
         ),
     }
     const result = (await handlers.get("analytics_engine_compare")!(client, {

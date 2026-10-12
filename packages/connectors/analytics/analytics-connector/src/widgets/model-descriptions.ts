@@ -13,7 +13,6 @@ import type { EngineLandscapeData } from "./engine-landscape.js"
 import type { AnalyticsSettingsViewData } from "./settings-section.js"
 import type { AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
 import { deltaFacts } from "./comparison-shared.js"
-import { versionCompareCaveats } from "../version-compare-caveats.js"
 
 /**
  * Model-context descriptions for every analytics widget, attached centrally via
@@ -293,21 +292,12 @@ export const describeClusterCompare: DescribeForModel<ClusterCompareData> = (dat
     surface: ANALYTICS_ONLY_SURFACE,
   })
 
-/**
- * Version compare: process-wide (the tool takes no element scope, #336). The
- * incident metric has no version label, so its rates come back null — said
- * in so many words, never left to read as zero.
- */
-export const describeVersionCompare: DescribeForModel<VersionCompareData> = (data) => {
-  const { incidentRatesUnavailable } = versionCompareCaveats(data)
-  return modelContextText({
+/** Version compare: process-wide (the tool takes no element scope, #336). */
+export const describeVersionCompare: DescribeForModel<VersionCompareData> = (data) =>
+  modelContextText({
     summary:
       "The operator is comparing two versions of one process (versionA is the baseline); every " +
       "figure covers the whole process." +
-      (incidentRatesUnavailable
-        ? " Incident rates are not measured per version (no version label on the incident " +
-          "metric) — unknown, not zero."
-        : "") +
       (data.suppressed ? SUPPRESSED : "") +
       (isAggregate(data.engines) ? AGGREGATED : ""),
     ids: {
@@ -317,14 +307,10 @@ export const describeVersionCompare: DescribeForModel<VersionCompareData> = (dat
       versionB: data.versionB,
       windowDays: data.windowDays,
     },
-    facts: {
-      ...comparisonFacts(data.delta, data.suppressed),
-      incidentRatesMeasured: incidentRatesUnavailable ? false : undefined,
-    },
+    facts: comparisonFacts(data.delta, data.suppressed),
     tools: ["analytics_version_compare", "analytics_element_bottleneck"],
     surface: ANALYTICS_ONLY_SURFACE,
   })
-}
 
 export const describeEngineCompare: DescribeForModel<EngineCompareData> = (data) =>
   modelContextText({

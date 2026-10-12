@@ -11,16 +11,17 @@ function mockClient() {
         { metric: { activity_id: "B", activity_type: "userTask" }, value: 5 },
       ]
     }
+    // Durations in ms, the histogram's unit.
     if (q.includes("histogram_quantile")) {
       return [
-        { metric: { activity_id: "A" }, value: 15 },
-        { metric: { activity_id: "B" }, value: 6 },
+        { metric: { activity_id: "A" }, value: 15_000 },
+        { metric: { activity_id: "B" }, value: 6_000 },
       ]
     }
-    if (q.includes("duration_seconds_sum")) {
+    if (q.includes("duration_milliseconds_sum")) {
       return [
-        { metric: { activity_id: "A" }, value: 100 },
-        { metric: { activity_id: "B" }, value: 20 },
+        { metric: { activity_id: "A" }, value: 100_000 },
+        { metric: { activity_id: "B" }, value: 20_000 },
       ]
     }
     if (q.includes("incident_created")) {
@@ -83,7 +84,7 @@ describe("elementBottleneck", () => {
   it("reports a missing histogram sample as an unmeasured p95, never 0 s", async () => {
     const instant = vi.fn(async (q: string): Promise<PromSample[]> =>
       q.includes("histogram_quantile") ||
-      q.includes("duration_seconds_sum") ||
+      q.includes("duration_milliseconds_sum") ||
       q.includes("incident")
         ? []
         : [{ metric: { activity_id: "A", activity_type: "serviceTask" }, value: 4 }],

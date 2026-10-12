@@ -51,8 +51,38 @@ export function clampWindow(
   }
 }
 
-/** The PromQL range suffix reading exactly `w`: `[<seconds>s] @ <to>`. */
-export const rangeAt = (w: Pick<ClampedWindow, "seconds" | "to">) => `[${w.seconds}s] @ ${w.to}`
+/**
+ * A window counters are read over: a PromQL duration, optionally pinned to the
+ * instant it ends at (`@`). Without `at` it ends now.
+ */
+export interface CountWindow {
+  /** PromQL duration, e.g. `7d` or `86400s`. */
+  range: string
+  /** Epoch seconds the window ends at; now when absent. */
+  at?: number
+}
+
+const UNIT_SECONDS: Readonly<Record<string, number>> = {
+  s: 1,
+  m: 60,
+  h: 3600,
+  d: DAY_SECONDS,
+  w: 7 * DAY_SECONDS,
+}
+
+/** The length of a single-unit PromQL duration (`7d`, `86400s`) in seconds. */
+export function rangeSeconds(range: string): number {
+  const match = /^(\d+)([smhdw])$/.exec(range)
+  if (!match)
+    throw new Error(`"${range}" is not a single-unit PromQL duration such as 7d or 86400s`)
+  return Number(match[1]) * UNIT_SECONDS[match[2]]
+}
+
+/** The window reading exactly `w`: `<seconds>s` ending `@ <to>`. */
+export const windowAt = (w: Pick<ClampedWindow, "seconds" | "to">): CountWindow => ({
+  range: `${w.seconds}s`,
+  at: w.to,
+})
 
 /** A window length in days, two decimals (a clamped window is rarely whole days). */
 export const daysOf = (seconds: number) => Math.round((seconds / DAY_SECONDS) * 100) / 100

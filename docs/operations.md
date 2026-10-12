@@ -75,7 +75,8 @@ unauthenticated and pinned to `camunda7:read-only,analytics:read-only`.
 Unknown `CAMUNDA_*`/`MCP_*` variables warn at boot; mcp-use telemetry is off
 (`MCP_USE_ANONYMIZED_TELEMETRY=true` opts in). The engine container takes
 `METRICS_ENABLED`, `ENGINE_ID` (must match the server's engine id, or that
-engine's analytics come back empty) and `OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_SERVICE_NAME`.
+engine's analytics come back empty), `OTEL_EXPORTER_OTLP_ENDPOINT`/`OTEL_SERVICE_NAME`
+and, per node of a clustered engine, `OTEL_RESOURCE_ATTRIBUTES=service.instance.id=<node>`.
 
 ## Module activation
 

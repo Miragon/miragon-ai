@@ -34,7 +34,5 @@ export const enServer: MessageCatalog = {
   "aSum.settingsSaved":
     "Analytics settings saved: default period {period}, min bucket size {minBucketSize}.",
   "aSum.versionCompare":
-    'Version comparison for "{key}" v{versionA} vs v{versionB} over {windowDays}d{engines}: {delta}{incidents}{suppressed}.',
-  "aSum.versionIncidentsUnavailable":
-    "; incident rates unavailable per version (the incident metric carries no version label), not zero",
+    'Version comparison for "{key}" v{versionA} vs v{versionB} over {windowDays}d{engines}: {delta}{suppressed}.',
 }

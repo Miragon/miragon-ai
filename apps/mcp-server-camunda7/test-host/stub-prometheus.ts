@@ -58,11 +58,15 @@ function processSeries(
     { name: `${P}incident_created_total`, labels: at, value: flows.incidents },
     { name: `${P}incident_resolved_total`, labels: at, value: Math.floor(flows.incidents / 3) },
     {
-      name: `${P}process_instance_duration_seconds_sum`,
+      name: `${P}process_instance_duration_milliseconds_sum`,
       labels: at,
-      value: flows.completed * flows.avgSec,
+      value: flows.completed * flows.avgSec * 1000,
     },
-    { name: `${P}process_instance_duration_seconds_count`, labels: at, value: flows.completed },
+    {
+      name: `${P}process_instance_duration_milliseconds_count`,
+      labels: at,
+      value: flows.completed,
+    },
     { name: `${P}process_definitions_deployed`, labels: at, value: 1 },
     { name: `${P}process_instances_running`, labels: at, value: live.running },
     ...(live.incidents > 0
@@ -108,8 +112,8 @@ const SERIES: Series[] = [
     }
     return [
       { name: `${P}activity_ended_total`, labels, value: count },
-      { name: `${P}activity_duration_seconds_sum`, labels, value: count * avgSec },
-      { name: `${P}activity_duration_seconds_count`, labels, value: count },
+      { name: `${P}activity_duration_milliseconds_sum`, labels, value: count * avgSec * 1000 },
+      { name: `${P}activity_duration_milliseconds_count`, labels, value: count },
     ]
   }),
   ...ENGINES.flatMap((engine, i) => [
@@ -139,15 +143,15 @@ function select(q: string, written: string, name: string = written): Series[] {
 }
 
 /**
- * The `camunda_<x>_seconds` histogram whose `_bucket` series `q` reads, found
- * with indexOf instead of a backtracking `\w+` (CodeQL js/polynomial-redos).
+ * The `camunda_<x>_milliseconds` histogram whose `_bucket` series `q` reads,
+ * found with indexOf instead of a backtracking `\w+` (CodeQL js/polynomial-redos).
  */
 function histogramIn(q: string): string | undefined {
-  const end = q.indexOf("_seconds_bucket")
+  const end = q.indexOf("_milliseconds_bucket")
   if (end === -1) return undefined
   const start = q.lastIndexOf("camunda_", end)
   if (start === -1 || !/^\w+$/.test(q.slice(start, end))) return undefined
-  return q.slice(start, end + "_seconds".length)
+  return q.slice(start, end + "_milliseconds".length)
 }
 
 /** The first series name `q` reads (a histogram's `_bucket` read as its `_sum`). */
@@ -179,13 +183,20 @@ const total = (series: Series[]) => series.reduce((sum, s) => sum + s.value, 0)
 
 /**
  * A small PromQL evaluator for the exact query shapes analytics sends: `sum`
- * and `sum by (…)` over one series (with its selector), the mean as `sum(_sum)
- * / sum(_count)`, and `histogram_quantile` read off the mean (×0.8 for the
- * median, ×2.2 for p95). A window anchored with `@` (the period before) reads
- * 85 % of the period's counts.
+ * and `sum by (…)` over one series (with its selector; a counter's born-series
+ * count and a gauge's node fold read as the series itself, the stub has one
+ * node and no births), the mean as `sum(_sum) / sum(_count)`, and
+ * `histogram_quantile` read off the mean (×0.8 for the median, ×2.2 for p95).
+ * A window anchored with `@` (the period before) reads 85 % of the period's
+ * counts.
  */
-/** The label list of the first `by (…)` in `q`, cut with indexOf (CodeQL js/polynomial-redos). */
+/**
+ * The label list of the outer `by (…)` in `q`, cut with indexOf (CodeQL
+ * js/polynomial-redos). A leading plain `sum(`/`max(` adds everything up,
+ * whatever an inner node fold groups by.
+ */
 function groupLabelsIn(q: string): string | undefined {
+  if (q.startsWith("sum(") || q.startsWith("max(")) return undefined
   const open = q.indexOf("by (")
   if (open === -1) return undefined
   const close = q.indexOf(")", open + 4)

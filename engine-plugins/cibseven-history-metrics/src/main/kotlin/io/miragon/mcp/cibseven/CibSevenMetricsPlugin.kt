@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 /**
  * Wires the engine's metric emitters:
  *  - [MetricsHistoryEventHandler] for event-driven counters/histograms (in
- *    `postInit`).
+ *    `postInit`), recorded once the command's transaction committed.
  *  - [EngineStateMetrics] for point-in-time gauges (in `postProcessEngineBuild`,
  *    where the built [ProcessEngine] and its query services are available).
  *
