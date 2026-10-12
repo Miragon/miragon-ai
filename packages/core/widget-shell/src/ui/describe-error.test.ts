@@ -153,6 +153,20 @@ describe("classifyError — the mapping table", () => {
   })
 })
 
+describe("classifyError — hostile input stays linear (CodeQL js/polynomial-redos)", () => {
+  const spaces = " ".repeat(100_000)
+
+  it("reads a long whitespace run before the write caveat and the engine suffix quickly", () => {
+    const started = performance.now()
+    const facts = classifyError(`[500 X] boom${spaces}— the POST may still have been applied`)
+    expect(facts.mayHaveApplied).toBe(true)
+    expect(facts.reason).toBe("boom")
+    expect(classifyError(`[500 X] boom${spaces}(engine prod)${spaces}`).reason).toBe("boom")
+    expect(classifyError(`[500 X] ${spaces}x`).reason).toBe("x")
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+})
+
 describe("describeError — the words, en and de", () => {
   const down = new Error(
     "[503 ProcessEngineException] Engine is shutting down (engine prod-leasing)",

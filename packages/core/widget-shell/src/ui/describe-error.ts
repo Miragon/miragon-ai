@@ -75,20 +75,42 @@ const TIMEOUT = /\(timeout\)|\btimed? ?out\b|-32001\b|did not respond within/i
 const UNREACHABLE =
   /\bunreachable\b|\bconnection to \S+(?: \S+)? failed\b|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EAI_AGAIN|\bfailed to fetch\b|\bfetch failed\b|\bnetworkerror\b|\bload failed\b/i
 /** The camunda7 client's caveat on a write whose outcome is unknown. */
-const WRITE_CAVEAT = /\s*(?:—|-|;)?\s*the \w+ may still have been applied\b[\s\S]*$/i
+const WRITE_CAVEAT = /the \w+ may still have been applied\b/i
 /** The bracketed status and exception: `[500 ProcessEngineException] `. */
 const STATUS_CODE = /\[\d{3}(?:\s[^\]\n]{0,120})?\]\s*/
 /** Any other leading bracketed code (`withToolErrors`' `[code] …`). */
 const LEADING_CODE = /^\[[^\]\n]{1,120}\]\s*/
 /** The engine id the camunda7 client appends: ` (engine prod)`. */
-const ENGINE_SUFFIX = /\s*\(engine [^\s)]+\)\s*$/
+const ENGINE_SUFFIX = /\(engine [^\s)]+\)$/
+
+/*
+ * The cuts below trim whitespace with String#trimEnd instead of `\s*` in the
+ * patterns: a leading `\s*` on an unanchored pattern backtracks polynomially
+ * over a long whitespace run (CodeQL js/polynomial-redos), and these helpers
+ * read error text that comes from the wire.
+ */
+
+/** The text before the write caveat, without the separator that led into it. */
+function withoutWriteCaveat(text: string): string {
+  const caveat = WRITE_CAVEAT.exec(text)
+  if (!caveat) return text
+  const head = text.slice(0, caveat.index).trimEnd()
+  return /[—;-]$/.test(head) ? head.slice(0, -1).trimEnd() : head
+}
+
+/** The text without the trailing ` (engine <id>)` the client appends. */
+function withoutEngineSuffix(text: string): string {
+  const trimmed = text.trimEnd()
+  const suffix = ENGINE_SUFFIX.exec(trimmed)
+  return suffix ? trimmed.slice(0, suffix.index).trimEnd() : text
+}
 
 /** The raw text as the source's own words (see {@link ErrorFacts.reason}). */
 function reasonOf(text: string): string | null {
-  const rest = text.replace(WRITE_CAVEAT, "")
+  const rest = withoutWriteCaveat(text)
   const code = STATUS_CODE.exec(rest)
   const words = code ? rest.slice(code.index + code[0].length) : rest.replace(LEADING_CODE, "")
-  return words.replace(ENGINE_SUFFIX, "").trim() || null
+  return withoutEngineSuffix(words).trim() || null
 }
 
 /** The message of whatever was thrown (an `Error`, a string, an `{ message }`). */
