@@ -123,13 +123,34 @@ describe("the failure dashboard", () => {
   // U17: a rate may pass 100 — the bars scale to the table's largest, never cut at 100.
   it("scales the rate bars to the largest rate in the table", () => {
     const { container } = renderIn("de", FailureRateTable, FAILURES)
-    const widths = [...container.querySelectorAll<HTMLElement>("[style*='width']")].map(
-      (el) => el.style.width,
-    )
-    expect(widths).toEqual([`${(40 / 425) * 100}%`, "100%"])
+    const bars = [...container.querySelectorAll<HTMLElement>("[style*='width']")]
+    expect(bars.map((el) => el.style.width)).toEqual([`${(40 / 425) * 100}%`, "100%"])
     expect(rateBarWidth(0, 10)).toBe(0)
     expect(rateBarWidth(5, 0)).toBe(0)
     expect(rateBarWidth(20, 10)).toBe(100)
+  })
+
+  // U17, decision j: a rate without a threshold or a period before is a
+  // magnitude, drawn in the data-viz blue; the danger stays with the open count.
+  it("draws the rate bars in the data-viz blue, the open incidents with the danger edge", () => {
+    const { container } = renderIn("de", FailureRateTable, FAILURES)
+    for (const bar of container.querySelectorAll<HTMLElement>("[style*='width']")) {
+      expect(bar.className).toContain("bg-info")
+      expect(bar.className).not.toContain("danger")
+    }
+    const open = screen.getByText("1.200")
+    expect(open.className).toContain("border-danger")
+    expect(open.className).not.toMatch(/text-danger/)
+  })
+
+  it("explains a rate over no running instance instead of showing a bare dash (en)", () => {
+    renderIn("en", FailureRateTable, {
+      ...FAILURES,
+      processBreakdown: [{ ...FAILURES.processBreakdown[0], runningNow: 0, incidentRatePct: null }],
+    })
+    expect(screen.getByText("—").getAttribute("title")).toBe(
+      "No running instance reported: no rate",
+    )
   })
 })
 
@@ -232,6 +253,17 @@ describe("the cross-engine landscape", () => {
       ["Last (absolut)", "3"],
       ["Job-Rückstand, über Engines vergleichbar", "4"],
     ])
+  })
+
+  // Decision f: an engine's open incidents are a state, edged like the matrix's.
+  it("edges an engine's open incidents in danger and leaves its other counts plain", () => {
+    renderIn("de", EngineLandscapeWidget, LANDSCAPE)
+    const table = screen.getByRole("table", { name: "Last und Job-Rückstand je Engine" })
+    const busy = within(table).getByText("prod-a").closest("tr")!
+    expect(within(busy).getByText("3").className).toContain("border-danger")
+    expect(busy.querySelectorAll("[class*='border-danger']")).toHaveLength(1)
+    const calm = within(table).getByText("prod-b").closest("tr")!
+    expect(calm.querySelector("[class*='border-danger']")).toBeNull()
   })
 
   // U17: a silent engine is unknown, never a row of plausible zeros.

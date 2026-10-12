@@ -29,6 +29,7 @@ import { useT, type T } from "../messages/use-t.js"
 import { useHandOff, type HandOff } from "./hand-off.js"
 import { processNameOf, type Named } from "../bpmn-names.js"
 import { NamedId } from "./names.js"
+import { Figure } from "./figure.js"
 
 /** The landscape payload: the figures plus the process names behind the matrix's keys. */
 export type EngineLandscapeView = Named<EngineLandscapeResult>
@@ -162,11 +163,21 @@ function engineGroups(t: T): ListTableGroup[] {
 function CountCell({ value, t }: { value: number | null; t: T }) {
   return (
     <Td align="right" className="tabular-nums">
-      {value === null ? (
-        <span title={t("aLandscape.unknown")}>{formatNumber(null)}</span>
-      ) : (
-        formatNumber(value)
-      )}
+      <Figure value={value} why={t("aLandscape.unknown")} />
+    </Td>
+  )
+}
+
+/**
+ * An engine's open incidents: the one state among its counts (decision f),
+ * so it carries the danger edge the matrix below and the failure tables give
+ * an open incident. The number itself stays in the foreground.
+ */
+function OpenIncidentsCell({ value, t }: { value: number | null; t: T }) {
+  if (value === null || value === 0) return <CountCell value={value} t={t} />
+  return (
+    <Td align="right">
+      <CountPill tone="danger">{formatNumber(value)}</CountPill>
     </Td>
   )
 }
@@ -181,14 +192,14 @@ function EngineRow({ engine: e, t }: { engine: EngineLandscapeEngine; t: T }) {
         </span>
       </Td>
       <CountCell value={e.runningInstances} t={t} />
-      <CountCell value={e.openIncidents} t={t} />
+      <OpenIncidentsCell value={e.openIncidents} t={t} />
       <CountCell value={e.failedJobs} t={t} />
       <CountCell value={e.executableJobs} t={t} />
       <CountCell value={e.suspendedJobs} t={t} />
       <CountCell value={e.jobsDueFuture} t={t} />
       <CountCell value={e.openExternalTasks} t={t} />
       <Td align="right" className="tabular-nums">
-        {formatNumber(e.deployedDefinitionKeys)}
+        <Figure value={e.deployedDefinitionKeys} why={t("aLandscape.unknown")} />
         {(e.exclusiveDefinitionKeys ?? 0) > 0 && (
           <span className="text-muted-foreground text-small ml-1 whitespace-nowrap">
             {t("aLandscape.exclusiveSuffix", {

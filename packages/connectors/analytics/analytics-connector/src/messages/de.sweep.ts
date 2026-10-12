@@ -138,6 +138,9 @@ export const deSweep: MessageCatalog = {
   "aFailureSummary.title": "Fehleranalyse",
   "aFailureSummary.totalIncidents": "Offene Incidents",
   "aFailureSummary.uniqueErrorPatterns": "Incident-Gruppen",
+  "aFigure.noRate": "Keine laufende Instanz gemeldet: keine Quote",
+  "aFigure.notReported": "Keine Engine meldet diesen Wert: unbekannt",
+  "aFigure.nothingEnded": "In diesem Zeitraum ist nichts beendet: keine Dauer",
   "aHeatmap.bpmnNoCamunda7":
     "Das Diagramm ist hier nicht verfügbar: Ohne das camunda7-Modul kann Analytics keine BPMN-Dateien laden. Frag im Chat stattdessen nach den Kennzahlen je Aktivität.",
   "aHeatmap.bpmnNotLoaded":

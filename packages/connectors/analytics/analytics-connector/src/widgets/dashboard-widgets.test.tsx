@@ -203,17 +203,29 @@ describe("the analytics dashboard in German", () => {
     const started = screen.getByText("1.288").closest("td")!
     expect(started.className).toContain("text-right")
     expect(started.className).toContain("tabular-nums")
-    // Not reported is "—", never 0.
+    // Not measured is "—", never 0, and its tooltip says why (U17).
     const invoiceRow = screen.getByText("invoice").closest("tr")!
-    expect(within(invoiceRow).getAllByText("—")).toHaveLength(2)
+    expect(
+      within(invoiceRow)
+        .getAllByText("—")
+        .map((dash) => dash.getAttribute("title")),
+    ).toEqual([
+      "Keine Engine meldet diesen Wert: unbekannt",
+      "In diesem Zeitraum ist nichts beendet: keine Dauer",
+    ])
   })
 
-  // CI §3.3, decision f: a number is never coloured; a dot marks the state.
-  it("gives only a process with new incidents a danger dot", () => {
+  // CI §3.3, decisions f and o: new incidents are a volume of the period, as
+  // in the summary above, so no count in the breakdown carries a tone.
+  it("keeps every count neutral, new incidents included", () => {
     const { container } = renderIn("de", ProcessDefinitionBreakdown, DASHBOARD)
-    const dots = container.querySelectorAll("[data-tone='danger']")
-    expect(dots).toHaveLength(1)
-    expect(dots[0].closest("tr")?.textContent).toContain("Bike Leasing")
+    const leasing = screen.getByText("Bike Leasing").closest("tr")!
+    // Running now and new incidents: both a plain tabular figure in its cell.
+    for (const figure of within(leasing).getAllByText("1")) {
+      expect(figure.tagName).toBe("TD")
+      expect(figure.className).toContain("tabular-nums")
+    }
+    expect(container.querySelector("[data-tone]")).toBeNull()
     expect(container.querySelector("[class*='-ink']")).toBeNull()
     expect(container.querySelector("[class*='text-success'], [class*='text-danger']")).toBeNull()
   })
@@ -243,6 +255,10 @@ describe("the analytics dashboard in German", () => {
     // An unknown name: the id leads; the engine's own type name folded into the BPMN element.
     const paid = screen.getByText("Event_Paid").closest("td")!
     expect(plain(paid.textContent)).toBe("Event_PaidEndereignis · invoice")
+    // A P95 over nothing that ended: "—" with its reason, never 0 ms.
+    expect(within(paid.closest("tr")!).getByText("—").getAttribute("title")).toBe(
+      "In diesem Zeitraum ist nichts beendet: keine Dauer",
+    )
     expect(screen.getByText("1.240")).toBeTruthy()
     const ask = screen.getAllByRole("button", { name: "Engpass im Chat erklären" })[0]
     expect(iconOf(ask)).toContain("lucide-hourglass")

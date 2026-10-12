@@ -236,9 +236,10 @@ Rules while building:
   2 s at most, a failure leaves the key out). The widget shows `NamedId`
   (`src/widgets/names.tsx`: the name first, the id quiet in mono below, the id alone in
   mono without a name) and an activity's type in words (`activityTypeLabel`).
-- A count nobody measured is `null` and renders "—" (`formatNumber(null)`), one meaning
-  everywhere; a silent engine's counts are null, never 0. A different state (a process
-  not deployed on an engine) gets its own sign and a legend line.
+- A count nobody measured is `null` and renders "—" through `Figure`
+  (`src/widgets/figure.tsx`, the reason as its tooltip), one meaning everywhere; a silent
+  engine's counts are null, never 0. A different state (a process not deployed on an
+  engine) gets its own sign and a legend line.
 - The heatmap is the kit's `BpmnHeatmapWidget`: ONE hue from `--cd-info-soft` to
   `--cd-blau` (red is for incidents), every element above zero at a visible minimum, a
   legend with the smallest and largest value (`HeatmapLegend` `min`/`max`, formatted),
@@ -250,11 +251,13 @@ Rules while building:
   maps, `resolveTone` for a tone from the wire, CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
   volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
-  incidents/failures. A count of what happened carries no tone; the open incident is the
-  state. A rate is judged only against a reference, never on its own: the dashboard's
+  incidents/failures. A count of what happened (new incidents included) carries no tone;
+  the open incident is the state: a danger dot on its KPI, `CountPill tone="danger"` in a
+  table. A rate is judged only against a reference, never on its own: the dashboard's
   incident rate against the period before (`previous` in `dashboardData`, the trend of its
   `KpiCell`, `deltaVerdict` with the comparisons' threshold, "not reliable" under the
-  saved `minBucketSize`). A bar scales to the largest value in its table, never to 100.
+  saved `minBucketSize`). A bar scales to the largest value in its table, never to 100, and is a magnitude
+  in the data-viz blue (`TONE_DOT.info`), never a state colour.
   No palette classes or raw colours.
 - Icons are Lucide via `Icon` (devDependency `lucide-react` `0.562.0`, see invariant 6), never
   glyphs or emoji, at 16 px (`dense` in rows and chips; no `size` other than 16 or 24). A chat

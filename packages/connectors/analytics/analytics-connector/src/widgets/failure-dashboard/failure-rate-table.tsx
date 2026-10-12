@@ -17,6 +17,7 @@ import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { processNameOf } from "../../bpmn-names.js"
 import { NamedId } from "../names.js"
+import { Figure } from "../figure.js"
 
 /**
  * What drives ONE process's open incidents right now (live gauges: open
@@ -73,15 +74,20 @@ function columns(t: T): ListTableColumn[] {
   ]
 }
 
-/** The rate as a number over a bar in the incident colour (red is for incidents). */
-function RateCell({ rate, max }: { rate: number | null; max: number }) {
-  if (rate === null) return <span className="text-muted-foreground">—</span>
+/**
+ * The rate as a number over a bar. The bar is a magnitude, not a state: it
+ * takes the data-viz blue (decision j), not the danger red. A rate is judged
+ * only against a threshold or the period before (U17), and this live ratio
+ * has neither; the open incidents beside it already carry the danger.
+ */
+function RateCell({ rate, max, t }: { rate: number | null; max: number; t: T }) {
+  if (rate === null) return <Figure value={null} why={t("aFigure.noRate")} />
   return (
     <span className="ml-auto flex w-24 flex-col items-end gap-1">
       <span className="tabular-nums">{formatNumber(rate, { maximumFractionDigits: 1 })}</span>
       <span aria-hidden="true" className="bg-muted block h-1.5 w-full overflow-hidden rounded-full">
         <span
-          className={cn("block h-full rounded-full", TONE_DOT.danger)}
+          className={cn("block h-full rounded-full", TONE_DOT.info)}
           style={{ width: `${rateBarWidth(rate, max)}%` }}
         />
       </span>
@@ -133,7 +139,7 @@ export function FailureRateTable({
                       {formatNumber(proc.deadJobs)}
                     </Td>
                     <Td align="right">
-                      <RateCell rate={proc.incidentRatePct} max={max} />
+                      <RateCell rate={proc.incidentRatePct} max={max} t={t} />
                     </Td>
                     <Td align="right">
                       <HandOffButton

@@ -1,4 +1,3 @@
-import { TONE_DOT, cn } from "@miragon/mcp-toolkit-ui"
 import {
   ListTable,
   Section,
@@ -15,11 +14,14 @@ import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { processNameOf } from "../../bpmn-names.js"
 import { NamedId } from "../names.js"
+import { Figure } from "../figure.js"
 
 /**
  * The figures side by side (U17): one row per process, the counts in
  * right-aligned tabular columns, so the processes compare at a glance. The
- * average duration gives way below 640 px.
+ * average duration gives way below 640 px. Every count here is a volume of
+ * the period or a live count without a state, new incidents included, so
+ * none carries a tone (U14): the summary above shows them the same way.
  */
 function columns(t: T): ListTableColumn[] {
   return [
@@ -30,26 +32,6 @@ function columns(t: T): ListTableColumn[] {
     { label: t("aDefBreakdown.colIncidents"), align: "right" },
     { label: t("aDefBreakdown.colAvgDuration"), align: "right", hideBelow: "sm" },
   ]
-}
-
-/**
- * A count of incidents created in the period: the number neutral, a danger
- * dot next to it when there is any (CI §3.3: the state is the dot, never a
- * coloured digit). The other counts carry no state and no dot.
- */
-function IncidentCount({ count }: { count: number }) {
-  return (
-    <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
-      {count > 0 && (
-        <span
-          aria-hidden="true"
-          data-tone="danger"
-          className={cn("size-2 shrink-0 rounded-full", TONE_DOT.danger)}
-        />
-      )}
-      {formatNumber(count)}
-    </span>
-  )
 }
 
 export function ProcessDefinitionBreakdown({
@@ -94,13 +76,17 @@ export function ProcessDefinitionBreakdown({
                     </Td>
                     {/* Not reported (no engine in scope sends its gauges): "—", never 0. */}
                     <Td align="right" className="tabular-nums">
-                      {formatNumber(def.runningNow)}
+                      <Figure value={def.runningNow} why={t("aFigure.notReported")} />
                     </Td>
-                    <Td align="right">
-                      <IncidentCount count={def.incidentsCreated} />
+                    <Td align="right" className="tabular-nums">
+                      {formatNumber(def.incidentsCreated)}
                     </Td>
                     <Td align="right" className="whitespace-nowrap tabular-nums">
-                      {formatDuration(def.avgDurationMs)}
+                      <Figure
+                        value={def.avgDurationMs}
+                        format={formatDuration}
+                        why={t("aFigure.nothingEnded")}
+                      />
                     </Td>
                   </tr>
                 ))}

@@ -17,6 +17,7 @@ import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { elementNameOf, processNameOf } from "../../bpmn-names.js"
 import { NamedId, activityTypeLabel } from "../names.js"
+import { Figure } from "../figure.js"
 
 type ActivityRow = AnalyticsDashboardData["activityBreakdown"][number]
 
@@ -139,10 +140,18 @@ export function ActivityBottleneckTable({
                       {formatNumber(act.executionCount)}
                     </Td>
                     <Td align="right" className="whitespace-nowrap tabular-nums">
-                      {formatDuration(act.avgDurationMs)}
+                      <Figure
+                        value={act.avgDurationMs}
+                        format={formatDuration}
+                        why={t("aFigure.nothingEnded")}
+                      />
                     </Td>
                     <Td align="right" className="whitespace-nowrap tabular-nums">
-                      {formatDuration(act.p95DurationMs)}
+                      <Figure
+                        value={act.p95DurationMs}
+                        format={formatDuration}
+                        why={t("aFigure.nothingEnded")}
+                      />
                     </Td>
                     <Td align="right">
                       <HandOffButton

@@ -137,6 +137,9 @@ export const enSweep: MessageCatalog = {
   "aFailureSummary.title": "Failure analysis",
   "aFailureSummary.totalIncidents": "Open incidents",
   "aFailureSummary.uniqueErrorPatterns": "Incident groups",
+  "aFigure.noRate": "No running instance reported: no rate",
+  "aFigure.notReported": "No engine reports this figure: unknown",
+  "aFigure.nothingEnded": "Nothing ended in this period: no duration",
   "aHeatmap.bpmnNoCamunda7":
     "The diagram is not available here: without the camunda7 module, analytics cannot load BPMN files. Ask in the chat for the figures per activity instead.",
   "aHeatmap.bpmnNotLoaded":
