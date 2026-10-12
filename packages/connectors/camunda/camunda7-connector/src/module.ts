@@ -226,6 +226,26 @@ function normalizeEnginesConfig(raw: unknown): unknown {
 }
 
 /**
+ * The configured engines that forward each caller's MCP token (their own
+ * `auth`, else `CAMUNDA_AUTH_TYPE`). A config that does not load names none:
+ * the boot fails on it with its own error.
+ */
+function passthroughEngineIds(env: NodeJS.ProcessEnv): string[] {
+  let engines: unknown
+  try {
+    engines = loadEnginesFromEnv(env)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(engines)) return []
+  const fallback = env.CAMUNDA_AUTH_TYPE?.trim()
+  return engines.flatMap((engine: unknown) => {
+    const { id, auth } = (engine ?? {}) as { id?: unknown; auth?: { type?: unknown } }
+    return (auth?.type ?? fallback) === "passthrough" && typeof id === "string" ? [id] : []
+  })
+}
+
+/**
  * Resolves the engine list from environment in this order of precedence:
  *   1. `CAMUNDA_ENGINES_FILE` — path to a JSON document (preferred at scale; fits ConfigMap workflows).
  *   2. `CAMUNDA_ENGINES_JSON` — inline JSON.
@@ -357,6 +377,12 @@ export const camunda7Module = {
       const id = env.CAMUNDA_ENGINE_ID?.trim() || "default"
       warnings.push(
         `No engine is configured (CAMUNDA_ENGINES_FILE / CAMUNDA_ENGINES_JSON / CAMUNDA_BASE_URL) — defaulting to http://localhost:8410/engine-rest with engine id "${id}". That id is the join key against the metrics' engine_id label: engine-scoped analytics return empty when it does not match the ENGINE_ID the engine stamps (the repo's Compose stack stamps "prod-a" — set CAMUNDA_ENGINE_ID to match).`,
+      )
+    }
+    const passthrough = passthroughEngineIds(env)
+    if (passthrough.length > 0) {
+      warnings.push(
+        `Passthrough auth on ${passthrough.map((id) => `"${id}"`).join(", ")}: each caller's MCP bearer token goes to the engine unchanged. Only for a trusted single-audience setup — the engine must accept a token minted for this MCP server, and anyone who sees it there can replay it against this server and every other passthrough engine. Elsewhere give the engine its own basic or bearer credentials.`,
       )
     }
     if (allowDeploymentsFromEnv(env) === "true") {
