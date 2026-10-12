@@ -57,6 +57,39 @@ function attributesOf(raw: string): Record<string, string> {
   return out
 }
 
+const SKIPPED_SECTIONS = [
+  { open: "<!--", close: "-->" },
+  { open: "<![CDATA[", close: "]]>" },
+] as const
+
+/**
+ * The document without its comments and CDATA sections, cut by a linear
+ * scan instead of a lazy regex (CodeQL js/polynomial-redos and
+ * js/incomplete-multi-character-sanitization: the XML comes from an engine).
+ * An unterminated section swallows the rest of the document, so no opener
+ * ever survives.
+ */
+function withoutCommentsAndCdata(xml: string): string {
+  // Each opener's next position is searched again only once the scan has
+  // passed it, so the whole cut stays linear in the document's length.
+  const nextOpen = SKIPPED_SECTIONS.map((section) => xml.indexOf(section.open))
+  let out = ""
+  let at = 0
+  for (;;) {
+    let pick = -1
+    SKIPPED_SECTIONS.forEach((section, i) => {
+      if (nextOpen[i] !== -1 && nextOpen[i] < at) nextOpen[i] = xml.indexOf(section.open, at)
+      if (nextOpen[i] !== -1 && (pick === -1 || nextOpen[i] < nextOpen[pick])) pick = i
+    })
+    if (pick === -1) return out + xml.slice(at)
+    const { open, close } = SKIPPED_SECTIONS[pick]
+    out += xml.slice(at, nextOpen[pick])
+    const end = xml.indexOf(close, nextOpen[pick] + open.length)
+    if (end === -1) return out
+    at = end + close.length
+  }
+}
+
 /**
  * Every name in one BPMN 2.0 XML document, read without a DOM: each
  * `<process id=… name=…>` (or, when the process has no name, the name of the
@@ -66,7 +99,7 @@ function attributesOf(raw: string): Record<string, string> {
  * yields no names, never an error.
  */
 export function readBpmnNames(xml: string): BpmnModelNames {
-  const text = xml.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, "")
+  const text = withoutCommentsAndCdata(xml)
   const own: Record<string, string> = {}
   const pools: Record<string, string> = {}
   const elements: Record<string, string> = {}

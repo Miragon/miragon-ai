@@ -138,9 +138,21 @@ function select(q: string, written: string, name: string = written): Series[] {
   return SERIES.filter((s) => s.name === name && tests.every((test) => test(s.labels)))
 }
 
+/**
+ * The `camunda_<x>_seconds` histogram whose `_bucket` series `q` reads, found
+ * with indexOf instead of a backtracking `\w+` (CodeQL js/polynomial-redos).
+ */
+function histogramIn(q: string): string | undefined {
+  const end = q.indexOf("_seconds_bucket")
+  if (end === -1) return undefined
+  const start = q.lastIndexOf("camunda_", end)
+  if (start === -1 || !/^\w+$/.test(q.slice(start, end))) return undefined
+  return q.slice(start, end + "_seconds".length)
+}
+
 /** The first series name `q` reads (a histogram's `_bucket` read as its `_sum`). */
 function seriesIn(q: string): { written: string; name: string } | undefined {
-  const bucket = /(camunda_\w+_seconds)_bucket/.exec(q)?.[1]
+  const bucket = histogramIn(q)
   if (bucket) return { written: `${bucket}_bucket`, name: `${bucket}_sum` }
   const names = [...new Set(SERIES.map((s) => s.name))]
     .map((n) => ({ n, at: q.indexOf(n) }))
@@ -172,12 +184,19 @@ const total = (series: Series[]) => series.reduce((sum, s) => sum + s.value, 0)
  * median, ×2.2 for p95). A window anchored with `@` (the period before) reads
  * 85 % of the period's counts.
  */
+/** The label list of the first `by (…)` in `q`, cut with indexOf (CodeQL js/polynomial-redos). */
+function groupLabelsIn(q: string): string | undefined {
+  const open = q.indexOf("by (")
+  if (open === -1) return undefined
+  const close = q.indexOf(")", open + 4)
+  return close === -1 ? undefined : q.slice(open + 4, close)
+}
+
 function evaluate(q: string): Array<{ metric: Record<string, string>; value: number }> {
   const read = seriesIn(q)
   if (!read) return []
   const by =
-    /by \(([^)]*)\)/
-      .exec(q)?.[1]
+    groupLabelsIn(q)
       ?.split(",")
       .map((l) => l.trim()) ?? []
   const factor = q.includes(" @ ") ? 0.85 : 1

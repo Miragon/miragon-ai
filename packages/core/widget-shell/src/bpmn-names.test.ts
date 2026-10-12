@@ -96,6 +96,31 @@ describe("parseBpmnNames", () => {
   })
 })
 
+describe("readBpmnNames — comments and CDATA are cut linearly (CodeQL js/polynomial-redos)", () => {
+  const doc = (inner: string) =>
+    `<definitions><process id="p" name="Rechnung">${inner}<task id="t" name="Prüfen"/></process></definitions>`
+
+  it("skips comments and CDATA, also when they quote a tag", () => {
+    const names = readBpmnNames(
+      doc('<!-- <task id="x" name="Kommentar"/> --><![CDATA[<task id="y" name="Daten"/>]]>'),
+    )
+    expect(names.elements).toEqual({ t: "Prüfen" })
+    expect(names.processes).toEqual({ p: "Rechnung" })
+  })
+
+  it("drops everything after an unterminated opener, so no opener survives", () => {
+    expect(readBpmnNames(doc("<!-- never closed")).elements).toEqual({})
+    expect(readBpmnNames(doc("<![CDATA[ never closed")).elements).toEqual({})
+  })
+
+  it("stays fast on many repeated openers", () => {
+    const started = performance.now()
+    expect(readBpmnNames(doc("<!--".repeat(100_000))).elements).toEqual({})
+    expect(readBpmnNames(doc("<!-- x -->".repeat(50_000))).elements).toEqual({ t: "Prüfen" })
+    expect(performance.now() - started).toBeLessThan(1000)
+  })
+})
+
 describe("readBpmnNames", () => {
   it("names every process of the file by the same rule, for a caller without the key", () => {
     const xml = `<definitions>
