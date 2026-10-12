@@ -21,6 +21,8 @@ export interface InstancesListFilters {
   withIncidents?: boolean
   /** Operator / caller text — quoted, never inlined. */
   businessKeyLike?: string
+  /** The search box's term (business key fragment or whole id) — quoted, never inlined. */
+  search?: string
 }
 
 /** The run-state and incident flags of {@link InstancesListFilters}, as on-screen facts. */
@@ -72,7 +74,7 @@ const PREVIOUS_RESULT_NOTE =
  * What the operator sees in the instances list: the count of the filtered
  * set with the filters it covers (both from the page on screen — see
  * {@link InstancesListFilters}). The process name is the deployer's text
- * and the business-key filter the operator's — both quoted, never inlined.
+ * and the business-key filter and search the operator's — all quoted, never inlined.
  */
 export function describeInstancesView({
   loadedCount,
@@ -106,6 +108,7 @@ export function describeInstancesView({
     untrusted: [
       { label: "processName", text: processName },
       { label: "businessKeyLike", text: filters.businessKeyLike },
+      { label: "search", text: filters.search },
     ],
     tools: [
       "camunda7_show_instance_detail",

@@ -4,7 +4,6 @@ import {
   startFakeEngine,
   type FakeEngine,
   type FakeRoutes,
-  type RecordedRequest,
 } from "../tools/test-support/fake-engine.js"
 import {
   buildCockpitDashboardData,
@@ -95,11 +94,10 @@ describe("the lists name a Modeler pool's unnamed process as analytics does", ()
   it("in the instance list, its rows and its title", async () => {
     const { client } = await engineWith({
       ...xmlRoute,
-      "GET /process-instance": (r: RecordedRequest) =>
-        r.query.processInstanceIds
-          ? { body: [] }
-          : { body: [{ id: "p1", definitionId: LEASING, businessKey: "LEA-1", suspended: false }] },
-      "GET /process-instance/count": { body: { count: 1 } },
+      "POST /process-instance": {
+        body: [{ id: "p1", definitionId: LEASING, businessKey: "LEA-1", suspended: false }],
+      },
+      "POST /process-instance/count": { body: { count: 1 } },
       "GET /process-definition": {
         body: [{ id: LEASING, key: "miraveloLeasing", name: null, version: 3 }],
       },

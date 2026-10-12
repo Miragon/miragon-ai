@@ -167,25 +167,29 @@ describe("buildProcessListData", () => {
   })
 })
 
-/** The process-instance endpoints, answered by query: the page, the page-scoped flags, the counts. */
+/** The filter a POST query or count sent in its body. */
+const bodyOf = (r: RecordedRequest) => r.body as Record<string, unknown>
+
+/**
+ * The process-instance endpoints: the page and the counts (POST, the filter in
+ * the body), the page-scoped incident flags (GET over the page's ids).
+ */
 function instanceRoutes(counts: { all: number; withIncident: number; suspended: number }) {
   return {
-    "GET /process-instance": (r: RecordedRequest) =>
-      r.query.processInstanceIds
-        ? { body: [{ id: "p2" }] }
-        : {
-            body: [
-              { id: "p1", definitionId: "K1:7:dep", businessKey: "BK-1", suspended: false },
-              { id: "p2", definitionId: "K1:7:dep", businessKey: null, suspended: true },
-              { id: "", definitionId: "K1:1:a" },
-              { id: "p3", definitionId: "legacy-id" },
-            ],
-          },
-    "GET /process-instance/count": (r: RecordedRequest) => ({
+    "GET /process-instance": { body: [{ id: "p2" }] },
+    "POST /process-instance": {
+      body: [
+        { id: "p1", definitionId: "K1:7:dep", businessKey: "BK-1", suspended: false },
+        { id: "p2", definitionId: "K1:7:dep", businessKey: null, suspended: true },
+        { id: "", definitionId: "K1:1:a" },
+        { id: "p3", definitionId: "legacy-id" },
+      ],
+    },
+    "POST /process-instance/count": (r: RecordedRequest) => ({
       body: {
-        count: r.query.withIncident
+        count: bodyOf(r).withIncident
           ? counts.withIncident
-          : r.query.suspended
+          : bodyOf(r).suspended
             ? counts.suspended
             : counts.all,
       },
@@ -245,7 +249,7 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
       withIncidentCount: 57,
       suspendedCount: 9,
     })
-    const flagQuery = calls(engine, "/process-instance").find((r) => r.query.processInstanceIds)
+    const flagQuery = calls(engine, "/process-instance").find((r) => r.method === "GET")
     expect(flagQuery?.query).toEqual({
       processInstanceIds: "p1,p2,p3",
       withIncident: "true",
@@ -253,10 +257,10 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
     })
     // No engine-wide incident scan decorates the page any more.
     expect(calls(engine, "/incident")).toEqual([])
-    expect(calls(engine, "/process-instance/count").map((r) => r.query)).toEqual([
+    expect(calls(engine, "/process-instance/count").map(bodyOf)).toEqual([
       { processDefinitionKey: "K1" },
-      { processDefinitionKey: "K1", withIncident: "true" },
-      { processDefinitionKey: "K1", suspended: "true" },
+      { processDefinitionKey: "K1", withIncident: true },
+      { processDefinitionKey: "K1", suspended: true },
     ])
   })
 
@@ -289,13 +293,85 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
     await buildProcessInstancesData(client, "engine-a", { suspended: false })
     await buildProcessInstancesData(client, "engine-a", { active: false, businessKeyLike: "BK" })
 
-    const pages = calls(engine, "/process-instance").filter((r) => !r.query.processInstanceIds)
-    const base = { firstResult: "0", maxResults: "50", sortBy: "businessKey", sortOrder: "asc" }
-    expect(pages.map((r) => r.query)).toEqual([
-      base,
-      { ...base, active: "true" },
-      { ...base, suspended: "true", businessKeyLike: "%BK%" },
+    const pages = calls(engine, "/process-instance").filter((r) => r.method === "POST")
+    expect(pages.map((r) => r.query)).toEqual(
+      Array.from({ length: 3 }, () => ({ firstResult: "0", maxResults: "50" })),
+    )
+    const sorting = [
+      { sortBy: "businessKey", sortOrder: "asc" },
+      { sortBy: "instanceId", sortOrder: "asc" },
+    ]
+    expect(pages.map(bodyOf)).toEqual([
+      { sorting },
+      { active: true, sorting },
+      { suspended: true, businessKeyLike: "%BK%", sorting },
     ])
+  })
+
+  it("pages in one total order: by business key, the instance id breaking the ties", async () => {
+    // Most instances carry no business key: without the id as a second key,
+    // "Load more" could repeat some of the tied rows and skip others.
+    const { engine, client } = await engineWith(
+      instanceRoutes({ all: 120, withIncident: 0, suspended: 0 }),
+    )
+
+    await buildProcessInstancesData(client, "engine-a", { firstResult: 50, maxResults: 50 })
+
+    const [page] = calls(engine, "/process-instance").filter((r) => r.method === "POST")
+    expect(page?.query).toEqual({ firstResult: "50", maxResults: "50" })
+    expect(bodyOf(page).sorting).toEqual([
+      { sortBy: "businessKey", sortOrder: "asc" },
+      { sortBy: "instanceId", sortOrder: "asc" },
+    ])
+  })
+
+  it("searches a business key fragment OR a whole id, over the page and every count", async () => {
+    const { engine, client } = await engineWith(
+      instanceRoutes({ all: 1, withIncident: 0, suspended: 0 }),
+    )
+
+    // The operator's search replaces the handed-in prefilter, as the box always did.
+    const data = await buildProcessInstancesData(client, "engine-a", {
+      processDefinitionKey: "K1",
+      businessKeyLike: "BK",
+      search: " 73059b49-c64b-11f1 ",
+    })
+
+    const orQueries = [
+      { businessKeyLike: "%73059b49-c64b-11f1%", processInstanceIds: ["73059b49-c64b-11f1"] },
+    ]
+    const reads = calls(engine, "/process-instance")
+      .filter((r) => r.method === "POST")
+      .concat(calls(engine, "/process-instance/count"))
+    expect(reads).toHaveLength(4)
+    for (const read of reads) {
+      expect(bodyOf(read)).toMatchObject({ processDefinitionKey: "K1", orQueries })
+      expect(bodyOf(read)).not.toHaveProperty("businessKeyLike")
+    }
+    // The echo names what the count covers: the search, not the replaced prefilter.
+    expect(data.filters).toEqual({
+      active: undefined,
+      suspended: undefined,
+      withIncidents: undefined,
+      search: "73059b49-c64b-11f1",
+    })
+  })
+
+  it("keeps a handed-in businessKeyLike when the search is blank", async () => {
+    const { engine, client } = await engineWith(
+      instanceRoutes({ all: 1, withIncident: 0, suspended: 0 }),
+    )
+
+    const data = await buildProcessInstancesData(client, "engine-a", {
+      businessKeyLike: "BK",
+      search: "   ",
+    })
+
+    const [page] = calls(engine, "/process-instance").filter((r) => r.method === "POST")
+    expect(bodyOf(page)).toMatchObject({ businessKeyLike: "%BK%" })
+    expect(bodyOf(page)).not.toHaveProperty("orQueries")
+    expect(data.filters).toMatchObject({ businessKeyLike: "BK" })
+    expect(data.filters).not.toHaveProperty("search")
   })
 
   it("refuses active and suspended together instead of listing one state", async () => {
@@ -343,8 +419,7 @@ describe("buildProcessInstancesData — each row's real definition key", () => {
     ],
   }
   const routes = (statistics: FakeRoutes[string]) => ({
-    "GET /process-instance": (r: RecordedRequest) => {
-      if (r.query.processInstanceIds) return { body: [] }
+    "POST /process-instance": (r: RecordedRequest) => {
       const onLongKey = { id: "p1", definitionId: UUID, businessKey: "BK-1", suspended: false }
       const onOrder = {
         id: "p2",
@@ -352,9 +427,9 @@ describe("buildProcessInstancesData — each row's real definition key", () => {
         businessKey: "BK-2",
         suspended: false,
       }
-      return { body: r.query.processDefinitionKey ? [onLongKey] : [onLongKey, onOrder] }
+      return { body: bodyOf(r).processDefinitionKey ? [onLongKey] : [onLongKey, onOrder] }
     },
-    "GET /process-instance/count": { body: { count: 2 } },
+    "POST /process-instance/count": { body: { count: 2 } },
     "GET /process-definition": {
       body: [{ id: UUID, key: LONG_KEY, name: "Onboarding", version: 3 }],
     },

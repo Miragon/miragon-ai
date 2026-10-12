@@ -232,6 +232,8 @@ export interface ProcessInstancesData {
     suspended?: boolean
     withIncidents?: boolean
     businessKeyLike?: string
+    /** The search box's term (business key fragment or whole id), when it replaced `businessKeyLike`. */
+    search?: string
   }
   engineId?: string
 }

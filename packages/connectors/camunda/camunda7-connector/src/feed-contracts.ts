@@ -56,6 +56,23 @@ export const processInstancesFilterShape = {
 }
 export type ProcessInstancesFilters = z.infer<z.ZodObject<typeof processInstancesFilterShape>>
 
+/**
+ * The instances list's search box — its FEED only, the show tool keeps the
+ * model's `businessKeyLike`. The box finds an instance by what the list's
+ * first column shows: a business key fragment or the whole id (the engine
+ * has no LIKE on ids; `engineInstanceSearch`). Like the box always did, the
+ * operator's search replaces a handed-in `businessKeyLike` prefilter.
+ */
+export const instanceSearchShape = {
+  search: z
+    .string()
+    .optional()
+    .describe(
+      "Search box: business key (substring) or whole process instance id. Replaces businessKeyLike.",
+    ),
+}
+export type InstanceSearchArgs = z.infer<z.ZodObject<typeof instanceSearchShape>>
+
 // ── jobs ──────────────────────────────────────────────────────────────────
 export const jobsFilterShape = {
   processDefinitionKey: z.string().optional().describe("Filter by process definition key"),

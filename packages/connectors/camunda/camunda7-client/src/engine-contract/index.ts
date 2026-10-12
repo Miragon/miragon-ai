@@ -17,7 +17,13 @@ export {
   toOptionalEngineDate,
 } from "./dates.js"
 export { engineSorting, type SortOrder } from "./sorting.js"
-export { complementaryFlags, engineKeyList, engineLike, trueOnly } from "./filters.js"
+export {
+  complementaryFlags,
+  engineInstanceSearch,
+  engineKeyList,
+  engineLike,
+  trueOnly,
+} from "./filters.js"
 export {
   DEFAULT_OBJECT_FORMAT,
   toEngineVariable,

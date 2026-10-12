@@ -278,8 +278,9 @@ export function ProcessInstancesView({
     key: ["camunda7:process-instances", feedEngine ?? null, pdk ?? null],
     tool: CAMUNDA7_PROCESS_INSTANCES_DATA,
     args: filterArgs,
-    // The operator's search overrides a handed-in businessKeyLike prefilter.
-    searchArg: "businessKeyLike",
+    // A business key fragment or a whole id, as the first column shows them;
+    // the feed lets it replace a handed-in businessKeyLike prefilter.
+    searchArg: "search",
     filtersActive: activeChip !== CHIP_ALL,
     pageSize: PAGE_SIZE,
     ready: true,
@@ -361,7 +362,9 @@ export function ProcessInstancesView({
 
       <PagedRows paged={paged}>
         {paged.items.length === 0 ? (
-          <TableEmptyState>
+          <TableEmptyState
+            description={listFilters.search ? t("processInstances.noMatchSearch") : undefined}
+          >
             {interacted ? t("processInstances.noMatch") : t("processInstances.noRunningInstances")}
           </TableEmptyState>
         ) : (

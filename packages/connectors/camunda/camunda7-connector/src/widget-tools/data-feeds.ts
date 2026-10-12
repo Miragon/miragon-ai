@@ -44,6 +44,7 @@ import { resolveEngine } from "../lib/resolve-engine.js"
 import {
   activityIncidentsFilterShape,
   incidentsDashboardFilterShape,
+  instanceSearchShape,
   jobsFilterShape,
   pagingShape,
   processInstancesFilterShape,
@@ -126,6 +127,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({
         ...processInstancesFilterShape,
+        ...instanceSearchShape,
         ...pagingShape,
         ...engineParam,
       }),
@@ -140,6 +142,7 @@ export function registerWidgetDataFeeds(ctx: WidgetToolsContext) {
           suspended: args.suspended,
           withIncidents: args.withIncidents,
           businessKeyLike: args.businessKeyLike,
+          search: args.search,
           firstResult: args.firstResult,
           maxResults: args.maxResults,
         })),

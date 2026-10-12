@@ -3069,6 +3069,10 @@
           "description": "Process definition key whose instances to list. Omit for ALL running instances engine-wide.",
           "type": "string"
         },
+        "search": {
+          "description": "Search box: business key (substring) or whole process instance id. Replaces businessKeyLike.",
+          "type": "string"
+        },
         "suspended": {
           "description": "true = only suspended instances, false = only running.",
           "type": "boolean"

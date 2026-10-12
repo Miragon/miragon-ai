@@ -156,7 +156,7 @@ const SITES: Record<string, SearchSite> = {
   },
   "process instances": {
     widget: () => <ProcessInstancesWidget data={INSTANCES} />,
-    search: { en: "Search by business key", de: "Nach Geschäftsschlüssel suchen" },
+    search: { en: "Search by business key or ID", de: "Nach Geschäftsschlüssel oder ID suchen" },
     chips: { en: "Instance filters", de: "Instanzfilter" },
   },
   "cluster detail": {

@@ -1,4 +1,10 @@
-import { complementaryFlags, engineLike, trueOnly, type Client } from "@miragon-ai/camunda7-client"
+import {
+  complementaryFlags,
+  engineInstanceSearch,
+  engineLike,
+  trueOnly,
+  type Client,
+} from "@miragon-ai/camunda7-client"
 import type {
   CockpitDashboardData,
   DefinitionStat,
@@ -11,11 +17,13 @@ import {
   getProcessDefinitions,
   getProcessDefinitionsCount,
   getProcessInstances,
-  getProcessInstancesCount,
   getJobsCount,
   queryJobs,
+  queryProcessInstances,
+  queryProcessInstancesCount,
 } from "@miragon-ai/camunda7-client/sdk"
 import type {
+  InstanceSearchArgs,
   JobsFilters,
   PagingArgs,
   ProcessInstancesFilters,
@@ -134,21 +142,36 @@ export async function buildProcessListData(
   }
 }
 
-export type ProcessInstancesArgs = ProcessInstancesFilters & PagingArgs
+export type ProcessInstancesArgs = ProcessInstancesFilters & InstanceSearchArgs & PagingArgs
 
 // The engine IGNORES `false` for active/suspended/withIncident (HTTP 200, no
 // filter — not a rejection), so a forwarded false would silently list every
 // instance: active/suspended send a false as the complement, withIncident
 // only ever goes out as true. businessKeyLike is a LIKE pattern — a value
-// without `%` would match the business key exactly.
+// without `%` would match the business key exactly. The search box finds a
+// business key fragment OR a whole id, and replaces a handed-in
+// businessKeyLike, as the box always did.
 function toProcessInstanceFilter(args: ProcessInstancesArgs) {
+  const { orQueries } = engineInstanceSearch(args.search)
   return {
     processDefinitionKey: args.processDefinitionKey,
     ...complementaryFlags(args, "active", "suspended"),
     withIncident: trueOnly(args.withIncidents),
-    businessKeyLike: engineLike(args.businessKeyLike),
+    businessKeyLike: orQueries ? undefined : engineLike(args.businessKeyLike),
+    orQueries,
   }
 }
+
+/**
+ * The list's order: by business key, the instance id as the tie-break. Most
+ * instances carry no business key, and the engine adds no tie-break of its
+ * own once a sort is given, so "Load more" could repeat some of the tied rows
+ * and skip others. Only the POST query takes two keys (as the job panel's).
+ */
+const INSTANCE_LIST_ORDER = [
+  { sortBy: "businessKey", sortOrder: "asc" },
+  { sortBy: "instanceId", sortOrder: "asc" },
+] as const
 
 type ProcessInstanceFilter = ReturnType<typeof toProcessInstanceFilter>
 
@@ -165,8 +188,8 @@ interface RawInstance {
  * call (`withIncident` = every match, `active` = none suspended).
  */
 function filteredTotals(client: Client, filter: ProcessInstanceFilter) {
-  const count = (query: ProcessInstanceFilter) =>
-    getProcessInstancesCount({ client, query }).then(countOf)
+  const count = (body: ProcessInstanceFilter) =>
+    queryProcessInstancesCount({ client, body }).then(countOf)
   const total = count(filter)
   return Promise.all([
     total,
@@ -261,15 +284,10 @@ export async function buildProcessInstancesData(
   const filter = toProcessInstanceFilter(args)
 
   const [raw, [totalCount, withIncidentCount, suspendedCount], definition] = await Promise.all([
-    getProcessInstances({
+    queryProcessInstances({
       client,
-      query: {
-        ...filter,
-        firstResult: args.firstResult ?? 0,
-        maxResults: args.maxResults ?? 50,
-        sortBy: "businessKey",
-        sortOrder: "asc",
-      },
+      query: { firstResult: args.firstResult ?? 0, maxResults: args.maxResults ?? 50 },
+      body: { ...filter, sorting: [...INSTANCE_LIST_ORDER] },
     }).then((rows) => rowsOf<RawInstance>(rows)),
     filteredTotals(client, filter),
     // A scoped list names its definition — and an unknown key is the
@@ -311,7 +329,9 @@ export async function buildProcessInstancesData(
       active: args.active,
       suspended: args.suspended,
       withIncidents: args.withIncidents,
-      businessKeyLike: args.businessKeyLike,
+      ...(filter.orQueries
+        ? { search: args.search?.trim() }
+        : { businessKeyLike: args.businessKeyLike }),
     },
     engineId,
   }
