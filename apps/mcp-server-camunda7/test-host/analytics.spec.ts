@@ -18,6 +18,8 @@ async function openAnalytics(
   tool: string,
   theme: "light" | "dark" = "light",
   locale = "en-US",
+  /** The host's height budget and display modes (absent: unbounded, inline only). */
+  host: { maxHeight?: number; displayModes?: string[] } = {},
 ): Promise<FrameLocator> {
   const base = process.env.HOST_SIM_URL
   if (!base) throw new Error("HOST_SIM_URL is unset — run via `playwright test -c test-host`")
@@ -30,6 +32,8 @@ async function openAnalytics(
     locale,
     width: String(INLINE_WIDTH),
   })
+  if (host.maxHeight !== undefined) query.set("maxHeight", String(host.maxHeight))
+  if (host.displayModes) query.set("displayModes", host.displayModes.join(","))
   await page.goto(`${base}/?${query.toString()}`)
   return page.frameLocator("#app")
 }
@@ -193,5 +197,59 @@ test.describe("analytics at the inline width (760 px)", () => {
       }))
       expect(violations, `${tool} (${theme})`).toEqual([])
     }
+  })
+})
+
+/**
+ * Inline, a view is a card in the chat (#396): under the host's height budget
+ * a table shows the head of its rows, says how many there are, and offers the
+ * rest — fullscreen where the host offers it, else the next rows in place.
+ * The stub's activity table has six rows; a 400 px budget leaves room for three.
+ */
+test.describe("an inline card under the host's height budget (#396)", () => {
+  const activities = (app: FrameLocator) =>
+    app.getByRole("region", { name: "Activities per process, sorted by total execution time" })
+  const bodyRows = (region: Locator) => region.locator("tbody tr")
+
+  test("a table shows the head of its rows and opens fullscreen for the rest", async ({ page }) => {
+    const app = await openAnalytics(page, "analytics_show_dashboard", "light", "en-US", {
+      maxHeight: 400,
+      displayModes: ["inline", "fullscreen"],
+    })
+    const region = activities(app)
+    await expect(region).toBeVisible({ timeout: 15_000 })
+    await expect(bodyRows(region)).toHaveCount(3)
+    await expect(region.getByText("3 of 6 shown")).toBeVisible()
+
+    await region.getByRole("button", { name: "Show all" }).click()
+
+    await expect
+      .poll(
+        async () =>
+          (
+            await page.evaluate(
+              () =>
+                (window as unknown as { __hostLog: { displayModeRequests: string[] } }).__hostLog,
+            )
+          ).displayModeRequests,
+      )
+      .toEqual(["fullscreen"])
+    await expect(bodyRows(region)).toHaveCount(6)
+    await expect(region.getByText("Task_VerifyIdentity")).toBeVisible()
+    await expect(region.getByText(/shown$/)).toHaveCount(0)
+  })
+
+  test("without fullscreen, the next rows show in place", async ({ page }) => {
+    const app = await openAnalytics(page, "analytics_show_dashboard", "light", "en-US", {
+      maxHeight: 400,
+      displayModes: ["inline"],
+    })
+    const region = activities(app)
+    await expect(bodyRows(region)).toHaveCount(3, { timeout: 15_000 })
+
+    await region.getByRole("button", { name: "Show more" }).click()
+
+    await expect(bodyRows(region)).toHaveCount(6)
+    await expect(region.getByRole("button", { name: "Show more" })).toHaveCount(0)
   })
 })

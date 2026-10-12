@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { parseToolResult, useCallTool } from "@miragon/mcp-toolkit-ui"
 import { useViewData, type UseViewDataOptions } from "@miragon/mcp-toolkit-ui/hooks"
+import { useInlineBudget } from "./inline-budget.js"
 
 /**
  * The pages appended after page 0, tagged with the reset generation they belong
@@ -22,7 +23,13 @@ interface PagedState<TItem> {
 }
 
 export interface PagedViewData<TItem, TData = unknown> {
-  /** Accumulated items across all loaded pages. */
+  /**
+   * The rows to show: every loaded page — inline under a host, at most the
+   * view's row budget of them (`useInlineBudget`, #396); `hasMore` then says
+   * there are more and `loadMore` shows them (fullscreen where the host
+   * offers it, else the next rows in place). The footer's "Showing X of Y"
+   * counts what is shown.
+   */
   items: TItem[]
   /**
    * The page-0 payload (handed-in or self-fetched) for reading list metadata.
@@ -197,7 +204,7 @@ export function usePagedViewData<TItem, TData>(opts: {
   const hasMore = !stale && !pages.exhausted && items.length < total
 
   const gen = pages.gen
-  const loadMore = useCallback(() => {
+  const fetchNext = useCallback(() => {
     if (!fetched || loadingMore || !callTool) return
     setLoadingMore(true)
     setPages((prev) => (prev.gen === gen ? { ...prev, error: null } : prev))
@@ -225,13 +232,15 @@ export function usePagedViewData<TItem, TData>(opts: {
       .finally(() => setLoadingMore(false))
   }, [fetched, loadingMore, callTool, tool, args, items.length, pageSize, selectItems, gen])
 
+  const head = useInlineHead({ items, hasMore, fetchNext, pageSize, resetKey: argsKey })
+
   return {
-    items,
+    items: head.items,
     firstPage: first,
     total,
     stale,
-    hasMore,
-    loadMore,
+    hasMore: head.hasMore,
+    loadMore: head.loadMore,
     loading: !first && ready && page0.error === null,
     refreshing: !!first && page0.isFetching,
     loadingMore,
@@ -241,4 +250,38 @@ export function usePagedViewData<TItem, TData>(opts: {
     retry: page0.refetch,
     loadMoreError: pages.error,
   }
+}
+
+/**
+ * Inline in a chat, the head of a list's rows (#396): at most the view's row
+ * budget (`useInlineBudget`). More is fullscreen where the host offers it;
+ * elsewhere the next rows in place, a fetched page with the click that loaded
+ * it. A new search or filter (`resetKey`) starts at the head again; a refetch
+ * keeps what was revealed. Without a budget (fullscreen, no host) every row.
+ */
+function useInlineHead<TItem>(opts: {
+  items: TItem[]
+  hasMore: boolean
+  fetchNext: () => void
+  pageSize: number
+  resetKey: string
+}): { items: TItem[]; hasMore: boolean; loadMore: () => void } {
+  const { items, hasMore, fetchNext, pageSize, resetKey } = opts
+  const { rows, expand } = useInlineBudget()
+  const [revealed, setRevealed] = useState(0)
+  const [prevKey, setPrevKey] = useState(resetKey)
+  if (resetKey !== prevKey) {
+    setPrevKey(resetKey)
+    setRevealed(0)
+  }
+  const cap = rows === null ? null : rows + revealed
+  const capped = cap !== null && items.length > cap
+  const shown = useMemo(() => (capped ? items.slice(0, cap) : items), [capped, items, cap])
+  const loadMore = useCallback(() => {
+    if (rows !== null && expand) return expand()
+    if (capped) return setRevealed((r) => r + (rows ?? 0))
+    if (rows !== null) setRevealed(items.length + pageSize - rows)
+    fetchNext()
+  }, [rows, expand, capped, items.length, pageSize, fetchNext])
+  return { items: shown, hasMore: capped || hasMore, loadMore }
 }

@@ -2,6 +2,13 @@ import { createContext, useContext, useMemo, type ReactNode } from "react"
 import { useDisplayMode, useHostContext } from "mcp-use/react"
 import { resolveRecoveryToolName } from "@miragon/mcp-toolkit-ui/hooks"
 import { hostThemeOf, type EffectiveTheme, type HostStyleVariables } from "./host-context.js"
+import {
+  INLINE_DIAGRAM_MAX_HEIGHT,
+  InlineBudgetProvider,
+  NO_INLINE_BUDGET,
+  inlineRowBudget,
+  type InlineBudget,
+} from "./inline-budget.js"
 import { DisplayModeProvider } from "./widget-shell.js"
 
 /**
@@ -54,7 +61,7 @@ export function useShellHost(): ShellHost {
  */
 export function ViewHostBridge({ children }: { children: ReactNode }) {
   const { hostContext, isAvailable, maxHeight } = useHostContext()
-  const { displayMode, availableDisplayModes } = useDisplayMode()
+  const { displayMode, availableDisplayModes, requestDisplayMode } = useDisplayMode()
   const host = useMemo<ShellHost>(
     () => ({
       connected: isAvailable,
@@ -70,9 +77,25 @@ export function ViewHostBridge({ children }: { children: ReactNode }) {
     }),
     [hostContext, isAvailable, maxHeight, displayMode, availableDisplayModes],
   )
+  // Inline, the view is a card in the chat: lists show the head of their rows
+  // and "show more" asks for fullscreen where the host offers it (#396).
+  const canExpand = availableDisplayModes.includes("fullscreen")
+  const budget = useMemo<InlineBudget>(
+    () =>
+      displayMode === "inline"
+        ? {
+            rows: inlineRowBudget(maxHeight),
+            diagramMaxHeight: INLINE_DIAGRAM_MAX_HEIGHT,
+            expand: canExpand ? () => void requestDisplayMode({ mode: "fullscreen" }) : null,
+          }
+        : NO_INLINE_BUDGET,
+    [displayMode, maxHeight, canExpand, requestDisplayMode],
+  )
   return (
     <ShellHostProvider host={host}>
-      <DisplayModeProvider mode={displayMode}>{children}</DisplayModeProvider>
+      <DisplayModeProvider mode={displayMode}>
+        <InlineBudgetProvider budget={budget}>{children}</InlineBudgetProvider>
+      </DisplayModeProvider>
     </ShellHostProvider>
   )
 }

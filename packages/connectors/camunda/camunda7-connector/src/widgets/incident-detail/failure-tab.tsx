@@ -8,12 +8,13 @@ import {
   cn,
 } from "@miragon/mcp-toolkit-ui"
 import {
+  formatNumber,
+  formatTimestamp,
   HandOffButton,
   Icon,
   IdText,
   LogText,
-  formatNumber,
-  formatTimestamp,
+  TEXT_BLOCK_FRAME,
 } from "@miragon-ai/widget-shell/widgets"
 import { Check, RotateCcw } from "lucide-react"
 
@@ -216,7 +217,10 @@ function StacktraceSection({ job }: { job: IncidentDetailJob }) {
   return (
     <pre
       aria-label={t("incidentFailure.stacktraceTitle")}
-      className="border-border bg-card text-foreground text-small max-h-[480px] overflow-auto rounded-md border p-3 font-mono leading-relaxed"
+      className={cn(
+        "border-border bg-card text-foreground text-small rounded-md border p-3 font-mono leading-relaxed",
+        TEXT_BLOCK_FRAME,
+      )}
     >
       {job.stacktrace}
     </pre>

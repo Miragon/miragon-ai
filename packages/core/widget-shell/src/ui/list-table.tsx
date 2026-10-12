@@ -1,5 +1,10 @@
-import { useId, type ReactNode } from "react"
-import { cn, MICRO_LABEL } from "@miragon/mcp-toolkit-ui"
+import { Children, useId, useState, type ReactNode } from "react"
+import { Button, cn, MICRO_LABEL, useLocale } from "@miragon/mcp-toolkit-ui"
+import { Maximize2 } from "lucide-react"
+import { formatNumber } from "./format.js"
+import { Icon } from "./icon.js"
+import { useInlineBudget, useRowsBudgeted } from "./inline-budget.js"
+import { kitLabels } from "./kit-labels.js"
 import { Th, type ColumnSort } from "./table.js"
 
 /**
@@ -208,6 +213,12 @@ function GroupRow({ groups }: { groups: ReadonlyArray<ListTableGroup> }) {
  * last column), and columns a reader can do without hide in a narrow region
  * (`hideBelow`). Dense table text: 14 px (`text-dense`, the product exception
  * of the type scale), heads 13 px semibold.
+ *
+ * Inline in a chat (#396) it shows the head of its rows, at most the view's
+ * row budget (`useInlineBudget`), and a last row says how many there are and
+ * offers the rest: fullscreen where the host offers it, else the next rows in
+ * place. A paged list budgets its own rows (`PagedRows`), so a table inside
+ * one is never capped twice.
  */
 export function ListTable({
   columns,
@@ -228,6 +239,13 @@ export function ListTable({
 }) {
   const scope = useId()
   const css = listTableCss(scope, columns, groups)
+  const budget = useInlineBudget()
+  const budgeted = useRowsBudgeted()
+  const [revealed, setRevealed] = useState(0)
+  const rows = Children.toArray(children)
+  const cap = budget.rows === null || budgeted ? null : budget.rows + revealed
+  const capped = cap !== null && rows.length > cap
+  const showMore = budget.expand ?? (() => setRevealed((r) => r + (budget.rows ?? 0)))
   return (
     // The frame does not scroll, so the ring laid over the region stays put
     // while the table scrolls under it.
@@ -261,7 +279,16 @@ export function ListTable({
               ))}
             </tr>
           </thead>
-          <tbody>{children}</tbody>
+          <tbody>{capped ? rows.slice(0, cap) : children}</tbody>
+          {capped && (
+            <MoreRows
+              colSpan={columns.length}
+              shown={cap}
+              total={rows.length}
+              fullscreen={budget.expand !== null}
+              onShowMore={showMore}
+            />
+          )}
         </table>
       </div>
       <span
@@ -270,5 +297,49 @@ export function ListTable({
         className={cn(RING_LAYER, REGION_FOCUS_RING)}
       />
     </div>
+  )
+}
+
+/**
+ * The last row of an inline table with more rows than its budget: how many
+ * it shows, and the way to the rest. A footer of its own (`<tfoot>`), so the
+ * position rules of the body rows never address it; its one cell spans every
+ * column and always shows (`display` set on the cell beats a hidden column's
+ * rule).
+ */
+function MoreRows({
+  colSpan,
+  shown,
+  total,
+  fullscreen,
+  onShowMore,
+}: {
+  colSpan: number
+  shown: number
+  total: number
+  fullscreen: boolean
+  onShowMore: () => void
+}) {
+  const labels = kitLabels(useLocale())
+  return (
+    <tfoot>
+      <tr data-list-table-more="">
+        <td
+          colSpan={colSpan}
+          style={{ display: "table-cell" }}
+          className="border-border border-t px-4 py-2"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-muted-foreground text-small" aria-live="polite">
+              {labels.rowsShown({ shown: formatNumber(shown), total: formatNumber(total) })}
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={onShowMore}>
+              {fullscreen && <Icon icon={Maximize2} dense />}
+              {fullscreen ? labels.showAll : labels.showMore}
+            </Button>
+          </div>
+        </td>
+      </tr>
+    </tfoot>
   )
 }
