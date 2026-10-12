@@ -85,6 +85,9 @@ const APP_ENV_VARS = [
   "MCP_ACTIVE_MODULES",
   "MCP_DASHBOARD_DIR",
   "MCP_PROFILE_DIR",
+  // mcp-use's request-log level, read by mcp-use itself (the boot warns at
+  // debug/trace).
+  "MCP_USE_LOG_LEVEL",
 ]
 
 /** The composition `createApp` hands to the shared boot (`createComposedServer`). */
