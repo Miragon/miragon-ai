@@ -38,14 +38,14 @@ anyone can reach unauthenticated. Deploying a BPMN/DMN is **code execution
 inside the engine JVM** (JUEL expressions, scripts), so
 `camunda7_create_deployment` also needs `CAMUNDA_ALLOW_DEPLOYMENTS=true`.
 
-`CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's token to the engine
-(never to Prometheus), which enforces the caller's permissions if its REST auth
-is on. With auth, profiles and saved dashboards scope to the user (`sub`);
-without it there is no caller identity: settings saves refuse and the
-dashboard builder is absent — it also needs every module above read-only.
-`docker compose --profile auth up -d` adds a local Keycloak on `:8480` (realm
-`miragon`, `demo`/`demo`; see `.env.example`). The public Fly playground is
-unauthenticated and pinned to `camunda7:read-only,analytics:read-only`.
+`CAMUNDA_AUTH_TYPE=passthrough` forwards each caller's token to the engine (never to
+Prometheus), which enforces the caller's permissions if its REST auth is on; only for a
+trusted single-audience setup, since the engine could replay that token here. With auth,
+profiles and saved dashboards scope to the user (`sub`); without it there is no caller
+identity: settings saves refuse and the dashboard builder is absent (it also needs
+every module above read-only). `docker compose --profile auth up -d` adds a local
+Keycloak on `:8480` (realm `miragon`, `demo`/`demo`; see `.env.example`). The public Fly
+playground is unauthenticated and pinned to `camunda7:read-only,analytics:read-only`.
 
 ## Environment variables
 

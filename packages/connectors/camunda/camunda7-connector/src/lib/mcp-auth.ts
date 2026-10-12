@@ -4,7 +4,9 @@ import { getMcpRequestInfo } from "@miragon-ai/widget-shell/server"
  * Resolves the bearer token of the MCP request currently being handled — the
  * token provider for `authType: "passthrough"`, where the credential each MCP
  * client presents to this server is forwarded to the engine per call, so the
- * engine enforces the caller's own permissions.
+ * engine enforces the caller's own permissions. A trusted single-audience
+ * setup only: the token was minted for this MCP server, and the engine (or
+ * anyone reading it there) could replay it against this server.
  *
  * Reads the raw `Authorization` header off the repo-owned ambient request
  * info (`getMcpRequestInfo`, `@miragon-ai/widget-shell/server`) — the

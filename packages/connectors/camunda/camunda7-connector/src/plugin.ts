@@ -25,6 +25,9 @@ export interface Camunda7PluginConfig {
    * `passthrough` forwards the bearer token each MCP client presents to this
    * server on to the engine per call ([[resolveMcpBearerToken]]) — no static
    * credentials; requires an MCP host that sends an `Authorization` header.
+   * Only for a trusted single-audience setup: the MCP auth spec forbids token
+   * passthrough, since the engine receives a token minted for this server and
+   * could replay it here (the boot warns, `bootWarnings` in `module.ts`).
    */
   authType?: Camunda7AuthType
   username?: string
