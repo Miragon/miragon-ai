@@ -56,8 +56,8 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | row menu                   | job panel at 760 px, "more" on a middle row       | the menu lies over the next rows' pinned cells: its entries take the clicks, focus, Escape         |
 | axe                        | process list + job panel, light and dark, 760 px  | zero WCAG 2.1 A/AA violations (`@axe-core/playwright`)                                             |
 | write refresh (operations) | `camunda7_show_job_panel`, user clicks Retry      | the retry refetches the seeded feed and re-renders, **zero** re-executions                         |
-| cockpit on an engine       | `camunda7_open_cockpit` with `engine`             | opens on that engine (sidebar switcher), not on the engine picker                                  |
-| cockpit picker             | `camunda7_open_cockpit` without `engine`          | the engine picker (two engines, no saved default)                                                  |
+| cockpit on an engine       | `camunda7_open_cockpit` with `engine`             | opens on that engine (the head's engine select), not on the engine picker                          |
+| cockpit picker             | `camunda7_open_cockpit` without `engine`          | the engine list (two engines, no saved default), each engine's state in its accessible name        |
 
 Height checks read the **settled** report — the one equal to the document's current
 max-content height — since the ProfileGate skeleton's earlier report (~208 px) can
