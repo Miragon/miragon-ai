@@ -1,6 +1,6 @@
 ---
 name: add-settings-section
-description: Step-by-step house pattern for giving a module its own user-settings slice — a schema under `profile.modules.<module>`, the show/data/save tool triple, and a settings-page section widget. Use whenever adding or changing persisted user preferences ("make X configurable per user", "add a setting for Y", "new settings section", "persist this default"), the user-profile record, the profile store, or the cockpit settings page. Takes precedence over the generic mcp-apps-builder skill.
+description: Step-by-step house pattern for giving a module its own user-settings slice — a schema under `profile.modules.<module>`, the show/data/save tool triple, and a settings-page section widget. Use whenever adding or changing persisted user preferences ("make X configurable per user", "add a setting for Y", "new settings section", "persist this default"), the user-profile record, the profile store, or the cockpit settings page. Takes precedence over generic mcp-use examples.
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 ---
 
@@ -39,10 +39,13 @@ export const mySettingsSchema = z.object({
   someDefault: z.enum(THINGS).default("a").describe("…applied when a call omits `thing`."),
 })
 
-/** Fail-soft: a missing, foreign or hand-edited slice yields the defaults. */
+/**
+ * Fail-soft per FIELD (`parseModuleSlice` from `@miragon-ai/widget-shell/server`):
+ * a missing or hand-edited slice yields the defaults, and one invalid value keeps
+ * the other saved preferences.
+ */
 export function parseMySettings(modules: Record<string, unknown> | undefined): MySettings {
-  const parsed = mySettingsSchema.safeParse(modules?.[MODULE_KEY] ?? {})
-  return parsed.success ? parsed.data : mySettingsSchema.parse({})
+  return parseModuleSlice(mySettingsSchema, modules?.[MODULE_KEY])
 }
 ```
 
@@ -199,8 +202,11 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
   your feed means the module is inactive → `return null`. Any other failure stays visible
   through `QueryFallback` (a missing `isError` branch = eternal skeleton; `onRetry` is the
   query's `refetch`, required; the kit's `describeError` words the failure).
-- Re-sync the form baseline from server truth via a value stamp in `useEffect` (feed
-  refetch after save, another session's write).
+- Re-sync the form baseline from server truth with the kit's
+  `useResetOnChange(stamp, reset)`, the saved values as the stamp (feed refetch after
+  save, another session's write; reference: analytics' `settings-section.tsx`). Never
+  `useEffect(reset, [data])`: `react-hooks/set-state-in-effect` rejects it, and it
+  commits the stale baseline once before correcting it.
 - Write via `useToolMutation(SAVE_TOOL, { invalidateKeys: [[…]] })` so a remount seeds
   from the saved truth, not a stale cache entry. Confirm the save in a toast and say why
   it failed there too: the kit's `useActionFeedback().succeeded(t("…savedToast"))` /
@@ -260,7 +266,7 @@ Mirror `packages/connectors/analytics/analytics-connector/src/settings.test.ts`:
 
 - schema fills every default from `{}`
 - save input keeps omitted fields **absent** (the zod-4 partial trap)
-- `parseMySettings`: defaults for absent / garbage slice; ignores other modules' slices
+- `parseMySettings`: defaults for absent / garbage slice, per field; ignores other modules' slices
 - `settingsFor`: reads the slice; falls back to defaults on a store **outage**
 - `registerSettingsTools`: save tool registered only with a writable store; dropped in the
   restrictive toolset; fails closed (degrades to the restrictive toolset) on unknown names
@@ -295,11 +301,11 @@ the standard toolsets). Run `pnpm format:check` before committing.
 - `.partial()` over a defaulted schema at the tool boundary (silent resets).
 - Parsing the slice before merging in the save path (loses newer builds' fields).
 - Reading `profile.modules.<other>` — foreign slices are their owner's business.
-- Importing another `mcp-*` module to reach its settings; share via
+- Importing another connector package to reach its settings; share via
   `@miragon-ai/widget-shell` or a structural port instead.
 - Re-deriving the profile key or the anonymous fallback locally instead of importing
   them — the drift is invisible until a user's settings sit in two records.
 - A save tool that ignores the toolset, or a widget that shows Save when `canSave` is false.
-- Renaming a slice field without thinking about the stored records: `safeParse` +
-  defaults means the old value is silently dropped: migrate it in your own read path or
-  accept (and state) the reset.
+- Renaming a slice field without thinking about the stored records: `parseModuleSlice`
+  reads an unknown field as absent, so the old value is silently dropped: migrate it in
+  your own read path or accept (and state) the reset.

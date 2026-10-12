@@ -12,7 +12,7 @@ Everything below is for running your own stack.
 
 ## Prerequisites
 
-- **Node.js 22+**
+- **Node.js 22.22.2 or later** (`engines` in the root `package.json`)
 - **pnpm 10.32.1** (pinned via `packageManager`; `corepack enable` picks it up automatically)
 - **Java 21** + [jenv](https://www.jenv.be/) (only needed to build the Kotlin engine plugins)
 - **Docker** (for Camunda, the OTEL Collector, and Prometheus)
@@ -76,4 +76,4 @@ committed lockfile — to the read-only mirror
 ## Documentation
 
 - **You're reading it.** Edit any page under `docs/` and `pnpm docs:dev` hot-reloads.
-- The root [`README.md`](https://github.com/miragon/miragon-ai/blob/main/README.md) keeps deep setup notes (Java/jenv quirks, Kotlin plugin builds, troubleshooting).
+- The root [`README.md`](https://github.com/miragon/miragon-ai/blob/main/README.md) lists every tool, toolset and env var; [`engine-plugins/README.md`](https://github.com/miragon/miragon-ai/blob/main/engine-plugins/README.md) covers the Kotlin plugin build.

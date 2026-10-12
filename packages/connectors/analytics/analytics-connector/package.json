@@ -53,6 +53,7 @@
   },
   "peerDependencies": {
     "@miragon/mcp-toolkit-core": "~2.8.0",
+    "@miragon/mcp-toolkit-ui": "~2.8.0",
     "lucide-react": "^0.562.0 || ^1.0.0",
     "mcp-use": "2.7.3",
     "react": "^19.2.0",
@@ -60,6 +61,9 @@
     "zod": "^4.4.0"
   },
   "peerDependenciesMeta": {
+    "@miragon/mcp-toolkit-ui": {
+      "optional": true
+    },
     "lucide-react": {
       "optional": true
     },

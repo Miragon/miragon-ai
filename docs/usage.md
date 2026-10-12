@@ -44,8 +44,8 @@ For a server on your own machine, use `http://127.0.0.1:8400/mcp` there —
 server listens on IPv4.
 
 Once connected, you'll see Camunda and analytics tools available in the
-assistant. Try asking _"list all running incidents"_ — Claude calls
-`camunda7_list_incidents` and renders the result in the incidents widget.
+assistant. Try asking _"show me the open incidents"_ — Claude calls
+`camunda7_show_incidents_dashboard` and renders the result in the incidents widget.
 
 ## What you can ask
 
@@ -67,8 +67,9 @@ operator widened it — answers every question but offers no write tools and no
 action buttons. Starting instances, completing tasks, retries and resolving
 incidents need `operations` (the default with login); deletions,
 modifications, migrations and signals need `admin`, which an operator has to
-enable explicitly. Every write prompts for explicit confirmation before running.
-A widget button that cancels, suspends or resolves asks first and names what
+enable explicitly. Whether a write the assistant starts asks you first is up
+to your chat app's tool-approval settings; the server marks every destructive
+tool (`destructiveHint`) so the app can ask. A widget button that cancels, suspends or resolves asks first and names what
 it acts on (instance, business key, engine); after any action the view reloads
 what it changed — completing a task shows the next one. The cockpit's
 **Refresh** re-reads the open view, e.g. after the assistant changed something.

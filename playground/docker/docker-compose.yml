@@ -167,9 +167,10 @@ services:
       start_period: 10s
 
   # Keycloak — the local IdP for the server's opt-in OAuth (MCP_OAUTH,
-  # provider "oidc-proxy": the server brokers MCP-client logins through its
-  # own /authorize + /token + /register with the pre-registered
-  # `miragon-ai-server` client). Opt-in via the `auth` profile — the plain
+  # provider "keycloak": the server only validates bearer tokens; MCP clients
+  # log in at Keycloak directly, by Dynamic Client Registration or with the
+  # pre-registered `miragon-ai-server` client for clients without DCR).
+  # Opt-in via the `auth` profile — the plain
   # `docker compose up` stays auth-free; with the profile a locally-run
   # server reaches it on localhost:8480. `--import-realm` seeds the `miragon` realm
   # (client + demo/demo user + the `mcp-resource` audience scope that stamps

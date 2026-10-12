@@ -5,7 +5,10 @@ Guidance for AI agents working in this repository. The repo-specific skills
 step-by-step walkthroughs for the two main feature paths — read them before adding tools,
 queries, or widgets; `.claude/skills/add-settings-section` covers the third path,
 module-owned user settings (a `profile.modules.<module>` slice + its tool triple + its
-section on the settings page).
+section on the settings page). The skills, READMEs and `docs/` are held to the code by
+`apps/mcp-server-camunda7/test/docs-refs.test.ts`: every backticked tool name must be
+registered, every repo path must exist, every identifier a house skill names must exist in
+the sources or the toolkit/mcp-use typings, and each docs page stays within its budget.
 
 ## What this repo is
 
@@ -740,7 +743,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
   `~2.8.0` (2.8.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
   appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
-  version. **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`) — a
+  version. A published package's shipped source imports only what its `dependencies` or
+  `peerDependencies` declare (`apps/mcp-server-camunda7/test/published-imports.test.ts`;
+  knip counts a devDependency as listed, so it cannot see this). **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`) — a
   duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
   on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
   `mcp-use` version in each package README and the release changelog. Toolkit updates are

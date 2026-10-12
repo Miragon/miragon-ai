@@ -15,7 +15,9 @@ package customers build their own connectors and composed servers on (see the
   feeds, and loading / error states. This is what keeps widgets rename-safe and refreshable.
 - **View builders** (`./server`) — `buildSingleWidgetView`, `buildComposedView` and
   `buildDataFeedResult` (the single implementation of the app-only `*_data` feed result), the
-  server-side helpers that assemble a widget tool's `{ widget, data }` result and `_meta.ui` wiring.
+  server-side helpers that assemble a widget tool's result: a summary for the model plus the
+  `structuredContent` layout its view renders. The view itself is declared on the tool by
+  `showToolBinding` (a `view` binding; mcp-use derives the `_meta.ui` keys from it).
 - **BPMN names** (`./server`): `readBpmnNames` / `parseBpmnNames`: the one rule every module
   reads a model's names by, without a DOM (a process's own name, else its Modeler pool's;
   character references such as `&#10;` and `&#38;` decoded, space folded), so two modules never

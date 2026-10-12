@@ -1,6 +1,6 @@
 ---
 name: add-bpm-feature
-description: Step-by-step house pattern for adding a new BPM operations tool, widget tool, or widget to the camunda7 module (`packages/connectors/camunda/camunda7-connector` + `packages/connectors/camunda/camunda7-client`). Use whenever adding or changing Camunda 7 / CIB Seven tools ("add a tool to suspend jobs", "expose X from the engine REST API"), input schemas, `show_*` widget tools, `*_data` feeds, or React widgets in the cockpit. Takes precedence over the generic mcp-apps-builder skill.
+description: Step-by-step house pattern for adding a new BPM operations tool, widget tool, or widget to the camunda7 module (`packages/connectors/camunda/camunda7-connector` + `packages/connectors/camunda/camunda7-client`). Use whenever adding or changing Camunda 7 / CIB Seven tools ("add a tool to suspend jobs", "expose X from the engine REST API"), input schemas, `show_*` widget tools, `*_data` feeds, or React widgets in the cockpit. Takes precedence over generic mcp-use examples.
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 ---
 
@@ -13,11 +13,11 @@ off a four-link registration chain. Follow the steps for the path you need.
 
 ## Step 0 — pick the render path
 
-| You need…                                | Path                                                      |
-| ---------------------------------------- | --------------------------------------------------------- |
-| JSON data for the model                  | Registrar tool in `src/tools/<domain>.ts` (Steps 1–3)     |
-| A widget rendered for the user + summary | `show_*` widget tool in `widget-tools.ts` (Step 4)        |
-| App-only JSON for in-widget refresh/nav  | `*_data` feed in `widget-tools.ts`, `...appOnly` (Step 4) |
+| You need…                                | Path                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| JSON data for the model                  | Registrar tool in `src/tools/<domain>.ts` (Steps 1–3)                    |
+| A widget rendered for the user + summary | `show_*` widget tool in `src/widget-tools/<area>.ts` (Step 4)            |
+| App-only JSON for in-widget refresh/nav  | `*_data` feed in `src/widget-tools/data-feeds.ts`, `...appOnly` (Step 4) |
 
 ## Step 1 — input schema in camunda7-client
 
@@ -337,11 +337,13 @@ somewhere**:
 4. `src/tool-names.ts` — add a `CAMUNDA7_SHOW_*` / `CAMUNDA7_*_DATA` constant for every
    new widget tool, so `host.showWidget(...)` call sites stay rename-safe.
 
-Links 1↔2 are guarded by `src/widgets/catalogue-sync.test.ts`; link 3 you verify by
-hand.
+Links 1↔2 are guarded by `src/widgets/catalogue-sync.test.ts`, link 3 by
+`apps/mcp-server-camunda7/test/widget-registry.test.ts` (every catalogued widget id needs a
+host-bundle entry).
 
-Then register the widget tool in `src/widget-tools.ts` (this file is the documented
-exception that uses `server.tool()` directly):
+Then register the widget tool in its area's file under `src/widget-tools/` (`cockpit.ts`,
+`instances.ts`, `incidents.ts`; `*_data` feeds in `data-feeds.ts`). `src/widget-tools.ts`
+wires them; these files are the documented exception that uses `server.tool()` directly:
 
 - Every widget-path tool (show tool AND feed) declares
   `inputSchema: strictToolInput({ … })` (from `@miragon-ai/widget-shell/server`) — never
@@ -364,7 +366,7 @@ exception that uses `server.tool()` directly):
 - `*_data` feeds: spread `...appOnly` (from `@miragon-ai/widget-shell/server` — the native
   `visibility: "app"` field, emitted as SEP-1865 `_meta.ui.visibility: ["app"]`, plus
   `openai/widgetAccessible`; **no** view binding) — return `buildDataFeedResult(data)` (from
-  `@miragon-ai/widget-shell/server`, aliased `rawData` in `widget-tools.ts`) so the
+  `@miragon-ai/widget-shell/server`, aliased `rawData` in `src/widget-tools/`) so the
   in-widget `callTool()` gets JSON back instead of the host rendering a new widget.
   Wrap every handler in `withToolErrors` (from `@miragon-ai/widget-shell/server`).
 - Shared data paths: every number a view shows comes from ONE builder in `src/data/`
