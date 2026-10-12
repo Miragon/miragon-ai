@@ -7,8 +7,9 @@
 
 /**
  * The narrow structural surface needed for tool-call middleware
- * (`server.use("mcp:tools/call", …)`) — callers pass an `MCPServer` without
- * this module importing mcp-use (same pattern as `McpMiddlewareHost`).
+ * (`server.use("mcp:tools/call", …)`, the metrics counter) — callers pass an
+ * `MCPServer` without this module importing mcp-use (same pattern as
+ * `McpMiddlewareHost`).
  */
 export interface ToolCallMiddlewareHost {
   use(
@@ -24,8 +25,8 @@ export function toolNameOf(ctx: unknown): string {
 
 /**
  * `error` for an `isError` result (the toolkit's `withToolErrors` shape —
- * handlers report failures as results, not throws), `ok` otherwise. Shared
- * by the log line and the metrics counter so both agree on what an error is.
+ * handlers report failures as results, not throws), `ok` otherwise — what the
+ * metrics counter calls an error.
  */
 export function toolCallOutcome(result: unknown): "ok" | "error" {
   const isError =
@@ -36,25 +37,19 @@ export function toolCallOutcome(result: unknown): "ok" | "error" {
 }
 
 /**
- * One log line per tools/call with tool name, duration, and outcome.
- * Arguments and results are deliberately not logged — they can carry
- * credentials or PII (e.g. process variables).
+ * mcp-use logs every request itself (one line per call: method, tool name,
+ * status, duration, an error's text), at `info` without any payload. Its
+ * `MCP_USE_LOG_LEVEL` raises that to `debug` (truncated tool inputs and
+ * outputs) or `trace` (full request and response dumps, headers included):
+ * process variables, business keys and bearer tokens then reach the log. The
+ * boot says so; `undefined` at `info` or unset.
  */
-export function installToolCallLogging(server: ToolCallMiddlewareHost, label: string): void {
-  server.use("mcp:tools/call", async (ctx, next) => {
-    const toolName = toolNameOf(ctx)
-    const start = Date.now()
-    try {
-      const result = await next()
-      console.log(
-        `[${label}] tools/call ${toolName} ${toolCallOutcome(result)} in ${Date.now() - start}ms`,
-      )
-      return result
-    } catch (error) {
-      console.log(`[${label}] tools/call ${toolName} error in ${Date.now() - start}ms`)
-      throw error
-    }
-  })
+export function requestLogLevelWarning(env: NodeJS.ProcessEnv): string | undefined {
+  const level = env.MCP_USE_LOG_LEVEL?.trim().toLowerCase()
+  if (level !== "debug" && level !== "trace") return undefined
+  return level === "trace"
+    ? "MCP_USE_LOG_LEVEL=trace — mcp-use logs every request and response in full, headers (bearer tokens) included. For debugging only."
+    : "MCP_USE_LOG_LEVEL=debug — mcp-use logs tool inputs and outputs (process variables, business keys) on every call. For debugging only."
 }
 
 /**

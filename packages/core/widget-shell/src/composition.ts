@@ -176,14 +176,22 @@ export function composeModules<TShared>(options: {
     ),
   ]
 
-  const activeModules = (env: NodeJS.ProcessEnv = process.env): ActiveModuleRef[] => {
+  /**
+   * `MCP_ACTIVE_MODULES` → the known modules (with their raw suffix) and the
+   * unknown names. Deliberately not the toolkit's `parseActiveModules`: that
+   * one reads an empty qualifier (`camunda7:`) as no qualifier, which would
+   * turn it into the auth-dependent default instead of failing closed. A name
+   * that appears twice is refused — two entries would build two plugins with
+   * colliding steps, and which suffix wins would be a guess.
+   */
+  const parseActiveModules = (
+    env: NodeJS.ProcessEnv,
+  ): { known: ActiveModuleRef[]; unknown: string[] } => {
     const envValue = env.MCP_ACTIVE_MODULES?.trim()
-
     if (!envValue || envValue === "all") {
-      return modules.map(({ name }) => ({ name }))
+      return { known: modules.map(({ name }) => ({ name })), unknown: [] }
     }
-
-    return envValue
+    const refs = envValue
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean)
@@ -195,14 +203,23 @@ export function composeModules<TShared>(options: {
         if (colon === -1) return { name: entry }
         return { name: entry.slice(0, colon).trim(), toolset: entry.slice(colon + 1).trim() }
       })
-      .filter(({ name }) => {
-        if (!registry[name]) {
-          console.warn(`[${label}] Unknown module "${name}" in MCP_ACTIVE_MODULES — skipping`)
-          return false
-        }
-        return true
-      })
+    const repeated = [...new Set(refs.map(({ name }) => name))].filter(
+      (name) => refs.filter((ref) => ref.name === name).length > 1,
+    )
+    if (repeated.length > 0) {
+      throw new Error(
+        `[${label}] MCP_ACTIVE_MODULES names ${repeated.map((name) => `"${name}"`).join(", ")} more than once — list each module once, with at most one :toolset.`,
+      )
+    }
+    return {
+      known: refs.filter(({ name }) => registry[name]),
+      unknown: refs.filter(({ name }) => !registry[name]).map(({ name }) => name),
+    }
   }
+
+  /** The known active modules; the unknown ones warn once per boot, in `emitBootWarnings`. */
+  const activeModules = (env: NodeJS.ProcessEnv = process.env): ActiveModuleRef[] =>
+    parseActiveModules(env).known
 
   // The one place a suffix becomes a toolset: per module, per boot.
   const effectiveToolset = (
@@ -287,9 +304,11 @@ export function composeModules<TShared>(options: {
     emitBootWarnings(env = process.env) {
       // Deliberately separate from `configFromEnv` (which runs inside
       // `resolveBoot` and stays side-effect free).
-      const warnings = activeModules(env).flatMap(
-        ({ name }) => registry[name].bootWarnings?.(env) ?? [],
-      )
+      const { known, unknown } = parseActiveModules(env)
+      const warnings = [
+        ...unknown.map((name) => `Unknown module "${name}" in MCP_ACTIVE_MODULES — skipping`),
+        ...known.flatMap(({ name }) => registry[name].bootWarnings?.(env) ?? []),
+      ]
       for (const warning of warnings) {
         console.warn(`[${label}] ${warning}`)
       }

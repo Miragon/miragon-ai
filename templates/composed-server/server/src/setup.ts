@@ -85,7 +85,6 @@ const APP_ENV_VARS = [
   "MCP_ACTIVE_MODULES",
   "MCP_DASHBOARD_DIR",
   "MCP_PROFILE_DIR",
-  "MCP_DEBUG_LEVEL",
 ]
 
 /** The composition `createApp` hands to the shared boot (`createComposedServer`). */

@@ -114,6 +114,12 @@ function isEngineUnresolvable({
  * The cockpit app is naturally inert here: it mounts its own `NavProvider`
  * deeper in the tree, which shadows this one for its subtree. Non-camunda7
  * widgets never call `useNav()` and render unchanged.
+ *
+ * Its queries (the engine list, the drilled views' feeds) run on the query
+ * client `ProfileGate` provides, so the shell belongs INSIDE
+ * `AppShellProviders`, as both host roots mount it. Deliberately not a client
+ * of its own: a drilled write invalidates the same cache the origin view and
+ * the profile read, and a second client would leave them stale.
  */
 export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
   // The rendered tool result's structuredContent (SEP-1865), via the
