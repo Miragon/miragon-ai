@@ -15,6 +15,7 @@ function rendered(tag: string | undefined) {
     opensInNewTab: labels.opensInNewTab("In CIB seven öffnen"),
     copyId: labels.copyId("5f0ce78e…"),
     heatmapRange: labels.heatmapRange({ min: "1", max: "1.234" }),
+    rowsShown: labels.rowsShown({ shown: "8", total: "23" }),
   }
 }
 
@@ -51,6 +52,9 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         heatmapElement: "Element",
         heatmapValue: "Wert",
         heatmapRange: "1 bis 1.234",
+        rowsShown: "8 von 23 angezeigt",
+        showAll: "Alle anzeigen",
+        showMore: "Mehr anzeigen",
       })
     }
   })
@@ -87,6 +91,9 @@ describe("kitLabels — the kit's own strings follow the active locale", () => {
         heatmapElement: "Element",
         heatmapValue: "Value",
         heatmapRange: "1 to 1.234",
+        rowsShown: "8 of 23 shown",
+        showAll: "Show all",
+        showMore: "Show more",
       })
     }
   })

@@ -1,17 +1,18 @@
 import { Fragment, useState } from "react"
 import { Button, DrillButton, StatusBadge, PagedListFooter } from "@miragon/mcp-toolkit-ui"
 import {
+  formatNumber,
+  formatTimestamp,
   HandOffButton,
   Icon,
   ListTable,
+  type ListTableColumn,
   LogText,
   OpenInCockpitLink,
+  PagedRows,
   Td,
-  ViewDataState,
-  formatNumber,
-  formatTimestamp,
   usePagedViewData,
-  type ListTableColumn,
+  ViewDataState,
 } from "@miragon-ai/widget-shell/widgets"
 import { Check } from "lucide-react"
 
@@ -274,13 +275,16 @@ export function PagedIncidentTable({
           {t("procIncTable.noIncidents")}
         </p>
       ) : (
-        <IncidentTable
-          incidents={paged.items}
-          recovery={recovery}
-          onAnalyze={onAnalyze}
-          engine={engine}
-          vendor={vendor}
-        />
+        // The rows are the inline head of the list (#396).
+        <PagedRows paged={paged}>
+          <IncidentTable
+            incidents={paged.items}
+            recovery={recovery}
+            onAnalyze={onAnalyze}
+            engine={engine}
+            vendor={vendor}
+          />
+        </PagedRows>
       )}
       <div className="bg-muted px-3 pb-1">
         <PagedListFooter paged={paged} noun={t("procIncTable.footerNoun")} />

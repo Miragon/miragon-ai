@@ -96,7 +96,7 @@ export { SERVED_FONT_FILES, SERVED_FONT_PATH, servedFontBaseUrl } from "../serve
 export { SegmentedControl, type SegmentedControlOption } from "./segmented-control.js"
 export { useDetailView } from "./use-detail-view.js"
 export { viewRefreshState, type ViewRefreshState } from "./view-refresh-state.js"
-export { LogText, LOG_TEXT_PREVIEW } from "./log-text.js"
+export { LogText, LOG_TEXT_PREVIEW, TEXT_BLOCK_FRAME } from "./log-text.js"
 export { AskAiButton, type AskAiButtonProps, type AskAiVariant } from "./ask-ai-button.js"
 export { HAND_OFF_ACTIONS, HandOffButton, type HandOffAction } from "./hand-off-button.js"
 export {
@@ -119,6 +119,15 @@ export { useApplyTheme } from "./use-apply-theme.js"
 export { usePagedViewData, type PagedViewData } from "./use-paged-view-data.js"
 export { usePagedListView, type PagedListView } from "./use-paged-list-view.js"
 export { PagedRows } from "./paged-rows.js"
+export {
+  DEFAULT_INLINE_ROWS,
+  INLINE_DIAGRAM_MAX_HEIGHT,
+  InlineBudgetProvider,
+  NO_INLINE_BUDGET,
+  inlineRowBudget,
+  useInlineBudget,
+  type InlineBudget,
+} from "./inline-budget.js"
 export {
   BpmnHeatmap,
   HeatmapLegend,

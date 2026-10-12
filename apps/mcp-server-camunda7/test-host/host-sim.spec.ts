@@ -766,6 +766,21 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     expect(reported).toBeLessThanOrEqual(220)
   })
 
+  // #396: a list view fits a usual budget as a card — it never turns into one
+  // scroll box inside the chat (the 220 px case above is the safety net).
+  test("a 600 px budget: the list view fits as a card, without a scroll of its own", async ({
+    page,
+  }) => {
+    const app = await openView(page, { maxHeight: 600 })
+
+    await expectProcessList(app)
+    const container = await app.locator("#root").evaluate((root) => {
+      const el = root.firstElementChild as HTMLElement
+      return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }
+    })
+    expect(container.scrollHeight).toBeLessThanOrEqual(container.clientHeight)
+  })
+
   test("host with fullscreen: the toggle requests it and follows the host's switch", async ({
     page,
   }) => {

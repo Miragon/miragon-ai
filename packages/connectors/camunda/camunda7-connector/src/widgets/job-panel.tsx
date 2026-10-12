@@ -11,19 +11,20 @@ import {
 
 import type { JobPanelData } from "../view-models.js"
 import {
+  formatNumber,
+  formatTimestamp,
   HandOffButton,
   Icon,
   IdText,
   ListTable,
   LogText,
   NamedId,
+  PagedRows,
   TableEmptyState,
   Td,
+  usePagedViewData,
   ViewDataState,
   WidgetShell,
-  formatNumber,
-  formatTimestamp,
-  usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import { Check } from "lucide-react"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
@@ -392,22 +393,25 @@ export function JobPanelWidget({
         <TableEmptyState>{t("jobPanel.noJobs")}</TableEmptyState>
       ) : (
         <>
-          {/* Jobs without retries come first — the feed sorts by retries. */}
-          <ListTable
-            ariaLabel={t("jobPanel.tableLabel")}
-            columns={[
-              { label: t("jobPanel.colActivity") },
-              { label: t("jobPanel.colInstance"), hideBelow: "lg" },
-              { label: t("jobPanel.colRetries"), align: "right" },
-              { label: t("jobPanel.colError") },
-              { label: t("jobPanel.colCreated"), align: "right", hideBelow: "md" },
-              { plain: true, sticky: true },
-            ]}
-          >
-            {jobs.map((job) => (
-              <JobRow key={job.id} job={job} retry={retry} engineId={engineId} />
-            ))}
-          </ListTable>
+          {/* Jobs without retries come first — the feed sorts by retries. The
+              rows are the inline head of the list (PagedRows, #396). */}
+          <PagedRows paged={paged}>
+            <ListTable
+              ariaLabel={t("jobPanel.tableLabel")}
+              columns={[
+                { label: t("jobPanel.colActivity") },
+                { label: t("jobPanel.colInstance"), hideBelow: "lg" },
+                { label: t("jobPanel.colRetries"), align: "right" },
+                { label: t("jobPanel.colError") },
+                { label: t("jobPanel.colCreated"), align: "right", hideBelow: "md" },
+                { plain: true, sticky: true },
+              ]}
+            >
+              {jobs.map((job) => (
+                <JobRow key={job.id} job={job} retry={retry} engineId={engineId} />
+              ))}
+            </ListTable>
+          </PagedRows>
           <PagedListFooter paged={paged} noun={t("jobPanel.footerNoun")} />
         </>
       )}

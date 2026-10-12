@@ -57,6 +57,11 @@ export interface KitLabels {
   noDataHint: string
   /** `BpmnHeatmap`: the values behind the colours, as a table under the diagram. */
   heatmapValues: string
+  /** An inline table with more rows than its budget (#396): how many it shows. */
+  rowsShown: (p: { shown: string; total: string }) => string
+  /** …and the way to the rest: fullscreen where the host offers it, else the next rows. */
+  showAll: string
+  showMore: string
   /** The frequency/duration switch's group name. */
   heatmapMetric: string
   heatmapElement: string
@@ -112,6 +117,9 @@ const LABELS: Record<Locale, KitLabels> = {
     heatmapElement: "Element",
     heatmapValue: "Value",
     heatmapRange: ({ min, max }) => `${min} to ${max}`,
+    rowsShown: ({ shown, total }) => `${shown} of ${total} shown`,
+    showAll: "Show all",
+    showMore: "Show more",
   },
   de: {
     loading: "Wird geladen…",
@@ -159,6 +167,9 @@ const LABELS: Record<Locale, KitLabels> = {
     heatmapElement: "Element",
     heatmapValue: "Wert",
     heatmapRange: ({ min, max }) => `${min} bis ${max}`,
+    rowsShown: ({ shown, total }) => `${shown} von ${total} angezeigt`,
+    showAll: "Alle anzeigen",
+    showMore: "Mehr anzeigen",
   },
 }
 

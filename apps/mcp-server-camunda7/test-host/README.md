@@ -49,6 +49,8 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | fonts blocked              | `resourceDomains=ignore` (CSP without them)       | faces fail, the host's font is drawn, rows and height within 5 % of the Geist render               |
 | font route unreachable     | the font requests are held, never answered        | the list paints at once in the fallback (`font-display: swap`), nothing waits                      |
 | height budget              | `containerDimensions.maxHeight: 220`              | settled report ≤ 220 and ≥ the capped container, the shell scrolls inside it                       |
+| list fits a 600 px budget  | `containerDimensions.maxHeight: 600`              | the list view fits as a card: the shell's container has no scroll of its own (#396)                |
+| inline head of a table     | analytics dashboard, `maxHeight: 400` (3 rows)    | 3 of 6 rows and "3 of 6 shown"; Show all requests fullscreen (all 6), without it Show more (#396)  |
 | inline KPI view            | `render-view` with `shell:kpi-grid`               | settled report < 200 px (K40), the view title as its one heading                                   |
 | fullscreen                 | `availableDisplayModes: ["inline", "fullscreen"]` | the toggle requests fullscreen and follows the host's switch                                       |
 | BPMN on a dark host        | `camunda7_show_bpmn_viewer`, `theme: "dark"`      | light canvas, dark flows/labels, every zoom button clickable past the logo                         |

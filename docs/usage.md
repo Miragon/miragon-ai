@@ -59,7 +59,9 @@ assistant. Try asking _"show me the open incidents"_ — Claude calls
 
 Most data-heavy answers come back as an interactive widget — process lists,
 task inboxes, incident dashboards, instance details, and analytics dashboards
-all render inline.
+all render inline. Inline a widget stays a compact card: a list shows its
+first rows and how many there are, and **Show all** opens it fullscreen where
+your chat app offers that.
 
 What the assistant may _change_ depends on the deployment's toolset. A
 read-only deployment — the playground, or any server without login unless its

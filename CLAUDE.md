@@ -256,6 +256,15 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    (`KometMark`, the CI's `miragon-komet-blau.svg` inlined unchanged and sha-pinned, ≥ 24 px;
    `AppEmptyState`) belongs to APP-level surfaces only (landing, first start, "no engines")
    and hangs on the theme slot `--brand-mark-display` a customer brand sets to `none`.
+   **Inline is a card, not a page** (#396): under a host, `useInlineBudget` (the host
+   bridge, from `containerDimensions.maxHeight`: 3–10 rows, 8 without a budget; none in
+   fullscreen or outside a host) caps a paged list in `usePagedViewData` (its `items` are
+   the head, the footer counts what is shown, `loadMore` opens fullscreen where the host
+   offers it, else shows the next rows in place) and an unpaged `ListTable` (a `<tfoot>`
+   line "3 of 6 shown" + Show all/Show more); a paged list's table sits in `PagedRows`,
+   which marks its rows as budgeted, so nothing caps twice. The inline BPMN canvas stays
+   ≤ 320 px, unbounded text (a log, a stack trace) scrolls in `TEXT_BLOCK_FRAME`, and
+   `HostDocument`'s scroll inside the budget is only the safety net.
    **Tables never widen the document** (U2, WCAG 1.4.10; the host simulation checks 760 px):
    `ListTable` scrolls inside a named region (`role="region"`, `tabIndex=0`, `ariaLabel`
    required; its focus ring an outline drawn INSIDE the region's box by a sibling layered

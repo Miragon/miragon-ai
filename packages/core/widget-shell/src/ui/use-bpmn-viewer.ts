@@ -10,6 +10,7 @@ import {
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer"
 import { type BpmnElement } from "./bpmn-heatmap/heat-utils.js"
 import { BPMN_TOKENS, cdVar } from "./bpmn-tokens.js"
+import { useInlineBudget } from "./inline-budget.js"
 
 /**
  * Structural typings for the bpmn-js services the widgets touch. bpmn-js ships
@@ -307,7 +308,10 @@ export function useBpmnViewer({
 
   const xmlBounds = useMemo(() => diagramBoundsFromXml(bpmnXml), [bpmnXml])
   const bounds = xmlBounds ?? (drawn?.xml === bpmnXml ? drawn.bounds : null)
-  const height = diagramHeight(bounds, width)
+  // Inline in a chat the frame stays low enough to leave room for the rest of
+  // the card (#396); fullscreen draws it at its own height.
+  const { diagramMaxHeight } = useInlineBudget()
+  const height = Math.min(diagramHeight(bounds, width), diagramMaxHeight ?? Infinity)
   // The frame took a new height: fit the diagram into it. A height change
   // from a new width refits only a viewer that refits on resize anyway — the
   // heatmap keeps the operator's pan and zoom; a new diagram size refits both.

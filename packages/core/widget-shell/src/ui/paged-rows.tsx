@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { cn, TONE_DOT } from "@miragon/mcp-toolkit-ui"
+import { RowsBudgeted } from "./inline-budget.js"
 import type { PagedViewData } from "./use-paged-view-data.js"
 
 /**
@@ -12,7 +13,8 @@ import type { PagedViewData } from "./use-paged-view-data.js"
  * `PagedListFooter` (`paged` passes as is), whose live count line says in
  * words what the bar marks ("Updating…", the failure above it), so old rows
  * under a new search never read as its answer. The toolkit did not lift this
- * piece: it is the kit's own.
+ * piece: it is the kit's own. Its rows are already the inline head
+ * (`usePagedViewData`, #396), so a `ListTable` inside does not cap them again.
  */
 export function PagedRows<TItem, TData>({
   paged,
@@ -41,7 +43,7 @@ export function PagedRows<TItem, TData>({
           )}
         />
       )}
-      {children}
+      <RowsBudgeted>{children}</RowsBudgeted>
     </div>
   )
 }
