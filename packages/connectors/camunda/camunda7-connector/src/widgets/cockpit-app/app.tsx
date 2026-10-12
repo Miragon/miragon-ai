@@ -14,23 +14,31 @@ import {
   Icon,
   type LucideIcon,
   NativeSelect,
+  NavigationFocus,
   useHostWidgets,
   useResetOnChange,
   ViewDataState,
   WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
-import { ChevronRight, Layers, LayoutDashboard, Settings, TriangleAlert } from "lucide-react"
+import { Layers, LayoutDashboard, Settings, TriangleAlert } from "lucide-react"
 import type { CockpitAppData } from "../../view-models.js"
 import { groupEnginesByEnvironment } from "../../lib/environments.js"
 import { EngineChromeProvider, EnvironmentChip, environmentIn } from "../lib/engine-context.js"
 import { NavProvider, type NavIntent, type OnNavigate } from "../navigation.js"
-import { buildViewParams, intentToView, popTo, pushView, type CockpitView } from "../nav-core.js"
+import {
+  buildViewParams,
+  type CockpitScope,
+  type CockpitView,
+  intentToView,
+  popTo,
+  pushView,
+} from "../nav-core.js"
 import { camunda7BaseWidgets } from "../registry.js"
 import { useHandOff } from "../lib/hand-off.js"
 import { cockpitContext, fleetContext, landingContext } from "./model-context.js"
 import { translator } from "../../messages/index.js"
 import { CAMUNDA7_LIST_ENGINES } from "../../tool-names.js"
-import { NavBreadcrumb } from "./breadcrumb.js"
+import { FleetCrumbs, NavBreadcrumb, navigationOf } from "./breadcrumb.js"
 import { cockpitViews } from "./views.js"
 import { useAnalyticsActive } from "./analytics-probe.js"
 import { FleetView } from "./fleet-view.js"
@@ -56,13 +64,6 @@ const SECTIONS: Array<{ id: TopSection; intent: NavIntent; icon: LucideIcon }> =
 function isTopSection(section: CockpitView["section"]): section is TopSection {
   return section === "overview" || section === "incidents" || section === "settings"
 }
-
-/**
- * Top-level cockpit scope. Open Cockpit offers two ways in: operate a single
- * engine, or run cross-engine ("fleet") analyses. `landing` is the chooser shown
- * when more than one engine is in the list and none was resolved.
- */
-type CockpitScope = { kind: "landing" } | { kind: "fleet" } | { kind: "engine"; engineId: string }
 
 /**
  * The whole navigation state in one reducer: `scope` decides WHICH cockpit is
@@ -289,32 +290,6 @@ function activeSectionOf(stack: CockpitView[]): TopSection {
   return root === "incidents" || root === "settings" ? root : "overview"
 }
 
-/**
- * The cross-engine view's trail: "Alle Engines" (the chooser) and itself,
- * the current page. The cockpit offers the view only with more than one
- * engine, so the chooser is always there to go back to.
- */
-function FleetCrumbs({ locale, onLanding }: { locale: string; onLanding: () => void }) {
-  return (
-    <nav
-      aria-label={translator(locale, "cockpit.aria.breadcrumb")}
-      className="text-muted-foreground text-dense mb-4 flex items-center gap-1.5"
-    >
-      <button
-        type="button"
-        onClick={onLanding}
-        className={cn("hover:text-foreground rounded", FOCUS_RING)}
-      >
-        {translator(locale, "cockpit.crumb.allEngines")}
-      </button>
-      <Icon icon={ChevronRight} dense />
-      <span aria-current="page" className="text-foreground font-medium">
-        {translator(locale, "cockpit.crumb.fleet")}
-      </span>
-    </nav>
-  )
-}
-
 /** Why the cockpit left the engine it was on: that engine left the engine list. Nothing without one. */
 function EngineGoneNotice({ engineId }: { engineId: string | null }) {
   const locale = useLocale()
@@ -453,9 +428,13 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
     return <EnginesEmptyState hasTransport={!!queryCallTool} enginesQuery={enginesQuery} />
   }
 
+  // Every view below renders in ONE frame, so a navigation (a drill, a crumb
+  // pop, a scope change) moves focus to the new view and names it (#344 N107).
+  const nav = navigationOf(scope, stack, locale)
+
   if (scope.kind === "landing") {
     return (
-      <>
+      <NavigationFocus viewKey={nav.key} label={nav.label}>
         {/* The model hears the picker as the picker — no engine is in scope. */}
         <HostModelContext content={context(landingContext(engineGroups))}>{null}</HostModelContext>
         <LandingChooser
@@ -465,18 +444,20 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
           onOpenFleet={openFleet}
           notice={<EngineGoneNotice engineId={goneEngineId} />}
         />
-      </>
+      </NavigationFocus>
     )
   }
 
   // ── Cross-engine (fleet) mode ─────────────────────────────────────────────
   if (scope.kind === "fleet") {
     return (
-      <WidgetShell>
-        <HostModelContext content={context(fleetContext(engineGroups))}>{null}</HostModelContext>
-        <FleetCrumbs locale={locale} onLanding={() => dispatch({ type: "to-landing" })} />
-        <FleetView engines={engines} onEnterEngine={enterEngine} widgets={cockpitWidgets} />
-      </WidgetShell>
+      <NavigationFocus viewKey={nav.key} label={nav.label}>
+        <WidgetShell>
+          <HostModelContext content={context(fleetContext(engineGroups))}>{null}</HostModelContext>
+          <FleetCrumbs locale={locale} onLanding={() => dispatch({ type: "to-landing" })} />
+          <FleetView engines={engines} onEnterEngine={enterEngine} widgets={cockpitWidgets} />
+        </WidgetShell>
+      </NavigationFocus>
     )
   }
 
@@ -488,57 +469,59 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
   const environment = environmentIn(engines, engineId)
 
   return (
-    <WidgetShell>
-      <HostModelContext content={context(cockpitContext(engineId, current))}>
-        {null}
-      </HostModelContext>
-      <CockpitHead
-        activeSection={activeSection}
-        onSection={(intent) => dispatch(intent)}
-        onOpenFleet={openFleet}
-        engineSwitch={
-          <EngineSwitch
-            engineId={engineId}
-            environment={environment}
-            engineGroups={engineGroups}
-            onSwitch={switchEngine}
-          />
-        }
-      />
-
-      <main className="min-w-0">
-        <EngineGoneNotice engineId={goneEngineId} />
-        {/* "Alle Engines" leads back to the chooser (#322 U15) whenever there
-            is more than one engine to choose from; a root view with a single
-            engine renders no trail (NavBreadcrumb handles that). */}
-        <NavBreadcrumb
-          stack={stack}
-          locale={locale}
-          rootLabel={
-            engines.length > 1 ? translator(locale, "cockpit.crumb.allEngines") : undefined
+    <NavigationFocus viewKey={nav.key} label={nav.label}>
+      <WidgetShell>
+        <HostModelContext content={context(cockpitContext(engineId, current))}>
+          {null}
+        </HostModelContext>
+        <CockpitHead
+          activeSection={activeSection}
+          onSection={(intent) => dispatch(intent)}
+          onOpenFleet={openFleet}
+          engineSwitch={
+            <EngineSwitch
+              engineId={engineId}
+              environment={environment}
+              engineGroups={engineGroups}
+              onSwitch={switchEngine}
+            />
           }
-          onPop={(to) => dispatch(to < 0 ? { type: "to-landing" } : { type: "pop", to })}
         />
 
-        {/* Every view is a layout of self-fetching widgets rendered through the
+        <main className="min-w-0">
+          <EngineGoneNotice engineId={goneEngineId} />
+          {/* "Alle Engines" leads back to the chooser (#322 U15) whenever there
+            is more than one engine to choose from; a root view with a single
+            engine renders no trail (NavBreadcrumb handles that). */}
+          <NavBreadcrumb
+            stack={stack}
+            locale={locale}
+            rootLabel={
+              engines.length > 1 ? translator(locale, "cockpit.crumb.allEngines") : undefined
+            }
+            onPop={(to) => dispatch(to < 0 ? { type: "to-landing" } : { type: "pop", to })}
+          />
+
+          {/* Every view is a layout of self-fetching widgets rendered through the
             toolkit renderer. The NavProvider is the client-side navigation
             seam: widgets call `useNav()`, which resolves to this in-app router
             instead of a chat follow-up. The head names the engine, so the
             views leave it out of their own meta line (EngineChromeProvider). */}
-        <NavProvider value={navigate}>
-          <EngineChromeProvider>
-            <WidgetRenderer
-              layout={filterLayoutToWidgets(
-                cockpitViews[current.section](buildViewParams(current, engineId)),
-                cockpitWidgets,
-              )}
-              keys={{}}
-              errors={[]}
-              widgets={cockpitWidgets}
-            />
-          </EngineChromeProvider>
-        </NavProvider>
-      </main>
-    </WidgetShell>
+          <NavProvider value={navigate}>
+            <EngineChromeProvider>
+              <WidgetRenderer
+                layout={filterLayoutToWidgets(
+                  cockpitViews[current.section](buildViewParams(current, engineId)),
+                  cockpitWidgets,
+                )}
+                keys={{}}
+                errors={[]}
+                widgets={cockpitWidgets}
+              />
+            </EngineChromeProvider>
+          </NavProvider>
+        </main>
+      </WidgetShell>
+    </NavigationFocus>
   )
 }

@@ -77,6 +77,7 @@ export function instance(over: Partial<InstanceDetailData> = {}): InstanceDetail
       ended: false,
     },
     processDefinitionName: null,
+    definitionKey: "invoice",
     activityTree: null,
     variables: { amount: { value: 42, type: "Integer" } },
     incidents: [],

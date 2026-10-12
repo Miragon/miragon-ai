@@ -253,3 +253,11 @@ export function selectedEntity(view: CockpitView): SelectedEntity {
   }
   return {}
 }
+
+/**
+ * Top-level cockpit scope. Open Cockpit offers two ways in: operate a single
+ * engine, or run cross-engine ("fleet") analyses. `landing` is the chooser shown
+ * when more than one engine is in the list and none was resolved.
+ */
+export type CockpitScope =
+  { kind: "landing" } | { kind: "fleet" } | { kind: "engine"; engineId: string }

@@ -119,6 +119,14 @@ export { useApplyTheme } from "./use-apply-theme.js"
 export { usePagedViewData, type PagedViewData } from "./use-paged-view-data.js"
 export { usePagedListView, type PagedListView } from "./use-paged-list-view.js"
 export { PagedRows } from "./paged-rows.js"
+export { NavigationFocus } from "./navigation-focus.js"
+export {
+  DisplayModeControlProvider,
+  DisplayModeToggle,
+  SHELL_VIEW_CONFIG,
+  useDisplayModeControl,
+  type DisplayModeControl,
+} from "./display-mode-toggle.js"
 export {
   DEFAULT_INLINE_ROWS,
   INLINE_DIAGRAM_MAX_HEIGHT,

@@ -104,6 +104,9 @@ export const enBuilder: MessageCatalog = {
   "builder.step.load-jobs.summary":
     "Reads the engine's jobs with the totals of all jobs and of jobs without retries.",
 
+  "builder.field.processList.engine.title": "Engine",
+  "builder.field.processList.engine.summary":
+    "The engine to read from. Without it, your default engine.",
   "builder.field.processList.processDefinitionKey.title": "Process definition key",
   "builder.field.processList.processDefinitionKey.summary":
     "Shows only the definition with exactly this key.",
@@ -128,6 +131,9 @@ export const enBuilder: MessageCatalog = {
   "builder.field.activityIncidentList.emptyVariant.title": "Without incidents",
   "builder.field.activityIncidentList.emptyVariant.summary":
     "What the list shows without an open incident: a short note, or other processes with incidents.",
+  "builder.field.processInstances.engine.title": "Engine",
+  "builder.field.processInstances.engine.summary":
+    "The engine to read from. Without it, your default engine.",
   "builder.field.processInstances.processDefinitionKey.title": "Process definition key",
   "builder.field.processInstances.processDefinitionKey.summary":
     "Lists the instances of this definition.",
@@ -143,6 +149,9 @@ export const enBuilder: MessageCatalog = {
   "builder.field.processInstances.businessKeyLike.title": "Business key contains",
   "builder.field.processInstances.businessKeyLike.summary":
     "Shows only instances whose business key contains this text.",
+  "builder.field.incidentDetail.engine.title": "Engine",
+  "builder.field.incidentDetail.engine.summary":
+    "The engine to read from. Without it, your default engine.",
   "builder.field.incidentDetail.incidentId.title": "Incident ID",
   "builder.field.incidentDetail.incidentId.summary": "The incident the widget shows.",
   "builder.field.engineHealth.engine.title": "Engine",

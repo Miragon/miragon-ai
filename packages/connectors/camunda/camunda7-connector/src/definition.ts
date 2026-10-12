@@ -13,8 +13,20 @@ import {
 import { processInstancesFilterShape } from "./feed-contracts.js"
 import { builderAppTitle, builderText, fieldText } from "./builder-texts.js"
 
+/**
+ * The `engine` a composed widget reads from (#344 N115): render-view and the
+ * builder can pin a view to an engine, as the cockpit does through its props.
+ */
+const engineField = (widget: string) =>
+  z
+    .string()
+    .optional()
+    .describe("Engine id. Omitted → saved default engine or single default.")
+    .meta(fieldText(`${widget}.engine`))
+
 const processListPropsSchema = z.toJSONSchema(
   z.object({
+    engine: engineField("processList"),
     processDefinitionKey: z
       .string()
       .optional()
@@ -78,6 +90,7 @@ const activityIncidentListPropsSchema = z.toJSONSchema(
 
 const processInstancesPropsSchema = z.toJSONSchema(
   z.object({
+    engine: engineField("processInstances"),
     processDefinitionKey: z
       .string()
       .describe("Process definition key whose instances to list.")
@@ -95,6 +108,7 @@ const processInstancesPropsSchema = z.toJSONSchema(
 
 const incidentDetailPropsSchema = z.toJSONSchema(
   z.object({
+    engine: engineField("incidentDetail"),
     incidentId: z
       .string()
       .describe("The incident ID to inspect.")

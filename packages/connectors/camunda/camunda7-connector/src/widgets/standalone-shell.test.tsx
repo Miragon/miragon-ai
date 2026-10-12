@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
 import {
+  DisplayModeControlProvider,
   HostWidgetsProvider,
   SettingsPageWidget,
   SHELL_SETTINGS_PAGE_WIDGET,
@@ -116,7 +117,61 @@ const followUps = (actions: HostActionLog[]) =>
 
 const originHidden = () => screen.getByText("origin-content").closest("[hidden]") !== null
 
+/** The shell under a host that offers fullscreen, recording what the view asks for. */
+function harnessWithFullscreen(displayMode: string, requests: string[]) {
+  const control = {
+    displayMode,
+    canFullscreen: true,
+    request: (mode: string) => requests.push(mode),
+  }
+  const Widget: ComponentType<Record<string, unknown>> = () => (
+    <DisplayModeControlProvider control={control}>
+      <Harness />
+    </DisplayModeControlProvider>
+  )
+  return Widget
+}
+
 describe("Camunda7StandaloneShell", () => {
+  // #344 N109: the origin's toolbar is hidden while drilled, so the drill
+  // brings its own fullscreen switch — and only where the host offers it.
+  it("offers fullscreen in a drill, and the way back from it", async () => {
+    const requests: string[] = []
+    renderShell({}, [], harnessWithFullscreen("inline", requests))
+    expect(screen.queryByRole("button", { name: "Fullscreen" })).toBeNull()
+
+    fireEvent.click(screen.getByText("drill-settings"))
+    fireEvent.click(await screen.findByRole("button", { name: "Fullscreen" }))
+    expect(requests).toEqual(["fullscreen"])
+
+    cleanup()
+    renderShell({}, [], harnessWithFullscreen("fullscreen", requests))
+    fireEvent.click(screen.getByText("drill-settings"))
+    fireEvent.click(await screen.findByRole("button", { name: "Exit fullscreen" }))
+    expect(requests).toEqual(["fullscreen", "inline"])
+  })
+
+  // #344 N107: a drill and a pop move focus to the view shown and name it.
+  it("moves focus to the drilled view and names it, and back on a pop", async () => {
+    renderShell({}, [])
+    fireEvent.click(screen.getByText("drill-settings"))
+    await screen.findByRole("navigation", { name: "Breadcrumb" })
+    const frame = document.activeElement as HTMLElement
+    expect(frame.getAttribute("tabindex")).toBe("-1")
+    expect(within(frame).getAllByRole("status")[0]?.textContent).toBe("Settings")
+
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+    expect(document.activeElement).toBe(frame)
+    expect(within(frame).getAllByRole("status")[0]?.textContent).toBe("Start")
+  })
+
+  it("offers no fullscreen switch where the host has none", async () => {
+    renderShell({}, [])
+    fireEvent.click(screen.getByText("drill-settings"))
+    await screen.findByRole("navigation", { name: "Breadcrumb" })
+    expect(screen.queryByRole("button", { name: "Fullscreen" })).toBeNull()
+  })
+
   it("renders the origin untouched at depth 0 — no trail, no chrome", () => {
     const actions: HostActionLog[] = []
     renderShell({}, actions)

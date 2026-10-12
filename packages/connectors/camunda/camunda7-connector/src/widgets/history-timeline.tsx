@@ -21,6 +21,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
+import { durationOutliers } from "./lib/duration-outliers.js"
 import { EngineMeta } from "./lib/engine-context.js"
 import { useT } from "../messages/use-t.js"
 import {
@@ -70,10 +71,16 @@ export function explainInstanceHandOff(
   }
 }
 
+/** The instance a timeline row belongs to — its id, and its key where known. */
+export interface TimelineInstanceRef {
+  id?: string
+  processDefinitionKey?: string | null
+}
+
 /** Why ONE step took this long — the outlier row's hand-off. */
 export function explainActivityHandOff(
   activity: HistoryEntry,
-  instance: TimelineInstance | null | undefined,
+  instance: TimelineInstanceRef | null | undefined,
   engineId: string | undefined,
 ): HandOff {
   return {
@@ -84,9 +91,11 @@ export function explainActivityHandOff(
       activityId: activity.activityId,
     },
     toolIds: {
-      analytics_element_bottleneck: { processDefinitionKey: instance?.processDefinitionKey },
+      analytics_element_bottleneck: {
+        processDefinitionKey: instance?.processDefinitionKey ?? undefined,
+      },
       analytics_analyze_process_performance: {
-        processDefinitionKey: instance?.processDefinitionKey,
+        processDefinitionKey: instance?.processDefinitionKey ?? undefined,
       },
     },
     facts: { durationMs: activity.durationInMillis, activityType: activity.activityType },
@@ -113,6 +122,7 @@ export function explainActivityHandOff(
 export function HistoryTimelineView({
   activities,
   processInstance,
+  instanceRef,
   engineId,
   totalActivities,
   incidentActivityIds,
@@ -120,6 +130,8 @@ export function HistoryTimelineView({
 }: {
   activities: HistoryEntry[]
   processInstance?: HistoryTimelineData["processInstance"]
+  /** The instance the rows belong to, for their hand-offs where no header data is shown. */
+  instanceRef?: TimelineInstanceRef
   engineId?: string
   totalActivities?: number
   /** Activities with an open incident on this instance — their running step is marked. */
@@ -141,22 +153,9 @@ export function HistoryTimelineView({
     return <HistoryTable entries={activities} incidentIds={incidentIds} />
   }
 
-  // Duration outliers: only surface the per-row "explain duration" hand-off
-  // affordance on the slowest step(s) so the timeline isn't cluttered. A row is
-  // an outlier if it has the single max duration, or its duration is >= 2x the
-  // median of all completed (non-null) durations.
-  const durations = activities.map((a) => a.durationInMillis).filter((d): d is number => d != null)
-  let outlierThreshold = Infinity
-  let maxDuration = -Infinity
-  if (durations.length > 0) {
-    const sorted = [...durations].sort((a, b) => a - b)
-    const mid = Math.floor(sorted.length / 2)
-    const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
-    outlierThreshold = median * 2
-    maxDuration = sorted[sorted.length - 1]
-  }
-  const isOutlier = (ms: number | null): boolean =>
-    ms != null && (ms === maxDuration || ms >= outlierThreshold)
+  // Duration outliers: the per-row "explain duration" hand-off only on the
+  // slowest step(s), so the timeline isn't cluttered (`durationOutliers`).
+  const isOutlier = durationOutliers(activities.map((a) => a.durationInMillis))
 
   return (
     <div className="flex flex-col gap-4">
@@ -250,7 +249,13 @@ export function HistoryTimelineView({
                       <HandOffButton
                         action="explainDuration"
                         variant="icon"
-                        prompt={ask(explainActivityHandOff(activity, processInstance, engineId))}
+                        prompt={ask(
+                          explainActivityHandOff(
+                            activity,
+                            processInstance ?? instanceRef,
+                            engineId,
+                          ),
+                        )}
                       />
                     )}
                   </div>
@@ -290,11 +295,14 @@ export function PagedHistoryView({
   variant = "timeline",
   initialPage = null,
   processInstance,
+  processDefinitionKey,
   incidentActivityIds,
 }: {
   processInstanceId: string
   /** Explicit engine routing; omitted → the caller's saved default engine. */
   engine?: string
+  /** The instance's definition key, where no header data (`processInstance`) carries it. */
+  processDefinitionKey?: string | null
   variant?: "timeline" | "table"
   /** Page 0 handed in (no self-fetch); "Load more" continues after it. */
   initialPage?: HistoryPage | null
@@ -342,6 +350,7 @@ export function PagedHistoryView({
         variant={variant}
         activities={paged.items}
         processInstance={processInstance}
+        instanceRef={{ id: processInstanceId, processDefinitionKey }}
         engineId={engine}
         totalActivities={paged.total}
         incidentActivityIds={incidentActivityIds}
