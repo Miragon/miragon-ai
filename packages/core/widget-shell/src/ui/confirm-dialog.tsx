@@ -1,4 +1,4 @@
-import { Fragment } from "react"
+import { Fragment, useRef } from "react"
 import {
   Button,
   Dialog,
@@ -12,6 +12,7 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import { describeError } from "./describe-error.js"
 import { kitLabels } from "./kit-labels.js"
+import { useHostDisplayMode } from "./widget-shell.js"
 
 /** One line of a confirmation's target block: what it is, and its id or name. */
 export type ConfirmTarget = readonly [label: string, value: string]
@@ -53,6 +54,12 @@ export interface ConfirmDialogProps {
  * While the write runs the dialog cannot be dismissed (its outcome would be
  * hidden); a failure shows inside it (`describeError`, raw text under
  * "Details") and the user can try again or keep.
+ *
+ * Inline in a chat (#344 K45) it opens beside the element that opened it,
+ * not in the middle of the frame: a frame as tall as its content can be far
+ * taller than the chat shows, and its middle is then off screen. The opener
+ * is in view (it was just used), so the dialog is centred on it, kept inside
+ * the frame ({@link anchoredTop}). In fullscreen it stays centred.
  */
 export function ConfirmDialog({
   open,
@@ -70,6 +77,18 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const locale = useLocale()
   const described = error ? describeError(error, locale) : null
+  const inline = useHostDisplayMode() === "inline"
+  const content = useRef<HTMLDivElement>(null)
+  // When the dialog opens, the focus is still on its opener (Radix fires this
+  // before it moves the focus in).
+  const anchor = () => {
+    const panel = content.current
+    const opener = document.activeElement
+    if (!inline || !panel || !opener || opener === document.body) return
+    const top = anchoredTop(opener.getBoundingClientRect(), panel.offsetHeight, window.innerHeight)
+    panel.style.top = `${top}px`
+    panel.style.translate = "-50% 0"
+  }
   return (
     <Dialog
       open={open}
@@ -77,7 +96,13 @@ export function ConfirmDialog({
         if (!pending) onOpenChange(next)
       }}
     >
-      <DialogContent role="alertdialog" showCloseButton={!pending} className="sm:max-w-md">
+      <DialogContent
+        ref={content}
+        role="alertdialog"
+        showCloseButton={!pending}
+        onOpenAutoFocus={anchor}
+        className="sm:max-w-md"
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="text-body">{description}</DialogDescription>
@@ -114,4 +139,21 @@ export function ConfirmDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+/** The gap the dialog keeps to the frame's edges (px). */
+const FRAME_MARGIN = 16
+
+/**
+ * The top of a dialog `height` px tall, centred on its opener and kept inside
+ * a frame `frameHeight` px tall — at the frame's top edge when it does not fit.
+ */
+export function anchoredTop(
+  opener: { top: number; height: number },
+  height: number,
+  frameHeight: number,
+): number {
+  const centred = opener.top + opener.height / 2 - height / 2
+  const lowest = frameHeight - height - FRAME_MARGIN
+  return Math.max(FRAME_MARGIN, Math.min(centred, lowest))
 }
