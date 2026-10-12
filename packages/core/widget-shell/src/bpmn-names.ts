@@ -28,7 +28,6 @@ export interface BpmnModelNames {
 /** A start tag: prefix, local name, and its attributes (a quoted value may hold `>`). */
 const START_TAG =
   /<(?:[A-Za-z_][\w.-]*:)?([A-Za-z_][\w.-]*)((?:\s+[A-Za-z_][\w:.-]*\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*\/?>/g
-const ATTRIBUTE = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" }
 
@@ -51,9 +50,38 @@ function attributeText(raw: string): string {
     .trim()
 }
 
+const isSpace = (c: string | undefined) => c === " " || c === "\t" || c === "\n" || c === "\r"
+const NAME_CHAR = /[\w:.-]/
+const NAME_START = /^[A-Za-z_]/
+
+/**
+ * The `name="value"` / `name='value'` pairs of a start tag, read by a linear
+ * tokenizer: a global attribute regex rescans from every position of a run
+ * without `=` (CodeQL js/polynomial-redos), and the XML comes from an engine.
+ * Every step advances, so malformed input ends the loop too.
+ */
 function attributesOf(raw: string): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const m of raw.matchAll(ATTRIBUTE)) out[m[1]] = m[2] ?? m[3] ?? ""
+  let at = 0
+  while (at < raw.length) {
+    while (isSpace(raw[at])) at++
+    const start = at
+    while (at < raw.length && NAME_CHAR.test(raw[at])) at++
+    const name = raw.slice(start, at)
+    while (isSpace(raw[at])) at++
+    if (raw[at] !== "=") {
+      at = Math.max(at, start + 1)
+      continue
+    }
+    at++
+    while (isSpace(raw[at])) at++
+    const quote = raw[at]
+    if (quote !== '"' && quote !== "'") continue
+    const end = raw.indexOf(quote, at + 1)
+    if (end === -1) break
+    if (NAME_START.test(name)) out[name] = raw.slice(at + 1, end)
+    at = end + 1
+  }
   return out
 }
 

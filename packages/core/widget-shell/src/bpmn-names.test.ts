@@ -113,6 +113,22 @@ describe("readBpmnNames — comments and CDATA are cut linearly (CodeQL js/polyn
     expect(readBpmnNames(doc("<![CDATA[ never closed")).elements).toEqual({})
   })
 
+  it("reads attributes with a linear tokenizer", () => {
+    const many = Array.from({ length: 20_000 }, (_, i) => `a${i}="${i}"`).join(" ")
+    const doc = (tag: string) => `<definitions><process id="p">${tag}</process></definitions>`
+    const started = performance.now()
+    // A run without `=` makes the tag malformed: no names, and still fast.
+    expect(readBpmnNames(doc(`<task ${"A".repeat(100_000)} id="t" name="x"/>`)).elements).toEqual(
+      {},
+    )
+    expect(readBpmnNames(doc(`<task ${many} id="t" name='Prüfen' other = "x"/>`)).elements).toEqual(
+      {
+        t: "Prüfen",
+      },
+    )
+    expect(performance.now() - started).toBeLessThan(1000)
+  })
+
   it("stays fast on many repeated openers", () => {
     const started = performance.now()
     expect(readBpmnNames(doc("<!--".repeat(100_000))).elements).toEqual({})
