@@ -2,7 +2,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
-import { ConfirmDialog, type ConfirmDialogProps } from "./confirm-dialog.js"
+import { useState } from "react"
+import { anchoredTop, ConfirmDialog, type ConfirmDialogProps } from "./confirm-dialog.js"
+import { DisplayModeProvider } from "./widget-shell.js"
 
 afterEach(cleanup)
 
@@ -104,5 +106,57 @@ describe("ConfirmDialog (CI §8 dialogs, §9 destructive)", () => {
     expect(
       screen.getByText("[503 ProcessEngineException] down (engine prod)").closest("details"),
     ).toBeTruthy()
+  })
+})
+
+// #344 K45: inline, a frame as tall as its content can be far taller than the
+// chat shows; the dialog opens beside its opener, which is in view.
+describe("ConfirmDialog placement", () => {
+  it("anchoredTop centres on the opener and stays inside the frame", () => {
+    expect(anchoredTop({ top: 900, height: 40 }, 300, 2000)).toBe(770)
+    expect(anchoredTop({ top: 1950, height: 40 }, 300, 2000)).toBe(1684)
+    expect(anchoredTop({ top: 0, height: 40 }, 300, 2000)).toBe(16)
+  })
+
+  function Opener({ mode }: { mode: string }) {
+    const [open, setOpen] = useState(false)
+    return (
+      <DisplayModeProvider mode={mode}>
+        <button type="button" onClick={() => setOpen(true)}>
+          Cancel instance…
+        </button>
+        <ConfirmDialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Cancel this instance?"
+          description="The instance stops for good."
+          target={[["Instance", "pi-1"]]}
+          confirmLabel="Cancel instance"
+          keepLabel="Keep instance"
+          onConfirm={vi.fn()}
+        />
+      </DisplayModeProvider>
+    )
+  }
+
+  function openFrom(mode: string) {
+    render(<Opener mode={mode} />)
+    const opener = screen.getByRole("button", { name: "Cancel instance…" })
+    opener.getBoundingClientRect = () => ({ top: 1200, height: 40 }) as DOMRect
+    opener.focus()
+    fireEvent.click(opener)
+    return screen.getByRole("alertdialog")
+  }
+
+  it("opens beside its opener inline", () => {
+    const dialog = openFrom("inline")
+    expect(dialog.style.top).toMatch(/px$/)
+    expect(Number.parseFloat(dialog.style.top)).toBeGreaterThan(16)
+    expect(dialog.style.translate).toBe("-50% 0")
+  })
+
+  it("stays centred in fullscreen", () => {
+    const dialog = openFrom("fullscreen")
+    expect(dialog.style.top).toBe("")
   })
 })

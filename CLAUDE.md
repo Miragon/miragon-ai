@@ -250,7 +250,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    write's failure to its dialog. `ConfirmDialog` (kit, `ConfirmTarget` lines) is the one
    confirmation: an `alertdialog` on the toolkit `Dialog` (scrim, md radius, `shadow-3`),
    verb + object on both buttons, the destructive confirm in the danger role, closed to
-   dismissal while the write runs. Nothing to show is `TableEmptyState`: `variant="done"`
+   dismissal while the write runs; inline it opens beside its opener, not in the middle of a
+   frame taller than the chat shows (`anchoredTop`, #344 K45). Nothing to show is `TableEmptyState`: `variant="done"`
    (`CircleCheck`, success tone) for "nothing left to do", the quiet `Inbox` default for no
    data, `description` and `action` as the toolkit's `EmptyState` takes them; the Komet
    (`KometMark`, the CI's `miragon-komet-blau.svg` inlined unchanged and sha-pinned, ≥ 24 px;
