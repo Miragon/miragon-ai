@@ -7,7 +7,11 @@ import { appOnly, showToolBinding, strictToolInput } from "./widget-tool-binding
 describe("showToolBinding", () => {
   it("binds the view to the tool name and stamps the Apps-SDK _meta half", () => {
     const binding = showToolBinding("camunda7_show_thing", "Thing")
-    expect(binding.view).toEqual({ name: "camunda7_show_thing" })
+    expect(binding.view).toEqual({
+      name: "camunda7_show_thing",
+      description: "Thing",
+      prefersBorder: true,
+    })
     expect(binding._meta).toMatchObject({
       "openai/outputTemplate": "ui://views/camunda7_show_thing.html",
       "openai/widgetAccessible": true,

@@ -42,6 +42,9 @@
  *   apps/<app>/test/__golden__/char-budgets.json
  *                                   model-visible tool-surface budgets
  *                                   shrink-only, never removed
+ *   apps/<app>/test/__golden__/bundle-budget.json
+ *                                   widget-bundle gzip ceilings shrink-only,
+ *                                   never removed
  *   package.json (root)             no gate drops out of `lint`/`test`, and the
  *                                   chains only gain plain `pnpm <script>`
  *                                   gates; every chained gate script and the
@@ -109,6 +112,7 @@ export function ratchetKind(relPath) {
   if (relPath === "knip.jsonc") return "knip"
   if (SHADOW_CONFIGS.some(({ pattern }) => pattern.test(relPath))) return "shadow-config"
   if (/^apps\/[^/]+\/test\/__golden__\/char-budgets\.json$/.test(relPath)) return "char-budgets"
+  if (/^apps\/[^/]+\/test\/__golden__\/bundle-budget\.json$/.test(relPath)) return "bundle-budget"
   if (relPath === "package.json") return "root-scripts"
   if (new RegExp(`^${PKG}/package\\.json$`).test(relPath)) return "package-scripts"
   return null
@@ -946,7 +950,15 @@ function compareKnip(relPath, oldJson, newJson) {
   return violations
 }
 
-function compareCharBudgets(relPath, oldJson, newJson) {
+/** The growth message of each shrink-only budget file. */
+const BUDGET_GROWTH = {
+  "char-budgets": (relPath, name, from, to) =>
+    `${relPath} -> "${name}": ${from} -> ${to} model-visible characters. The LLM-facing tool surface budget is shrink-only — trim descriptions/schemas elsewhere, or justify the growth with a Ratchet-Exception trailer.`,
+  "bundle-budget": (relPath, name, from, to) =>
+    `${relPath} -> "${name}": ${from} -> ${to} bytes gzip. Every view resource inlines the widget bundle, so its ceiling is shrink-only — shrink the bundle, or justify the growth with a Ratchet-Exception trailer.`,
+}
+
+function compareBudgets(kind, relPath, oldJson, newJson) {
   const violations = []
   for (const [name, oldValue] of Object.entries(oldJson ?? {})) {
     if (name.startsWith("$") || typeof oldValue !== "number") continue
@@ -954,9 +966,7 @@ function compareCharBudgets(relPath, oldJson, newJson) {
     if (typeof newValue !== "number") {
       violations.push(`${relPath} -> budget "${name}" was removed (was ${oldValue}).`)
     } else if (newValue > oldValue) {
-      violations.push(
-        `${relPath} -> "${name}": ${oldValue} -> ${newValue} model-visible characters. The LLM-facing tool surface budget is shrink-only — trim descriptions/schemas elsewhere, or justify the growth with a Ratchet-Exception trailer.`,
-      )
+      violations.push(BUDGET_GROWTH[kind](relPath, name, oldValue, newValue))
     }
   }
   return violations
@@ -1108,7 +1118,9 @@ export function checkRatchetFile(relPath, oldText, newText, fileExists = () => t
   }
   if (kind === "stryker") return compareStryker(relPath, oldJson, newJson, fileExists)
   if (kind === "knip") return compareKnip(relPath, oldJson, newJson)
-  if (kind === "char-budgets") return compareCharBudgets(relPath, oldJson, newJson)
+  if (kind === "char-budgets" || kind === "bundle-budget") {
+    return compareBudgets(kind, relPath, oldJson, newJson)
+  }
   if (kind === "root-scripts") return compareRootScripts(relPath, oldJson, newJson)
   if (kind === "package-scripts") return comparePackageScripts(relPath, oldJson, newJson)
   return []

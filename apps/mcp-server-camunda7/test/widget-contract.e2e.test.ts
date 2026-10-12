@@ -3,7 +3,7 @@ import { VIEW_RESOURCE_URI_PREFIX, viewResourceUri } from "@miragon/mcp-toolkit-
 import type { Client } from "@modelcontextprotocol/client"
 import { bootServer, type BootedServer } from "./boot-server.js"
 
-type ToolEntry = { name: string; _meta?: Record<string, unknown> }
+type ToolEntry = { name: string; title?: string; _meta?: Record<string, unknown> }
 
 function toolMeta(tool: ToolEntry | undefined): Record<string, unknown> {
   expect(tool?._meta, `${tool?.name ?? "tool"} should carry _meta`).toBeTruthy()
@@ -150,6 +150,23 @@ describe("widget wire contract (dual-protocol _meta)", () => {
       const resource = viewResources.find((r) => r.uri === viewResourceUri(tool.name))
       expect(resource, `view resource for ${tool.name} should be listed`).toBeDefined()
       expect(resource!.mimeType).toBe("text/html;profile=mcp-app")
+    }
+  })
+
+  // #344 N159: every module view names itself and asks the host for a border
+  // (owner decision 2026-10-12) — the cards draw none of their own.
+  it("names every module view and asks the host for a border", async () => {
+    const showTools = tools.filter((t) => t.name.includes("_show_"))
+    expect(showTools.length).toBeGreaterThanOrEqual(20)
+    for (const tool of showTools) {
+      const { contents } = await client.readResource({ uri: viewResourceUri(tool.name) })
+      const ui = uiBlock((contents[0] as { _meta?: Record<string, unknown> })._meta ?? {})
+      expect(ui.prefersBorder, tool.name).toBe(true)
+    }
+    const { resources } = await client.listResources()
+    for (const tool of showTools) {
+      const resource = resources.find((r) => r.uri === viewResourceUri(tool.name))
+      expect(resource?.description, tool.name).toBe(tool.title)
     }
   })
 
