@@ -292,6 +292,11 @@ export interface InstanceDetailData {
   }
   /** The process's name, from the instance's diagram — null without one or unreadable. */
   processDefinitionName: string | null
+  /**
+   * The key the instance's definition id names, null for a bare generated id
+   * (long keys) — the timeline rows' analytics hand-offs, omitted when null.
+   */
+  definitionKey: string | null
   activityTree: ActivityTree | null
   variables: Record<string, VariableValue>
   /** The instance's open incidents (capped list; the total is `incidentCount`). */

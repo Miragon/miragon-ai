@@ -264,7 +264,11 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    line "3 of 6 shown" + Show all/Show more); a paged list's table sits in `PagedRows`,
    which marks its rows as budgeted, so nothing caps twice. The inline BPMN canvas stays
    ≤ 320 px, unbounded text (a log, a stack trace) scrolls in `TEXT_BLOCK_FRAME`, and
-   `HostDocument`'s scroll inside the budget is only the safety net.
+   `HostDocument`'s scroll inside the budget is only the safety net. The roots declare
+   inline + fullscreen only (`SHELL_VIEW_CONFIG`, no pip); a client-side router renders its
+   views in ONE `NavigationFocus` frame (focus moves to the new view, its name announced
+   politely); a surface that hides the view's toolbar (the standalone drill) brings
+   `DisplayModeToggle`.
    **Tables never widen the document** (U2, WCAG 1.4.10; the host simulation checks 760 px):
    `ListTable` scrolls inside a named region (`role="region"`, `tabIndex=0`, `ariaLabel`
    required; its focus ring an outline drawn INSIDE the region's box by a sibling layered

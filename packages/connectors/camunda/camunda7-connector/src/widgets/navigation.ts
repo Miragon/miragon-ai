@@ -92,7 +92,8 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
       host.showWidget(
         buildShowWidgetIntent(
           CAMUNDA7_SHOW_CLUSTER_DETAIL,
-          `Show the failure cluster for activity \`${intent.activityId}\` (incident type ${intent.incidentType})`,
+          // The signature narrows the cluster to one failure (#344 N115).
+          `Show the failure cluster for activity \`${intent.activityId}\` (incident type ${intent.incidentType}${intent.messageSignature ? `, message signature \`${intent.messageSignature}\`` : ""})`,
         ),
       )
       return

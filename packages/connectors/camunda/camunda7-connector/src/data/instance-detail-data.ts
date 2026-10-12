@@ -147,6 +147,7 @@ export async function buildInstanceDetailData(
   return {
     instance: instance as unknown as InstanceDetailData["instance"],
     processDefinitionName: bpmnXml && processKey ? parseBpmnNames(bpmnXml, processKey).name : null,
+    definitionKey: processKey,
     activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
     variables: variables as unknown as InstanceDetailData["variables"],
     incidents: incidentRows,

@@ -7,7 +7,9 @@ import {
   useHostActions,
 } from "@miragon/mcp-toolkit-ui/app"
 import {
+  DisplayModeToggle,
   filterLayoutToWidgets,
+  NavigationFocus,
   useHostWidgets,
   useResetOnChange,
   WidgetShell,
@@ -17,6 +19,7 @@ import { NavBreadcrumb } from "./cockpit-app/breadcrumb.js"
 import { cockpitViews } from "./cockpit-app/views.js"
 import {
   buildViewParams,
+  crumbLabel,
   intentToView,
   popTo,
   pushView,
@@ -208,44 +211,56 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
   // reads broken. One localized label until server-side title i18n lands.
   const originLabel = translator(locale, "cockpit.crumb.origin")
 
+  // A drill and a pop are navigations: focus moves to the view shown and its
+  // name is announced (#344 N107).
+  const viewKey = JSON.stringify(stack)
+  const viewLabel = current ? crumbLabel(current, locale) : originLabel
+
   return (
     <NavProvider value={navigate}>
-      {/* The origin render stays mounted while a drill view is shown — "back"
+      <NavigationFocus viewKey={viewKey} label={viewLabel}>
+        {/* The origin render stays mounted while a drill view is shown — "back"
           is instant and keeps its state (paging, search, expanded rows). */}
-      <div hidden={current !== undefined}>{children}</div>
-      {current !== undefined && (
-        <WidgetShell>
-          {/* Outside the engine conditional on purpose: the way back to the
+        <div hidden={current !== undefined}>{children}</div>
+        {current !== undefined && (
+          <WidgetShell>
+            {/* Outside the engine conditional on purpose: the way back to the
               origin must exist even while (or if) the engines query never
-              settles — a drill must never trap the user on a loading state. */}
-          <NavBreadcrumb
-            stack={stack}
-            locale={locale}
-            rootLabel={originLabel}
-            onPop={(to) => setStack((prev) => (to < 0 ? [] : popTo(prev, to)))}
-          />
-          {!needsEngine || engineId ? (
-            <>
-              <HostModelContext content={context(drillContext(current, engineId))}>
-                {null}
-              </HostModelContext>
-              <WidgetRenderer
-                layout={filterLayoutToWidgets(
-                  cockpitViews[current.section](buildViewParams(current, engineId ?? "")),
-                  drillWidgets,
-                )}
-                keys={{}}
-                errors={[]}
-                widgets={drillWidgets}
+              settles — a drill must never trap the user on a loading state.
+              The origin's toolbar is hidden with it, so the drill brings its
+              own fullscreen switch (#344 N109). */}
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <NavBreadcrumb
+                stack={stack}
+                locale={locale}
+                rootLabel={originLabel}
+                onPop={(to) => setStack((prev) => (to < 0 ? [] : popTo(prev, to)))}
               />
-            </>
-          ) : (
-            <div className="text-muted-foreground text-dense p-6">
-              {translator(locale, "cockpit.loading.engines")}
+              <DisplayModeToggle />
             </div>
-          )}
-        </WidgetShell>
-      )}
+            {!needsEngine || engineId ? (
+              <>
+                <HostModelContext content={context(drillContext(current, engineId))}>
+                  {null}
+                </HostModelContext>
+                <WidgetRenderer
+                  layout={filterLayoutToWidgets(
+                    cockpitViews[current.section](buildViewParams(current, engineId ?? "")),
+                    drillWidgets,
+                  )}
+                  keys={{}}
+                  errors={[]}
+                  widgets={drillWidgets}
+                />
+              </>
+            ) : (
+              <div className="text-muted-foreground text-dense p-6">
+                {translator(locale, "cockpit.loading.engines")}
+              </div>
+            )}
+          </WidgetShell>
+        )}
+      </NavigationFocus>
     </NavProvider>
   )
 }

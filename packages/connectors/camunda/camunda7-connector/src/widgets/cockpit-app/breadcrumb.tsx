@@ -2,7 +2,7 @@ import { FOCUS_RING, cn } from "@miragon/mcp-toolkit-ui"
 import { Icon } from "@miragon-ai/widget-shell/widgets"
 import { ChevronRight } from "lucide-react"
 import { translator } from "../../messages/index.js"
-import { crumbLabel, type CockpitView } from "../nav-core.js"
+import { crumbLabel, type CockpitScope, type CockpitView } from "../nav-core.js"
 
 /**
  * The breadcrumb IS the stack — every crumb pops back to the view it names, so
@@ -52,4 +52,49 @@ export function NavBreadcrumb({
       ))}
     </nav>
   )
+}
+
+/**
+ * The cross-engine view's trail: "Alle Engines" (the chooser) and itself,
+ * the current page. The cockpit offers the view only with more than one
+ * engine, so the chooser is always there to go back to.
+ */
+export function FleetCrumbs({ locale, onLanding }: { locale: string; onLanding: () => void }) {
+  return (
+    <nav
+      aria-label={translator(locale, "cockpit.aria.breadcrumb")}
+      className="text-muted-foreground text-dense mb-4 flex items-center gap-1.5"
+    >
+      <button
+        type="button"
+        onClick={onLanding}
+        className={cn("hover:text-foreground rounded", FOCUS_RING)}
+      >
+        {translator(locale, "cockpit.crumb.allEngines")}
+      </button>
+      <Icon icon={ChevronRight} dense />
+      <span aria-current="page" className="text-foreground font-medium">
+        {translator(locale, "cockpit.crumb.fleet")}
+      </span>
+    </nav>
+  )
+}
+
+/** What the cockpit frame is showing: its key (a change is a navigation) and its name. */
+export function navigationOf(
+  scope: CockpitScope,
+  stack: readonly CockpitView[],
+  locale: string,
+): { key: string; label: string } {
+  if (scope.kind === "landing") {
+    return { key: "landing", label: translator(locale, "cockpit.landing.title") }
+  }
+  if (scope.kind === "fleet") {
+    return { key: "fleet", label: translator(locale, "cockpit.crumb.fleet") }
+  }
+  const view = stack[stack.length - 1]
+  return {
+    key: `${scope.engineId}|${stack.length}|${JSON.stringify(view)}`,
+    label: view ? crumbLabel(view, locale) : "",
+  }
 }

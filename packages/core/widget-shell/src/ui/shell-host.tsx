@@ -9,6 +9,7 @@ import {
   inlineRowBudget,
   type InlineBudget,
 } from "./inline-budget.js"
+import { DisplayModeControlProvider, type DisplayModeControl } from "./display-mode-toggle.js"
 import { DisplayModeProvider } from "./widget-shell.js"
 
 /**
@@ -91,10 +92,20 @@ export function ViewHostBridge({ children }: { children: ReactNode }) {
         : NO_INLINE_BUDGET,
     [displayMode, maxHeight, canExpand, requestDisplayMode],
   )
+  const control = useMemo<DisplayModeControl>(
+    () => ({
+      displayMode,
+      canFullscreen: canExpand,
+      request: (mode) => void requestDisplayMode({ mode }),
+    }),
+    [displayMode, canExpand, requestDisplayMode],
+  )
   return (
     <ShellHostProvider host={host}>
       <DisplayModeProvider mode={displayMode}>
-        <InlineBudgetProvider budget={budget}>{children}</InlineBudgetProvider>
+        <DisplayModeControlProvider control={control}>
+          <InlineBudgetProvider budget={budget}>{children}</InlineBudgetProvider>
+        </DisplayModeControlProvider>
       </DisplayModeProvider>
     </ShellHostProvider>
   )

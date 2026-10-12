@@ -103,6 +103,9 @@ export const deBuilder: MessageCatalog = {
   "builder.step.load-jobs.summary":
     "Liest die Jobs der Engine mit den Gesamtzahlen aller Jobs und der Jobs ohne Versuche.",
 
+  "builder.field.processList.engine.title": "Engine",
+  "builder.field.processList.engine.summary":
+    "Die Engine, aus der gelesen wird. Ohne Angabe deine Standard-Engine.",
   "builder.field.processList.processDefinitionKey.title": "Schlüssel der Prozessdefinition",
   "builder.field.processList.processDefinitionKey.summary":
     "Zeigt nur die Definition mit genau diesem Schlüssel.",
@@ -127,6 +130,9 @@ export const deBuilder: MessageCatalog = {
   "builder.field.activityIncidentList.emptyVariant.title": "Ohne Incidents",
   "builder.field.activityIncidentList.emptyVariant.summary":
     "Was die Liste ohne offenen Incident zeigt: einen kurzen Hinweis oder andere Prozesse mit Incidents.",
+  "builder.field.processInstances.engine.title": "Engine",
+  "builder.field.processInstances.engine.summary":
+    "Die Engine, aus der gelesen wird. Ohne Angabe deine Standard-Engine.",
   "builder.field.processInstances.processDefinitionKey.title": "Schlüssel der Prozessdefinition",
   "builder.field.processInstances.processDefinitionKey.summary":
     "Listet die Instanzen dieser Definition.",
@@ -142,6 +148,9 @@ export const deBuilder: MessageCatalog = {
   "builder.field.processInstances.businessKeyLike.title": "Geschäftsschlüssel enthält",
   "builder.field.processInstances.businessKeyLike.summary":
     "Zeigt nur Instanzen, deren Geschäftsschlüssel diesen Text enthält.",
+  "builder.field.incidentDetail.engine.title": "Engine",
+  "builder.field.incidentDetail.engine.summary":
+    "Die Engine, aus der gelesen wird. Ohne Angabe deine Standard-Engine.",
   "builder.field.incidentDetail.incidentId.title": "ID des Incidents",
   "builder.field.incidentDetail.incidentId.summary": "Der Incident, den das Widget zeigt.",
   "builder.field.engineHealth.engine.title": "Engine",

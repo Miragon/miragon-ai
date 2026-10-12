@@ -121,6 +121,7 @@ export function InstanceDetailWidget({
         <HistoryTab
           instanceId={instance.id}
           definitionId={instance.definitionId}
+          definitionKey={data.definitionKey}
           engineId={engineId}
           incidentActivityIds={data.incidentActivityIds}
         />

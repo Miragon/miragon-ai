@@ -1,6 +1,10 @@
 import { StrictMode } from "react"
 import { bootstrapView } from "mcp-use/react"
-import { AppShellProviders, LocalizedAppView } from "@miragon-ai/widget-shell/widgets"
+import {
+  AppShellProviders,
+  LocalizedAppView,
+  SHELL_VIEW_CONFIG,
+} from "@miragon-ai/widget-shell/widgets"
 import { Camunda7StandaloneShell } from "@miragon-ai/camunda7-connector/widgets"
 import { widgetRegistry } from "./widget-registry.js"
 import "./globals.css"
@@ -26,4 +30,5 @@ function AppRoot() {
 
 // bootstrapView owns the mount: it connects the host postMessage bridge,
 // installs an error boundary, and auto-reports size changes.
-bootstrapView({ default: AppRoot })
+// Inline and fullscreen only: no view is laid out for picture-in-picture.
+bootstrapView({ default: AppRoot, viewConfig: SHELL_VIEW_CONFIG })

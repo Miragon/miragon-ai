@@ -45,6 +45,7 @@ const INSTANCE: InstanceDetailData = {
     ended: false,
   },
   processDefinitionName: null,
+  definitionKey: "invoice",
   activityTree: null,
   variables: {},
   incidents: [],

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { HistoryTimelineWidget } from "./history-timeline.js"
+import { explainActivityHandOff, HistoryTimelineWidget } from "./history-timeline.js"
 import type { HistoryTimelineData } from "../view-models.js"
 
 afterEach(cleanup)
@@ -160,5 +160,43 @@ describe("HistoryTimelineWidget paging", () => {
   it("offers no Load more when the page is the whole timeline", () => {
     render(<WidgetFixtureHost widget={Widget} data={DATA as unknown as Record<string, unknown>} />)
     expect(screen.queryByText("Load more")).toBeNull()
+  })
+})
+
+// #344 N120: inside the instance detail the timeline shows no header data,
+// yet a row's "why so long here?" still names its instance and, where the
+// definition id names one, the key the analytics tools take.
+describe("explainActivityHandOff", () => {
+  const activity = {
+    id: "act-1",
+    activityId: "chargeCard",
+    activityName: "Charge card",
+    activityType: "serviceTask",
+    startTime: "2026-10-10T08:00:00.000+0000",
+    endTime: "2026-10-10T08:01:00.000+0000",
+    durationInMillis: 60_000,
+  } as Parameters<typeof explainActivityHandOff>[0]
+
+  it("names the instance and the key the rows belong to", () => {
+    const handOff = explainActivityHandOff(
+      activity,
+      { id: "pi-1", processDefinitionKey: "invoice" },
+      "prod",
+    )
+    expect(handOff.ids).toMatchObject({ engine: "prod", processInstanceId: "pi-1" })
+    expect(handOff.toolIds?.analytics_element_bottleneck).toEqual({
+      processDefinitionKey: "invoice",
+    })
+  })
+
+  it("leaves the key out where the definition id names none", () => {
+    const handOff = explainActivityHandOff(
+      activity,
+      { id: "pi-1", processDefinitionKey: null },
+      "prod",
+    )
+    expect(handOff.toolIds?.analytics_element_bottleneck).toEqual({
+      processDefinitionKey: undefined,
+    })
   })
 })
