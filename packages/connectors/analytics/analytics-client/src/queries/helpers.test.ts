@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { increaseIn } from "./helpers.js"
-import { DAY_SECONDS } from "./windows.js"
+import { DAY_SECONDS, rangeSeconds } from "./windows.js"
 
 const NOW = Date.UTC(2026, 9, 12, 12, 0, 0)
 const NOW_SECONDS = NOW / 1000
@@ -34,14 +34,27 @@ describe("increaseIn", () => {
     expect(increaseIn("camunda_x_total", { range: "1d", at })).toBe(
       `increase(camunda_x_total[1d] @ ${at})`,
     )
-    // One hour and a second inside the retention: the check can see before the window.
-    const inside = NOW_SECONDS - 30 * DAY_SECONDS + 3601 + DAY_SECONDS
-    expect(increaseIn("camunda_x_total", { range: "1d", at: inside })).toContain(
-      "present_over_time",
+    // The hour before the window starts exactly at the retention edge: still retained.
+    const edge = NOW_SECONDS - 30 * DAY_SECONDS + 3600 + DAY_SECONDS
+    expect(increaseIn("camunda_x_total", { range: "1d", at: edge })).toContain("present_over_time")
+    expect(increaseIn("camunda_x_total", { range: "1d", at: edge - 1 })).toBe(
+      `increase(camunda_x_total[1d] @ ${edge - 1})`,
     )
   })
 
   it("refuses a range it cannot measure", () => {
     expect(() => increaseIn("camunda_x_total", { range: "1d12h" })).toThrow(/single-unit/)
+  })
+})
+
+describe("rangeSeconds", () => {
+  it("measures every single-unit PromQL duration", () => {
+    expect(["30s", "5m", "2h", "1d", "1w"].map(rangeSeconds)).toEqual([
+      30,
+      300,
+      7200,
+      DAY_SECONDS,
+      7 * DAY_SECONDS,
+    ])
   })
 })
