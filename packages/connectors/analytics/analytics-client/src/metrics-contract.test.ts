@@ -272,20 +272,21 @@ describe("metrics contract", () => {
       }
     }
 
-    // `sum by (a, b)(max by (…)(camunda_x{…}))` — a by-clause plus the first
-    // camunda_* series of the aggregated expression (possibly behind nested
-    // calls, parentheses and inner by-clauses).
-    const grouped =
-      /\bby\s*\(([^)]*)\)\s*\(\s*(?=((?:(?:[A-Za-z_][A-Za-z0-9_]*)?\s*(?:by\s*\([^)]*\)\s*)?\(\s*)*)(camunda_[A-Za-z0-9_]+))/g
+    // `sum by (a, b)(max by (…)(camunda_x{…}))` — each by-clause attributed to
+    // the first camunda_* series after it (the aggregated expression's, behind
+    // any nested calls, parentheses and inner by-clauses). Two flat regexes and
+    // a slice, not one nested pattern: that one backtracked (CodeQL js/redos).
+    const byClause = /\bby\s*\(([^)]*)\)/g
+    const firstSeries = /camunda_[A-Za-z0-9_]+/
 
     let checked = 0
     for (const { name, text } of [alertsSource(), ...dashboardSources()]) {
-      const byClauses = text.match(/\bby\s*\(/g) ?? []
-      const matches = [...text.matchAll(grouped)]
-      // Every by-clause must be attributable to a camunda_* series; if a new
-      // query shape defeats the regex, extend it rather than losing coverage.
-      expect(matches.length, `unattributable "by (…)" clause in ${name}`).toBe(byClauses.length)
-      for (const [, labelList, , series] of matches) {
+      for (const clause of text.matchAll(byClause)) {
+        const labelList = clause[1]
+        const series = firstSeries.exec(text.slice(clause.index + clause[0].length))?.[0]
+        // Every by-clause must be attributable to a camunda_* series.
+        expect(series, `unattributable "${clause[0]}" clause in ${name}`).toBeDefined()
+        if (series === undefined) continue
         const metric = seriesToMetric.get(series)
         expect(metric, `${series} (${name}) missing from contract`).toBeDefined()
         if (!metric) continue
