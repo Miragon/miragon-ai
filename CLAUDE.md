@@ -103,8 +103,12 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   `--link`, `--focus`, `--ring`, `--input`, `--accent` oder einen Status. BPMN-Papier und seine
   Zoom-Leiste bleiben immer hell.
 - Schrift: Geist zuerst, dann die Schrift des Hosts (`adoptHostFontVariables` in
-  `HostDocument`), dann System. Geist liefert die App noch nicht aus (ein späterer Schritt über
-  `resourceDomains`), also rendert heute die Host-Schrift.
+  `HostDocument`), dann System. Geist und Geist Mono liefert der Server selbst aus, als woff2
+  (latin, variabel) unter `/fonts/geist-<version>/` (`installFontAssets`, kein CDN, `immutable`
+  gecacht); jede View erlaubt den Ursprung über ihre CSP `resourceDomains` (`MCP_URL`, sonst der
+  Ursprung, von dem der Host die View gelesen hat) und lädt die Schnitte mit `font-display: swap`
+  (`declareServedFonts`). Blockt ein Host den Ursprung oder erreicht der Browser den Server nicht,
+  rendert die Host-Schrift, ohne dass etwas wartet.
 - Sprache: Deutsch und Englisch nach Host-Locale (Fallback Englisch) statt nur Deutsch.
 - Chrome: im Rahmen des Hosts (Kopf mit Titel und Aktionen) statt randlosem Canvas mit
   schwebendem Chrome in den Ecken.
@@ -481,18 +485,23 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    title, "show" over a composed `render-view`) live in `@miragon-ai/widget-shell/widgets`;
    the stylesheet is the toolkit's `@miragon/mcp-toolkit-ui/theme.css` after `tailwindcss`
    (never its `globals.css`, a second Tailwind entry, nor `fonts.css`, base64 Geist per view;
+   Geist arrives by URL from the server's font route, `declareServedFonts` in `HostDocument`;
    no height floor on html/body/#root — `test/ui-stylesheet.test.ts`), and the whole server
    boot lives in `/server`:
    `createComposedServer` owns the ORDER (env-typo warnings + HTTP edge policy + the
    OAuth/`MCP_URL` check → ONE `resolveBoot`, authenticated exactly when the root hands
    in an OAuth provider → boot log → the root's `setup(boot)` (plugins, persistence) →
    `createFrameworkApp` with `serverInfo` (version from the root's `package.json`, title,
-   `instructions`) → request context → `installToolCallLogging` →
+   `instructions`) and the view CSP (`fontAssetsCsp`: `MCP_URL`'s origin in `resourceDomains`,
+   carried onto every plugin's view-bound tools and their `openai/widgetCSP` by
+   `honorWidgetMetaDefaults`) → request context → `installToolCallLogging` →
    `swallowDevCliViewsPrime` → `installMetrics` (labels bounded by construction: tool
    catalogue + known routes, never users/sessions/arguments; optional
    `MCP_METRICS_TOKEN` bearer) → `installHttpEdgeGuard` → `installHealthEndpoints`
    (readiness probes the server's OWN dependencies only, never engines or Prometheus;
-   503 `draining` during shutdown) — metrics first, hono only counts routes registered
+   503 `draining` during shutdown) → `installFontAssets` (Geist + Geist Mono under the
+   versioned `SERVED_FONT_PATH`, immutable, CORS `*`, behind the guard: a font GET passes
+   the Origin half, never a foreign Host) — metrics first, hono only counts routes registered
    after its middleware) and its `listen()` serves production through
    `createBodyLimitedListener` (mcp-use's public `toNodeHandler` behind the
    `MCP_MAX_BODY_BYTES` cap — 413 before buffering — an in-flight body budget of 4× the
@@ -724,7 +733,7 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
 | `pnpm test:mutation` | Diff-scoped Stryker run (`scripts/mutation-diff.mjs`): changed files inside a package's `mutate` allowlist must keep the mutation score above the package's `thresholds.break` (`stryker.config.json`); runs in CI as "Mutation (changed files)". The gate bypasses the package's incremental cache, so a local run and CI agree. More than 25 in-scope files in one package FAIL the gate unless the branch carries a reviewed `Mutation-Cap-Exception: <reason>` trailer                                                                                                                                                                                                                           |
 | `pnpm fitness`       | Aggregated fitness report — architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI — the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle: the view document `createApp` serves (`resources/read`), sandboxed behind a SEP-1865 host shim, rendering a real camunda7 show tool against a stub engine (keep/strip, slow tool, `isError`, cancel, host theme, display modes; `pinned …` scenarios = known defects, flipped when fixed); runs in CI as "Widget host simulation (test:host)" — run it locally for changes to the widget shell, `src/ui/`, or the toolkit pin                                                                                                                                                 |
+| `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle: the view document `createApp` serves (`resources/read`), sandboxed behind a SEP-1865 host shim, rendering a real camunda7 show tool against a stub engine (keep/strip, slow tool, `isError`, cancel, host theme, display modes, served fonts: Geist drawn when allowed, the host's font when the host ignores `resourceDomains` or the route is unreachable; `pinned …` scenarios = known defects, flipped when fixed); runs in CI as "Widget host simulation (test:host)" — run it locally for changes to the widget shell, `src/ui/`, or the toolkit pin                    |
 | `pnpm test:pg`       | The database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters**; runs in CI as "Postgres adapters (test:pg)" against a `postgres:` service container — run it locally for changes to `postgres.ts` or any `*-store-postgres.ts`                                                                                                                                                                                                                                                                                  |
 | Docker build         | `.github/workflows/docker-build.yml`: plain `docker build` of the root `Dockerfile` (no push) on every PR touching it, `apps/`, `packages/` or a root file the build stage copies                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only). The default boot is read-only — write paths need an explicit suffix, e.g. `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env`                                                                                                                                                                                                                                                                                                                                                                    |

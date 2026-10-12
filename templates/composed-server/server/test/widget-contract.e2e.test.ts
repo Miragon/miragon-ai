@@ -16,13 +16,16 @@ const FIXTURE_JS = path.join(import.meta.dirname, "fixtures", "mcp-app.js")
  * directory from the developer's shell, and a dead engine URL — tools
  * register fine; only actual calls would fail.
  */
-async function bootAndList(activeModules: string | undefined): Promise<{
+async function bootAndList(
+  activeModules: string | undefined,
+  env: Record<string, string> = {},
+): Promise<{
   app: RunningServer
   client: Client
   origin: string
   tools: ToolEntry[]
 }> {
-  stubNeutralEnv({ MCP_ACTIVE_MODULES: activeModules })
+  stubNeutralEnv({ MCP_ACTIVE_MODULES: activeModules, ...env })
 
   const composed = await createApp(process.env, { bundle: { jsPath: FIXTURE_JS } })
   const app = await composed.listen({ port: 0, host: "127.0.0.1" })
@@ -219,6 +222,65 @@ describe("widget wire contract (dual-protocol _meta)", () => {
     expect(csp, "read contents should carry _meta.ui.csp").toBeTruthy()
     // mcp-use appends the request-resolved server origin itself since 2.x.
     expect(csp!.connectDomains).toContain(serverOrigin)
+  })
+
+  it("admits the server's origin for resources on EVERY view — where the view loads Geist from", async () => {
+    // Without MCP_URL the origin is the one the host read the view from — the
+    // same origin the view resolves its font URLs against.
+    const { resources } = await client.listResources()
+    const views = resources.filter((r) => r.uri.startsWith(VIEW_RESOURCE_URI_PREFIX))
+    expect(views.map((v) => v.uri)).toContain(viewResourceUri("notes_show_notes"))
+    for (const view of views) {
+      expect(await readResourceDomains(client, view.uri), view.uri).toContain(serverOrigin)
+    }
+  })
+})
+
+/** `_meta.ui.csp.resourceDomains` of a view resource as `resources/read` returns it. */
+async function readResourceDomains(client: Client, uri: string): Promise<string[]> {
+  const { contents } = await client.readResource({ uri })
+  const csp = uiBlock((contents[0] as { _meta?: Record<string, unknown> })._meta ?? {}).csp as
+    { resourceDomains?: string[] } | undefined
+  return csp?.resourceDomains ?? []
+}
+
+/**
+ * Behind its public URL (`MCP_URL`) the server declares that origin itself on
+ * every view-bound tool — the framework's, the Miragon modules' and YOUR
+ * modules' alike, listed and read, and in the Apps SDK half
+ * (`openai/widgetCSP`) — so a host admits the font route the views load
+ * Geist from.
+ */
+describe("widget wire contract — the font origin under MCP_URL", () => {
+  const PUBLIC_ORIGIN = "https://mcp.acme.test"
+  let app: RunningServer
+  let client: Client
+  let tools: ToolEntry[]
+
+  beforeAll(async () => {
+    ;({ app, client, tools } = await bootAndList(undefined, { MCP_URL: `${PUBLIC_ORIGIN}/mcp` }))
+  })
+
+  afterAll(async () => {
+    await client?.close()
+    await app?.shutdown()
+    vi.unstubAllEnvs()
+  })
+
+  it("advertises it in resourceDomains on every view resource and to Apps SDK hosts", async () => {
+    const { resources } = await client.listResources()
+    const views = resources.filter((r) => r.uri.startsWith(VIEW_RESOURCE_URI_PREFIX))
+    expect(views.map((v) => v.uri)).toContain(viewResourceUri("notes_show_notes"))
+    for (const view of views) {
+      expect(await readResourceDomains(client, view.uri), view.uri).toContain(PUBLIC_ORIGIN)
+    }
+    const widgetTools = tools.filter((t) => t._meta?.["openai/outputTemplate"] !== undefined)
+    expect(widgetTools.map((t) => t.name)).toContain("notes_show_notes")
+    for (const tool of widgetTools) {
+      expect(tool._meta?.["openai/widgetCSP"], tool.name).toEqual({
+        resource_domains: [PUBLIC_ORIGIN],
+      })
+    }
   })
 })
 

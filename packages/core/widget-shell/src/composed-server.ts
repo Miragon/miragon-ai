@@ -15,11 +15,14 @@
  * 2. ONE boot selection (`resolveBoot`, authenticated exactly when the root
  *    handed in an OAuth provider) and its boot log;
  * 3. the root's runtime (`setup(boot)` — e.g. database migrations);
- * 4. `createFrameworkApp`, then the mcp-use middleware (request context
- *    before tool-call logging before metrics) and the HTTP routes: metrics
- *    first (hono only counts routes registered after its middleware), then
- *    the Host/Origin guard, then the health probes — so `/metrics` and
- *    `/health*` stay reachable by IP-addressed scrapers and probes;
+ * 4. `createFrameworkApp` (every view-bound tool advertising the view CSP —
+ *    `MCP_URL`'s origin in `resourceDomains`, where the views load their
+ *    fonts from), then the mcp-use middleware (request context before
+ *    tool-call logging before metrics) and the HTTP routes: metrics first
+ *    (hono only counts routes registered after its middleware), then the
+ *    Host/Origin guard, then the health probes — so `/metrics` and
+ *    `/health*` stay reachable by IP-addressed scrapers and probes — and the
+ *    font route behind the guard;
  * 5. `listen()` (production only — `mcp-use dev` owns the socket): the
  *    body-capped Node listener with request timeouts, and the graceful drain
  *    on SIGTERM/SIGINT.
@@ -50,8 +53,10 @@ import {
 } from "./http-edge.js"
 import { installMetrics } from "./metrics.js"
 import { createBodyLimitedListener, type BodyLimitedListener } from "./node-listener.js"
+import { fontAssetsCsp, installFontAssets } from "./font-assets.js"
 import { installToolSchemaTrim } from "./tool-schema-trim.js"
 import { installMcpRequestContext } from "./request-context.js"
+import { honorWidgetMetaDefaults } from "./widget-meta-defaults.js"
 
 /** What the server reports as `serverInfo` (plus the `instructions` it advertises). */
 export interface ComposedServerInfo {
@@ -207,10 +212,14 @@ async function buildFrameworkApp(
   boot: ResolvedBoot,
   builder: boolean,
   runtime: ComposedServerRuntime,
+  env: NodeJS.ProcessEnv,
 ): Promise<MCPServer<unknown>> {
   const { info, oauth } = options
   const { title, websiteUrl } = info
   const instructions = serverInstructions(options, boot)
+  // The font origin, on render-view's view and — through each plugin's
+  // widget defaults — on every module's view-bound tool.
+  const csp = fontAssetsCsp(env)
   const frameworkOptions = {
     name: info.name,
     version: info.version,
@@ -223,9 +232,14 @@ async function buildFrameworkApp(
     // Cast: the toolkit types `plugins` unparameterized (TServer = unknown);
     // the factories return `AppPlugin<MCPServer>`, which is what the
     // framework passes at runtime.
-    plugins: runtime.plugins as AppPlugin[],
+    plugins: runtime.plugins.map(honorWidgetMetaDefaults) as AppPlugin[],
     appConfig: { activeApps: boot.entries, pipelines: {} },
-    app: { bundle: options.bundle, builder, dashboardStore: runtime.dashboardStore },
+    app: {
+      bundle: options.bundle,
+      builder,
+      dashboardStore: runtime.dashboardStore,
+      ...(csp ? { csp } : {}),
+    },
   }
   // Two calls because the oauth/no-oauth overloads are distinct.
   return oauth
@@ -391,7 +405,7 @@ export async function createComposedServer(
   }
 
   const runtime = await options.setup(boot)
-  const app = await buildFrameworkApp(options, boot, builder, runtime)
+  const app = await buildFrameworkApp(options, boot, builder, runtime, env)
   const state = { draining: false }
 
   // Ambient per-request info (OAuth caller, Authorization header) for the
@@ -411,6 +425,9 @@ export async function createComposedServer(
     label,
     draining: () => state.draining,
   })
+  // Geist + Geist Mono for the views — behind the guard (a font GET passes
+  // the Origin half, a foreign Host does not), counted by the metrics.
+  installFontAssets(app, { label })
 
   return {
     app,

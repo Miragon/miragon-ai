@@ -196,8 +196,9 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
 
     await vi.waitFor(() => expect(probe()).toBe("en|fullscreen|demo:widget"))
     // The host's font fills the fallback slot of the theme's font roles
-    // (adoptHostFontVariables), so the stack stays Geist first when the
-    // consumer loads it; the role names themselves are not overwritten.
+    // (adoptHostFontVariables), so the stack stays Geist first, then the
+    // host's font, then the system; the role names themselves are not
+    // overwritten.
     expect(root.style.getPropertyValue("--host-font-sans")).toBe("HostSans, sans-serif")
     expect(root.style.getPropertyValue("--host-font-mono")).toBe("HostMono")
     expect(root.style.getPropertyValue("--font-sans")).toBe("")

@@ -156,18 +156,18 @@ JVM). See the `setup-server` skill before widening a server others can reach.
 and saved dashboards belong to the signed-in user. Without it the settings
 show their defaults and cannot be saved.
 
-| Variable                                     | Effect                                                                                                 |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `PORT`                                       | HTTP port (default 8400)                                                                               |
-| `MCP_URL`                                    | Public base URL (behind a proxy/gateway) — also the `Host`/`Origin` the server accepts                 |
-| `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS`  | Further hostnames / origins the server accepts (default: localhost-class and `MCP_URL`'s only)         |
-| `MCP_MAX_BODY_BYTES`                         | Request-body cap (default 4 MiB; larger bodies get 413 before they are read)                           |
-| `MCP_METRICS_TOKEN`                          | Bearer token `/metrics` requires (default: open)                                                       |
-| `MCP_OAUTH`                                  | OAuth resource server (`keycloak` / `auth0` JSON, needs `MCP_URL`) — the only caller identity          |
-| `MCP_ACTIVE_MODULES`                         | Modules (default: all), e.g. `camunda7:operations,notes`; no suffix: read-only, `MCP_OAUTH` → standard |
-| `MCP_PROFILE_DIR`                            | Filesystem persistence for user profiles (default: in-memory)                                          |
-| `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards — only used under `MCP_OAUTH` (see below)                  |
-| `CAMUNDA_*`, `PROMETHEUS_URL`, `NOTES_TITLE` | Module config — see `.env.example` for the full list                                                   |
+| Variable                                     | Effect                                                                                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                       | HTTP port (default 8400)                                                                                                        |
+| `MCP_URL`                                    | Public base URL (behind a proxy/gateway) — also the `Host`/`Origin` the server accepts and the origin the views load Geist from |
+| `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS`  | Further hostnames / origins the server accepts (default: localhost-class and `MCP_URL`'s only)                                  |
+| `MCP_MAX_BODY_BYTES`                         | Request-body cap (default 4 MiB; larger bodies get 413 before they are read)                                                    |
+| `MCP_METRICS_TOKEN`                          | Bearer token `/metrics` requires (default: open)                                                                                |
+| `MCP_OAUTH`                                  | OAuth resource server (`keycloak` / `auth0` JSON, needs `MCP_URL`) — the only caller identity                                   |
+| `MCP_ACTIVE_MODULES`                         | Modules (default: all), e.g. `camunda7:operations,notes`; no suffix: read-only, `MCP_OAUTH` → standard                          |
+| `MCP_PROFILE_DIR`                            | Filesystem persistence for user profiles (default: in-memory)                                                                   |
+| `MCP_DASHBOARD_DIR`                          | Filesystem persistence for saved dashboards — only used under `MCP_OAUTH` (see below)                                           |
+| `CAMUNDA_*`, `PROMETHEUS_URL`, `NOTES_TITLE` | Module config — see `.env.example` for the full list                                                                            |
 
 ## Deploying
 
@@ -204,6 +204,13 @@ docker run -p 8400:8400 \
   stops accepting and lets in-flight requests finish (readiness answers those
   503 `draining`); on Kubernetes add a `preStop` sleep so the endpoint is
   removed before new connections are refused.
+- The views render in Geist and Geist Mono, served by the server itself
+  under `/fonts/geist-<version>/` (woff2, cached immutable, no CDN) and
+  admitted by every view's CSP (`resourceDomains`: `MCP_URL`'s origin, else
+  the origin the host read the view from). The host's browser fetches them
+  from that origin, so behind a gateway route `/fonts/` to the server too. A
+  host that blocks the origin, or a browser that cannot reach it, shows the
+  host's font instead; nothing waits for the files.
 
 ## Going further
 

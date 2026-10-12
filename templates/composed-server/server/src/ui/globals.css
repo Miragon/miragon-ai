@@ -20,7 +20,8 @@
 /*
  * The look: the toolkit's Miragon theme plus your brand overrides, both in
  * brand.css. Do not import `@miragon/mcp-toolkit-ui/globals.css` here (a
- * second Tailwind entry); `@miragon/mcp-toolkit-ui/fonts.css` is opt-in
- * (Geist as base64 in every view document).
+ * second Tailwind entry) nor `@miragon/mcp-toolkit-ui/fonts.css` (Geist as
+ * base64 in every view document): Geist arrives by URL from the server's
+ * font route, declared in every view by the widget shell's `HostDocument`.
  */
 @import "./brand.css";
