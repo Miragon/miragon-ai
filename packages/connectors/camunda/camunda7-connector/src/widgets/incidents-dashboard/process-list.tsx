@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react"
 
 import {
+  CountPill,
   DrillButton,
   FilterBar,
   GroupCard,
   SectionHeading,
+  TONE_DOT,
+  cn,
   type FilterChip,
   type ToneVariant,
 } from "@miragon/mcp-toolkit-ui"
@@ -19,6 +22,8 @@ import { useNav } from "../navigation.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { GroupSummaryRow, IncidentGroupIcon } from "../group-summary-row.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { MoreActions } from "../lib/more-actions.js"
+import { countTone } from "../cockpit-dashboard/lib.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
 import { dashboardScope, incidentsFeed } from "./scope.js"
@@ -37,17 +42,6 @@ const TYPE_ALL = "all"
 const TYPE_LAST24H = "last24h"
 
 type IncidentChip = typeof TYPE_ALL | typeof TYPE_LAST24H
-
-/** Threshold above which a process is rendered with a "danger" tone in the
- *  process group cards. Computed from the unfiltered incident count so the
- *  visual severity stays stable when the user toggles a filter chip. */
-const CRITICAL_INCIDENT_THRESHOLD = 50
-
-// Named for its semantics (sheer incident volume) — distinct from the
-// failed-jobs/incidents/instances severity ladder in cockpit-dashboard/lib.ts.
-function incidentVolumeTone(unfilteredIncidentCount: number): ToneVariant {
-  return unfilteredIncidentCount >= CRITICAL_INCIDENT_THRESHOLD ? "danger" : "warning"
-}
 
 /**
  * Root cause of ONE process's open incidents — do the failing activities share
@@ -93,6 +87,12 @@ interface DisplayProcess extends IncidentsDashboardProcess {
   shownCount: number | null
 }
 
+/**
+ * One process group (#322 U20): two lines instead of one crowded row. Line
+ * one is the process by its full name (never cut to "Mirave…") and its
+ * count; line two the facts and the ONE drill, "Öffnen" — the link into the
+ * vendor's app and the chat hand-off wait behind "more".
+ */
 function ProcessSummary({
   process,
   expanded,
@@ -113,58 +113,58 @@ function ProcessSummary({
 }) {
   const t = useT()
   const { ask } = useHandOff()
-  const tone = process.tone
   const cockpitUrl = process.cockpitUrl
+  const name = process.processDefinitionName ?? process.processDefinitionKey
+  const facts = [
+    process.affectedActivityCount === null
+      ? `${formatCount(null)} ${t("incidentsList.activitiesLabel")}`
+      : t("incidentsList.activities", { count: formatNumber(process.affectedActivityCount) }),
+    process.last24hCount === null
+      ? null
+      : t("incidentsList.new24h", { count: formatNumber(process.last24hCount) }),
+    t("incidentsList.instancesCount", { count: formatNumber(process.runningInstances) }),
+    t("incidentsList.lastSeen", { time: formatTimestamp(process.latestIncident) }),
+  ].filter((fact): fact is string => fact !== null)
 
   return (
-    <GroupSummaryRow
-      tone={tone}
-      title={process.processDefinitionName ?? process.processDefinitionKey}
-      subline={
-        <>
-          {process.affectedActivityCount === null
-            ? `${formatCount(null)} ${t("incidentsList.activitiesLabel")}`
-            : t("incidentsList.activities", {
-                count: formatNumber(process.affectedActivityCount),
-              })}{" "}
-          · {t("incidentsList.instancesCount", { count: formatNumber(process.runningInstances) })} ·{" "}
-          {t("incidentsList.lastSeen", { time: formatTimestamp(process.latestIncident) })}
-        </>
-      }
-      stats={[
-        {
-          value: formatCount(process.affectedActivityCount),
-          label: t("incidentsList.activitiesLabel"),
-        },
-        {
-          value:
-            process.last24hCount === null
-              ? formatCount(null)
-              : `+${formatNumber(process.last24hCount)}`,
-          label: t("incidentsList.last24hLabel"),
-        },
-      ]}
-      count={formatCount(process.shownCount)}
-      countTone={tone}
-      actions={
-        <>
+    <div className={cn("flex flex-col gap-1.5 px-4 py-3", expanded && "border-border border-b")}>
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className={cn("mt-2 size-1.5 shrink-0 rounded-full", TONE_DOT[process.tone])}
+        />
+        <span className="text-foreground text-dense min-w-0 flex-1 font-semibold break-words">
+          {name}
+          {process.processDefinitionName && (
+            <span className="text-muted-foreground text-small ms-2 font-mono font-normal">
+              {process.processDefinitionKey}
+            </span>
+          )}
+        </span>
+        <CountPill tone={process.tone}>{formatCount(process.shownCount)}</CountPill>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 ps-4">
+        <span className="text-muted-foreground text-small min-w-0 flex-1">{facts.join(" · ")}</span>
+        <div className="flex items-center gap-1">
           <DrillButton
             onDrill={onOpenDetail}
-            ariaLabel={t("incidentsList.openDetailAria", {
-              name: process.processDefinitionName ?? process.processDefinitionKey,
-            })}
+            ariaLabel={t("incidentsList.openDetailAria", { name })}
           >
             {t("incidentsList.open")}
           </DrillButton>
-          {cockpitUrl ? <OpenInCockpitLink url={cockpitUrl} vendor={vendor} /> : <span />}
-          <HandOffButton
-            action="findCause"
-            prompt={ask(processRootCauseHandOff(process, engineId, filters))}
-          />
-        </>
-      }
-      expanded={expanded}
-    />
+          <MoreActions label={t("incidentsList.moreActions", { name })}>
+            {cockpitUrl && (
+              <OpenInCockpitLink url={cockpitUrl} vendor={vendor} variant="menuitem" />
+            )}
+            <HandOffButton
+              action="findCause"
+              variant="menuitem"
+              prompt={ask(processRootCauseHandOff(process, engineId, filters))}
+            />
+          </MoreActions>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -192,7 +192,7 @@ function ActivityList({ process }: { process: DisplayProcess }) {
   return (
     <div className="bg-muted">
       {process.scannedIncidentCount < process.incidentCount && (
-        <p className="text-muted-foreground border-border border-b px-4 py-2 pl-7 text-xs">
+        <p className="text-muted-foreground border-border text-small border-b px-4 py-2 pl-7">
           {t("incidentsList.breakdownPartial", {
             scanned: formatNumber(process.scannedIncidentCount),
             total: formatNumber(process.incidentCount),
@@ -247,7 +247,8 @@ function filterProcesses(
         ...p,
         activities,
         shownCount: showLast24h ? p.last24hCount : p.incidentCount,
-        tone: incidentVolumeTone(p.incidentCount),
+        // The one severity ladder (#322 U14): open incidents are danger.
+        tone: countTone(p.incidentCount),
       }
     })
     .filter((p): p is DisplayProcess => p !== null)
@@ -326,8 +327,12 @@ export function IncidentProcessListView({
     })
   }
 
-  function openDetail(processDefinitionKey: string) {
-    go({ type: "process-incidents", processDefinitionKey })
+  function openDetail(process: IncidentsDashboardProcess) {
+    go({
+      type: "process-incidents",
+      processDefinitionKey: process.processDefinitionKey,
+      label: process.processDefinitionName ?? undefined,
+    })
   }
 
   return (
@@ -367,7 +372,7 @@ export function IncidentProcessListView({
                   engineId={engine ?? data.engineId}
                   vendor={data.engineVendor}
                   filters={data.filters}
-                  onOpenDetail={() => openDetail(p.processDefinitionKey)}
+                  onOpenDetail={() => openDetail(p)}
                 />
               }
             >

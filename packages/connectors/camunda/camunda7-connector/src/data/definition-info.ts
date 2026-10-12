@@ -4,6 +4,7 @@ import {
   getProcessDefinitionStatistics,
   getProcessDefinitions,
 } from "@miragon-ai/camunda7-client/sdk"
+import { extractActivityNames } from "../lib/bpmn-parse.js"
 import { rowsOf } from "./engine-reads.js"
 
 /**
@@ -114,6 +115,62 @@ export async function fetchDefinitionXml(
 ): Promise<string | null> {
   const reply = await getProcessDefinitionBpmn20Xml({ client, path: { id: definitionId } })
   return (reply as { bpmn20Xml?: string | null } | null)?.bpmn20Xml ?? null
+}
+
+/**
+ * How many diagrams one view reads for display names at most: a page of
+ * jobs or a cluster list rarely spans more definitions, and the names are
+ * enrichment — a definition past the cap shows its ids.
+ */
+export const NAMED_DEFINITIONS_LIMIT = 8
+
+/**
+ * The display names in the diagrams of `definitionIds` (activities, and the
+ * process itself: its `<process>` element is named too), by definition id —
+ * one XML read per distinct id, at most {@link NAMED_DEFINITIONS_LIMIT}.
+ * ENRICHMENT: each read that fails (or carries no XML) leaves its id out of
+ * the map, so the names behind it are null, never the view's failure.
+ */
+export async function fetchNamesByDefinition(
+  client: Client,
+  definitionIds: Iterable<string | null | undefined>,
+): Promise<Map<string, Record<string, string>>> {
+  const ids = [...new Set([...definitionIds].filter((id): id is string => !!id))].slice(
+    0,
+    NAMED_DEFINITIONS_LIMIT,
+  )
+  const read = await Promise.all(
+    ids.map(async (id) => {
+      const xml = await fetchDefinitionXml(client, id).catch(() => null)
+      return xml ? ([id, extractActivityNames(xml)] as const) : null
+    }),
+  )
+  return new Map(read.filter((entry) => entry !== null))
+}
+
+/**
+ * The definitions behind `definitionIds` (name, key, version), by id — ONE
+ * `/process-definition?processDefinitionIdIn=` read for the whole set. The
+ * read propagates: a builder that shows the names as enrichment wraps the
+ * call in `optional(...)` and renders the ids without them.
+ */
+export async function fetchDefinitionsById(
+  client: Client,
+  definitionIds: Iterable<string | null | undefined>,
+): Promise<Map<string, DefinitionInfo>> {
+  const ids = [...new Set([...definitionIds].filter((id): id is string => !!id))]
+  if (ids.length === 0) return new Map()
+  const rows = rowsOf<RawDefinition>(
+    await getProcessDefinitions({
+      client,
+      query: { processDefinitionIdIn: ids.join(","), maxResults: ids.length },
+    }),
+  )
+  return new Map(
+    rows
+      .filter((row): row is RawDefinition & { id: string } => !!row.id)
+      .map((row) => [row.id, toDefinitionInfo(row, row.key ?? definitionKeyInId(row.id) ?? "")]),
+  )
 }
 
 /**

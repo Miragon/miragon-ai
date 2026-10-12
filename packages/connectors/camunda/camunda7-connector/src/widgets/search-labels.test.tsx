@@ -61,6 +61,7 @@ const INSTANCES: ProcessInstancesData = {
       id: "pi-1",
       businessKey: "BK-1",
       processDefinitionKey: "invoice",
+      processDefinitionName: null,
       version: 1,
       suspended: false,
       hasIncident: false,
@@ -72,6 +73,7 @@ const INSTANCES: ProcessInstancesData = {
 
 const CLUSTER: ClusterDetailData = {
   activityId: "callWMS",
+  activityName: null,
   incidentType: "failedExternalTask",
   messageSignature: "connection timeout",
   incidentCount: 1,
@@ -88,6 +90,7 @@ const CLUSTER: ClusterDetailData = {
       processInstanceId: "pi-1",
       businessKey: "ORDER-4711",
       processDefinitionKey: "shipping",
+      processDefinitionName: null,
       incidentTimestamp: "2026-06-11T14:00:00.000Z",
     },
   ],

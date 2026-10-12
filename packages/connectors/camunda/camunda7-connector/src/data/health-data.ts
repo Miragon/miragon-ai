@@ -20,7 +20,12 @@ import {
   type IncidentLike,
   type ScanCoverage,
 } from "./cluster-scan.js"
-import { definitionKeyResolver, fetchStatsByKey } from "./definition-info.js"
+import {
+  definitionKeyResolver,
+  fetchNamesByDefinition,
+  fetchStatsByKey,
+  type KeyStats,
+} from "./definition-info.js"
 import { countOf, DAY_MS, rowsOf } from "./engine-reads.js"
 
 /**
@@ -56,6 +61,8 @@ interface ClusterAcc {
   keys: Map<string, number>
   sampleMessage: string | null
   sampleIncidentId: string
+  /** The sample incident's definition version — whose diagram names the activity. */
+  sampleDefinitionId: string | null
   latest: string | null
 }
 
@@ -152,6 +159,7 @@ function clusterIncidents(
         keys: new Map<string, number>(),
         sampleMessage: truncateMessage(inc.incidentMessage ?? null),
         sampleIncidentId: inc.id ?? "",
+        sampleDefinitionId: inc.processDefinitionId ?? null,
         latest: null,
       } satisfies ClusterAcc)
 
@@ -168,29 +176,45 @@ function clusterIncidents(
 /**
  * The top clusters, ranked by their scanned share. Their counts are exact
  * only as far as the scan reaches: the total when it read every incident,
- * the 24h count when it reaches back past the cutoff — null otherwise.
+ * the 24h count when it reaches back past the cutoff — null otherwise. The
+ * names are display enrichment: the activity's from the diagram of the
+ * sample incident's version (`names`, one read per version), the process's
+ * from the statistics the verdict already read — null when unknown, the id
+ * then stands in.
  */
 function toClusterList(
-  byCluster: Map<string, ClusterAcc>,
+  ranked: ClusterAcc[],
   coverage: ScanCoverage,
   cutoffMs: number,
+  display: { names: Map<string, Record<string, string>>; statsByKey: Map<string, KeyStats> },
 ): EngineHealthCluster[] {
-  return [...byCluster.entries()]
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, MAX_CLUSTERS)
-    .map(([key, c]) => ({
-      id: key,
+  return ranked.map((c) => {
+    const keys = [...c.keys.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k)
+    const primaryKey = keys.find((k) => k !== UNKNOWN)
+    return {
+      id: `${c.activityId}::${c.incidentType}::${c.signature}`,
       activityId: c.activityId,
+      activityName:
+        (c.sampleDefinitionId ? display.names.get(c.sampleDefinitionId)?.[c.activityId] : null) ??
+        null,
       incidentType: c.incidentType,
       messageSignature: c.signature,
       incidentCount: coverage.complete ? c.count : null,
       scannedIncidentCount: c.count,
       last24hCount: coverage.covers(cutoffMs) ? c.last24h : null,
-      processDefinitionKeys: [...c.keys.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k),
+      processDefinitionKeys: keys,
+      processDefinitionName:
+        (primaryKey ? display.statsByKey.get(primaryKey)?.latest.name : null) ?? null,
       representativeMessage: c.sampleMessage,
       representativeIncidentId: c.sampleIncidentId,
       latestIncident: c.latest,
-    }))
+    }
+  })
+}
+
+/** The clusters the overview shows: the largest scanned shares, at most {@link MAX_CLUSTERS}. */
+function topClusters(byCluster: Map<string, ClusterAcc>): ClusterAcc[] {
+  return [...byCluster.values()].sort((a, b) => b.count - a.count).slice(0, MAX_CLUSTERS)
 }
 
 /**
@@ -261,7 +285,14 @@ export async function buildEngineHealthData(
     cutoffMs,
     definitionKeyResolver(statsByKey),
   )
-  const clusters = toClusterList(byCluster, coverage, cutoffMs)
+  const ranked = topClusters(byCluster)
+  // Display names of the top clusters' activities — enrichment, one diagram
+  // read per version behind them (a failed read leaves the id on screen).
+  const names = await fetchNamesByDefinition(
+    client,
+    ranked.map((c) => c.sampleDefinitionId),
+  )
+  const clusters = toClusterList(ranked, coverage, cutoffMs, { names, statsByKey })
   // The affected activities are exact only when the scan read every incident.
   const affectedActivities = coverage.complete ? activitySet.size : null
 

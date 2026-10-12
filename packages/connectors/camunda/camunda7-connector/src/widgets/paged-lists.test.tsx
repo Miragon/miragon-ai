@@ -92,6 +92,7 @@ function instances(ids: string[], total: number): ProcessInstancesData {
       id,
       businessKey: `BK-${id}`,
       processDefinitionKey: "invoice",
+      processDefinitionName: null,
       version: 1,
       suspended: false,
       hasIncident: false,
@@ -103,6 +104,7 @@ function instances(ids: string[], total: number): ProcessInstancesData {
 
 const CLUSTER: ClusterDetailData = {
   activityId: "callWMS",
+  activityName: null,
   incidentType: "failedExternalTask",
   messageSignature: "connection timeout",
   incidentCount: 2,
@@ -119,6 +121,7 @@ const CLUSTER: ClusterDetailData = {
       processInstanceId: "pi-1",
       businessKey: "ORDER-4711",
       processDefinitionKey: "shipping",
+      processDefinitionName: null,
       incidentTimestamp: "2026-06-11T14:00:00.000Z",
     },
     {
@@ -126,6 +129,7 @@ const CLUSTER: ClusterDetailData = {
       processInstanceId: "pi-2",
       businessKey: "ORDER-4712",
       processDefinitionKey: "shipping",
+      processDefinitionName: null,
       incidentTimestamp: "2026-06-11T13:00:00.000Z",
     },
   ],

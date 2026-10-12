@@ -58,7 +58,7 @@ function ProcessHeatmap({
   if (unavailable) return null
   if (!q.data) {
     return (
-      <div className="text-muted-foreground p-6 text-sm">{t("procIncFlow.heatmapLoading")}</div>
+      <div className="text-muted-foreground text-dense p-6">{t("procIncFlow.heatmapLoading")}</div>
     )
   }
   if (!q.data.bpmnXml) {
@@ -117,13 +117,13 @@ function FlowModeToolbar({
         ariaLabel={t("procIncFlow.modeAria")}
       />
       {mode === "incidents" ? (
-        <span className="text-muted-foreground text-xs">
+        <span className="text-muted-foreground text-small">
           {incidentsCaption}
           {heatmapUnavailable && ` · ${t("procIncFlow.heatmapUnavailable")}`}
         </span>
       ) : (
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground text-small">
             {mode === "frequency"
               ? t("procIncFlow.heatmapCaptionFrequency")
               : t("procIncFlow.heatmapCaptionDuration")}

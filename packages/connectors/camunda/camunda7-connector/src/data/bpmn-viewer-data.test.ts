@@ -111,6 +111,40 @@ describe("buildBpmnViewerData — instance-scoped overlays (#335 N66)", () => {
     })
   })
 
+  it("names the process from its diagram and the instance by its business key (#322 U13)", async () => {
+    const xml = '<definitions><process id="order" name="Order to cash"/></definitions>'
+    const named = await startFakeEngine(
+      {
+        ...ROUTES,
+        "GET /process-instance/pi-1": {
+          body: { id: "pi-1", definitionId: DEF, businessKey: "ORD-7" },
+        },
+        [`GET /process-definition/${DEF}/xml`]: { body: { id: DEF, bpmn20Xml: xml } },
+      },
+      { body: [] },
+    )
+    engines.push(named)
+
+    const instance = await buildBpmnViewerData(clientFor(named), "fake", {
+      processInstanceId: "pi-1",
+    })
+    const definition = await buildBpmnViewerData(clientFor(named), "fake", {
+      processDefinitionKey: "order",
+    })
+
+    expect([instance.processDefinitionName, instance.businessKey]).toEqual([
+      "Order to cash",
+      "ORD-7",
+    ])
+    expect([definition.processDefinitionName, definition.businessKey]).toEqual([
+      "Order to cash",
+      null,
+    ])
+    // An unnamed process or an instance without a key leaves the fields null.
+    const { data } = await build({ processInstanceId: "pi-1" })
+    expect([data.processDefinitionName, data.businessKey]).toEqual([null, null])
+  })
+
   it("returns the explicit empty shape for a key with no such version", async () => {
     const engine = await startFakeEngine({}, { body: [] })
     engines.push(engine)
@@ -120,6 +154,12 @@ describe("buildBpmnViewerData — instance-scoped overlays (#335 N66)", () => {
       version: 9,
     })
 
-    expect(data).toMatchObject({ processDefinitionId: null, bpmnXml: null, activityStats: [] })
+    expect(data).toMatchObject({
+      processDefinitionId: null,
+      processDefinitionName: null,
+      businessKey: null,
+      bpmnXml: null,
+      activityStats: [],
+    })
   })
 })

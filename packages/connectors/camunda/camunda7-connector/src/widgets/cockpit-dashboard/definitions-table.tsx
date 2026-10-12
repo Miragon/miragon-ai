@@ -1,12 +1,6 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { ViewDataState, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
-import {
-  DrillButton,
-  FilterBar,
-  ListFooter,
-  SectionHeading,
-  useDebouncedValue,
-} from "@miragon/mcp-toolkit-ui"
+import { DrillButton, FilterBar, ListFooter, useDebouncedValue } from "@miragon/mcp-toolkit-ui"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
@@ -41,6 +35,7 @@ export function ProcessDefinitionsSection({
 }) {
   const t = useT()
   const go = useNav()
+  const headingId = useId()
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebouncedValue(search.trim().toLowerCase(), 300)
   const [limit, setLimit] = useState(PAGE_SIZE)
@@ -97,11 +92,17 @@ export function ProcessDefinitionsSection({
   const rows = filtered.slice(0, limit)
 
   return (
-    <section>
-      <SectionHeading
-        title={t("cockpitDefs.heading")}
-        hint={t("cockpitDefs.deployedHint", { count: formatNumber(allRows.length) })}
-      />
+    // A section of the overview like the failure clusters above it: the same
+    // heading step, a real heading (#322 U27), its scope a quiet note beside.
+    <section aria-labelledby={headingId}>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 id={headingId} className="text-section text-foreground">
+          {t("cockpitDefs.heading")}
+        </h2>
+        <span className="text-muted-foreground text-small">
+          {t("cockpitDefs.deployedHint", { count: formatNumber(allRows.length) })}
+        </span>
+      </div>
       <FilterBar
         search={search}
         onSearchChange={setSearch}
@@ -124,7 +125,13 @@ export function ProcessDefinitionsSection({
               {t("cockpitDefs.instancesAction")}
             </DrillButton>
             <DrillButton
-              onDrill={() => go({ type: "process-detail", processDefinitionKey: row.key })}
+              onDrill={() =>
+                go({
+                  type: "process-detail",
+                  processDefinitionKey: row.key,
+                  label: row.name ?? undefined,
+                })
+              }
               ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
             >
               {t("cockpitDefs.openAction")}

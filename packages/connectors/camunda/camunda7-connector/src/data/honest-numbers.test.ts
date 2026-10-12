@@ -126,6 +126,12 @@ const clusterBusinessKeys = {
     incidents: Array<{ businessKey: unknown }>
   }) => data.incidents[0]?.businessKey,
 }
+/** The diagram that names a view's activity and processes (`fetchNamesByDefinition`). */
+const namesFrom = (definitionId: string) => `GET /process-definition/${definitionId}/xml`
+const clusterNames = {
+  ...clusterBusinessKeys,
+  [namesFrom(WORLD.instanceDefinitionId)]: (data: { activityName: unknown }) => data.activityName,
+}
 const incidentDetailEnrichment = {
   [`GET /process-definition/${WORLD.instanceDefinitionId}`]: (data: {
     processDefinitionName: unknown
@@ -161,11 +167,20 @@ const CASES: Record<string, Case> = {
       "GET /process-definition/statistics?incidents": (data: {
         instances: Array<{ processDefinitionKey: unknown }>
       }) => data.instances[0]?.processDefinitionKey,
+      // The rows' process names (#322 U13): one read over the page's versions.
+      "GET /process-definition?maxResults&processDefinitionIdIn": (data: {
+        instances: Array<{ processDefinitionName: unknown }>
+      }) => data.instances[0]?.processDefinitionName,
     },
   },
   buildJobPanelData: {
     run: (client) => buildJobPanelData(client, "fake", { processDefinitionKey: WORLD.key }),
     unknown: { read: KEY_LOOKUP, reply: NO_ROWS },
+    enrichment: {
+      [namesFrom(WORLD.instanceDefinitionId)]: (data: {
+        jobs: Array<{ activityName: unknown; processDefinitionName: unknown }>
+      }) => data.jobs[0]?.activityName ?? data.jobs[0]?.processDefinitionName,
+    },
   },
   buildInstanceDetailData: {
     run: (client) =>
@@ -179,6 +194,11 @@ const CASES: Record<string, Case> = {
   buildHistoryTimelineData: {
     run: (client) =>
       buildHistoryTimelineData(client, "fake", { processInstanceId: WORLD.instanceId }),
+    enrichment: {
+      // The failing steps the timeline marks.
+      "GET /incident?maxResults&processInstanceId": (data: { incidentActivityIds: unknown }) =>
+        data.incidentActivityIds,
+    },
   },
   buildBpmnViewerData: {
     run: (client) => buildBpmnViewerData(client, "fake", { processInstanceId: WORLD.instanceId }),
@@ -197,9 +217,13 @@ const CASES: Record<string, Case> = {
       "GET /history/process-instance/count?finishedAfter": (data: {
         summary: { completed24h: unknown }
       }) => data.summary.completed24h,
+      // The clusters are titled by their activity's name (#322 U12).
+      [namesFrom(WORLD.instanceDefinitionId)]: (data: {
+        clusters: Array<{ activityName: unknown }>
+      }) => data.clusters[0]?.activityName,
     },
   },
-  buildClusterDetailData: { run: clusterDetail, enrichment: clusterBusinessKeys },
+  buildClusterDetailData: { run: clusterDetail, enrichment: clusterNames },
   // The cluster's keys scope its remediation: a bare definition id resolves
   // through the statistics, and that read is primary — never a guessed key.
   "buildClusterDetailData (bare definition ids)": {
@@ -211,13 +235,16 @@ const CASES: Record<string, Case> = {
         processDefinitionId: BARE_DEFINITION_ID,
       })),
     ),
-    enrichment: clusterBusinessKeys,
+    enrichment: {
+      ...clusterBusinessKeys,
+      [namesFrom(BARE_DEFINITION_ID)]: (data: { activityName: unknown }) => data.activityName,
+    },
   },
   // A mass failure: the scan hits its limit, so the counts come from /count.
   "buildClusterDetailData (scan capped)": {
     run: clusterDetail,
     world: (r) => (r.path === "/incident" ? { body: incidentScan(CLUSTER_SCAN_LIMIT) } : undefined),
-    enrichment: clusterBusinessKeys,
+    enrichment: clusterNames,
   },
   buildIncidentDetailData: {
     run: (client, baseUrl) =>
@@ -275,6 +302,12 @@ const CASES: Record<string, Case> = {
         processDefinitionKey: WORLD.key,
         activityId: WORLD.activityId,
       }),
+    enrichment: {
+      // The rows are named by their instances' business keys (#322 U13).
+      "GET /process-instance?maxResults&processInstanceIds": (data: {
+        incidents: Array<{ businessKey: unknown }>
+      }) => data.incidents[0]?.businessKey,
+    },
   },
 }
 

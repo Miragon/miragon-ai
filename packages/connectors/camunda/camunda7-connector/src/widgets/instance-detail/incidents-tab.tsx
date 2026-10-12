@@ -19,7 +19,7 @@ export function IncidentsTab({
   const t = useT()
   const go = useNav()
   if ((incidents ?? []).length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("instanceDetail.noIncidents")}</p>
+    return <p className="text-muted-foreground text-dense">{t("instanceDetail.noIncidents")}</p>
   }
   /* Same IncidentTable as the definition view — an incident looks
       identical on both pages. All rows belong to this instance, so

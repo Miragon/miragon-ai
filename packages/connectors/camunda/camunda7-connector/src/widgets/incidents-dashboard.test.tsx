@@ -160,11 +160,24 @@ describe("incidents dashboard — a filtered view keeps its scope", () => {
         onHostAction={(action) => actions.push(action)}
       />,
     )
-    // A card's toggle wraps its chat hand-off — click the button itself.
-    const [analyze] = (await screen.findAllByRole("button", { name: /in chat/ })).sort(
-      (a, b) => (a.textContent ?? "").length - (b.textContent ?? "").length,
+    // A card keeps its chat hand-off behind its "more" button (#322 U20).
+    await waitFor(() =>
+      expect(
+        screen.queryAllByRole("button", { name: /in chat|^More actions for / }).length,
+      ).toBeGreaterThan(0),
     )
-    fireEvent.click(analyze)
+    const more = screen.queryAllByRole("button", { name: /^More actions for / })
+    if (more.length > 0) {
+      // The card's hand-off is an entry of its menu.
+      fireEvent.click(more[0])
+      fireEvent.click(await screen.findByRole("menuitem", { name: /in chat/ }))
+    } else {
+      // A card's toggle wraps its chat hand-off — click the button itself.
+      const [analyze] = (await screen.findAllByRole("button", { name: /in chat/ })).sort(
+        (a, b) => (a.textContent ?? "").length - (b.textContent ?? "").length,
+      )
+      fireEvent.click(analyze)
+    }
     const prompts = actions.flatMap((a) => (a.type === "sendFollowUpMessage" ? [a.prompt] : []))
     expect(prompts).toHaveLength(1)
     return prompts[0]

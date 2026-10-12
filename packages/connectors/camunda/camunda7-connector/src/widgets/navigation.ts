@@ -33,13 +33,27 @@ export type NavIntent =
   | { type: "process-list" }
   | { type: "incidents" }
   | { type: "settings" }
-  | { type: "cluster-detail"; activityId: string; incidentType: string; messageSignature?: string }
-  | { type: "process-detail"; processDefinitionKey: string }
+  | ({
+      type: "cluster-detail"
+      activityId: string
+      incidentType: string
+      messageSignature?: string
+    } & Labelled)
+  | ({ type: "process-detail"; processDefinitionKey: string } & Labelled)
   /** Omit the key for the engine-wide running-instances list. */
   | { type: "process-instances"; processDefinitionKey?: string }
-  | { type: "process-incidents"; processDefinitionKey: string }
-  | { type: "instance-detail"; processInstanceId: string }
-  | { type: "incident-detail"; incidentId: string }
+  | ({ type: "process-incidents"; processDefinitionKey: string } & Labelled)
+  | ({ type: "instance-detail"; processInstanceId: string } & Labelled)
+  | ({ type: "incident-detail"; incidentId: string } & Labelled)
+
+/**
+ * The name the target goes by on screen — its breadcrumb (#322 U13): an
+ * instance's business key, a process's or an activity's name. Optional: a
+ * drill without one shows the id the target is addressed by.
+ */
+interface Labelled {
+  label?: string
+}
 
 export type OnNavigate = (intent: NavIntent) => void
 

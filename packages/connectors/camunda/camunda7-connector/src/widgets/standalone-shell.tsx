@@ -233,7 +233,7 @@ export function Camunda7StandaloneShell({ children }: { children: ReactNode }) {
               />
             </>
           ) : (
-            <div className="text-muted-foreground p-6 text-sm">
+            <div className="text-muted-foreground text-dense p-6">
               {translator(locale, "cockpit.loading.engines")}
             </div>
           )}

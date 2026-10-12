@@ -58,7 +58,7 @@ export function GroupSummaryRow({
   title: ReactNode
   /** Inline suffix after the title, e.g. a `VersionChip`. */
   titleSuffix?: ReactNode
-  /** Mono, truncated second line under the title. */
+  /** Truncated second line under the title (the cause, in words). */
   subline?: ReactNode
   stats?: GroupSummaryStat[]
   /** Count-pill content after the stats; omit to render no pill. */
@@ -79,17 +79,26 @@ export function GroupSummaryRow({
     >
       {icon}
       <div className="min-w-0 flex-1">
-        <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
-          {tone && <span className={`size-1.5 shrink-0 rounded-full ${TONE_DOT[tone]}`} />}
+        <div className="text-foreground text-dense flex items-center gap-2 font-semibold">
+          {tone && (
+            <span
+              aria-hidden="true"
+              className={`size-1.5 shrink-0 rounded-full ${TONE_DOT[tone]}`}
+            />
+          )}
           <span className="truncate">{title}</span>
           {titleSuffix}
         </div>
+        {/* The cause in words (an engine message), not code: no mono. */}
         {subline !== undefined && (
-          <div className="text-muted-foreground truncate font-mono text-xs">{subline}</div>
+          <div className="text-muted-foreground text-small truncate">{subline}</div>
         )}
       </div>
       {stats.map((stat, i) => (
-        <div key={i} className="text-muted-foreground min-w-[80px] text-right text-xs tabular-nums">
+        <div
+          key={i}
+          className="text-muted-foreground text-small min-w-[80px] text-right tabular-nums"
+        >
           <div className="text-foreground font-semibold">{stat.value}</div>
           <div>{stat.label}</div>
         </div>

@@ -102,7 +102,9 @@ describe("explainDiagramHandOff", () => {
   const VIEW: BpmnViewerData = {
     bpmnXml: null,
     processInstanceId: "pi-1",
+    businessKey: null,
     processDefinitionId: "invoice:3:abc",
+    processDefinitionName: null,
     activeActivityIds: ["Task_A"],
     incidentActivityIds: ["Task_A"],
     activityStats: [{ id: "Task_A", instances: 1, failedJobs: 1 }],

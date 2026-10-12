@@ -1,231 +1,226 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
-import { useLocale, TONE_DOT } from "@miragon/mcp-toolkit-ui"
-import { Icon, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
-import { ArrowLeftRight, ArrowRight, ChevronLeft, LayoutDashboard } from "lucide-react"
+import type { ReactNode } from "react"
+import {
+  Button,
+  cn,
+  FOCUS_RING_INSET,
+  TONE_DOT,
+  TONE_ICON,
+  useLocale,
+} from "@miragon/mcp-toolkit-ui"
+import { Icon, KometMark, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { ArrowRight, CircleDashed, Layers, LoaderCircle, Unplug } from "lucide-react"
 import { DEFAULT_ENVIRONMENT_ID, groupEnginesByEnvironment } from "../../lib/environments.js"
 import { translator } from "../../messages/index.js"
 import { useEngineHealth } from "./engine-health.js"
 
-const chooserButtonCls =
-  "border-border bg-background text-foreground hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2"
+/** What the landing says about one engine — in words, so colour is never the only signal. */
+export type EngineStatusKind =
+  "loading" | "unreachable" | "empty" | "incidents" | "failedJobs" | "idle" | "healthy"
 
 /**
- * One engine's live health dot ({@link useEngineHealth}). Decorative on the
- * environment buttons — the engine stage behind them spells the numbers out.
+ * One engine's state as the chooser names it (#322 U15): unreachable, still
+ * loading, nothing deployed, open incidents, jobs without retries, idle or
+ * fine — from the same live health the engine's own overview reads
+ * (`useEngineHealth`, the same severity ladder).
  */
-function EngineHealthDot({ engineId }: { engineId: string }) {
-  const { tone } = useEngineHealth(engineId)
-  return <span className={`size-2 shrink-0 rounded-full ${TONE_DOT[tone]}`} aria-hidden />
+export function engineStatusKind(health: {
+  isError: boolean
+  summary:
+    | {
+        totalDefinitions: number
+        totalRunningInstances: number
+        totalFailedJobs: number
+        totalIncidents: number
+      }
+    | undefined
+}): EngineStatusKind {
+  if (health.isError) return "unreachable"
+  const s = health.summary
+  if (!s) return "loading"
+  if (s.totalDefinitions === 0) return "empty"
+  if (s.totalIncidents > 0) return "incidents"
+  if (s.totalFailedJobs > 0) return "failedJobs"
+  if (s.totalRunningInstances === 0) return "idle"
+  return "healthy"
+}
+
+/** The status mark: a shape per state, its tone where the state has one (CI §3.7). */
+function StatusMark({ kind }: { kind: EngineStatusKind }) {
+  if (kind === "loading") {
+    return <Icon icon={LoaderCircle} className="text-muted-foreground motion-safe:animate-spin" />
+  }
+  if (kind === "unreachable") return <Icon icon={Unplug} className={TONE_ICON.danger} />
+  if (kind === "empty") return <Icon icon={CircleDashed} className="text-muted-foreground" />
+  const tone =
+    kind === "incidents" || kind === "failedJobs"
+      ? "danger"
+      : kind === "healthy"
+        ? "success"
+        : "neutral"
+  return (
+    <span className="inline-flex size-4 items-center justify-center" aria-hidden="true">
+      <span className={cn("size-2 rounded-full", TONE_DOT[tone])} />
+    </span>
+  )
 }
 
 /**
- * One engine of the picker: health dot, id and the open-incident count — the
- * "where is it burning" glance before entering an engine, independent of the
- * analytics module (the numbers come from the engine's own REST API).
+ * One engine of the chooser: its status mark, id and state in words — all
+ * inside the button, so the state is part of its accessible name ("test-a,
+ * nicht erreichbar"). The saved default engine says so.
  */
-function EngineChoice({ engineId, onEnter }: { engineId: string; onEnter: () => void }) {
+function EngineRow({
+  engineId,
+  isDefault,
+  onEnter,
+}: {
+  engineId: string
+  isDefault: boolean
+  onEnter: () => void
+}) {
   const locale = useLocale()
-  const { query, incidents, tone } = useEngineHealth(engineId)
+  const tr = (key: string, params?: Record<string, unknown>) => translator(locale, key, params)
+  const { query, summary } = useEngineHealth(engineId)
+  const kind = engineStatusKind({ isError: query.isError, summary })
+  const status =
+    kind === "incidents"
+      ? tr("cockpit.landing.status.incidents", {
+          count: formatNumber(summary?.totalIncidents ?? 0),
+        })
+      : kind === "failedJobs"
+        ? tr("cockpit.landing.status.failedJobs", {
+            count: formatNumber(summary?.totalFailedJobs ?? 0),
+          })
+        : tr(`cockpit.landing.status.${kind}`)
   return (
-    <button type="button" onClick={onEnter} className={chooserButtonCls}>
-      <span className={`size-2 shrink-0 rounded-full ${TONE_DOT[tone]}`} aria-hidden />
-      {engineId}
-      {query.isError ? (
-        <span className="text-muted-foreground text-xs font-normal">
-          {translator(locale, "cockpit.landing.engine.noStatus")}
-        </span>
-      ) : (
-        incidents > 0 && (
-          <span className="text-danger-ink text-xs tabular-nums">
-            {translator(locale, "cockpit.landing.engine.incidents", {
-              count: formatNumber(incidents),
-            })}
-          </span>
-        )
+    <button
+      type="button"
+      onClick={onEnter}
+      data-status={kind}
+      className={cn(
+        "hover:bg-muted text-dense flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
+        FOCUS_RING_INSET,
       )}
-      <Icon icon={ArrowRight} dense />
+    >
+      <StatusMark kind={kind} />
+      <span className="text-foreground min-w-0 truncate font-semibold">{engineId}</span>
+      {isDefault && (
+        <span className="border-input text-muted-foreground text-small shrink-0 rounded-sm border px-1.5">
+          {tr("cockpit.landing.default")}
+        </span>
+      )}
+      {/* A comma for the accessible name ("prod-a, 18 Incidents"); the eye reads the gap. */}
+      <span className="sr-only">, </span>
+      <span className="text-muted-foreground ms-auto shrink-0 text-right">{status}</span>
+      <Icon icon={ArrowRight} dense className="text-muted-foreground" />
     </button>
   )
 }
 
 /**
- * The engine stage of the operate card — or, with more than one environment,
- * its second stage: the selection is a two-level map (environment → engine),
- * so the chooser asks for the environment FIRST and only then lists that
- * environment's engines. The environment choice is ephemeral UI state: the
- * durable selection stays the engine (its entry names the environment).
+ * The product signature of an app-level surface (#322 U15, owner decision):
+ * the Komet beside "Miragon AI" over "Operations Cockpit". Both Miragon
+ * marks hang on the theme slot a customer brand empties
+ * (`--brand-mark-display: none`); the product title stays. The landing and
+ * the "no engines" surface open with it.
  */
-function OperateCardBody({
-  engines,
-  onEnterEngine,
-}: {
-  engines: Array<{ id: string; environment?: string }>
-  onEnterEngine: (id: string) => void
-}) {
+export function LandingHeader({ subtitle, action }: { subtitle?: string; action?: ReactNode }) {
   const locale = useLocale()
-  const groups = groupEnginesByEnvironment(engines)
-  const [envId, setEnvId] = useState<string | null>(null)
-  // A vanished group (engine list refreshed) falls back to the environment
-  // stage instead of rendering an empty engine list.
-  const activeGroup =
-    groups.length > 1 ? (groups.find((g) => g.id === envId) ?? null) : (groups[0] ?? null)
-
-  // Keep keyboard focus with the user across the stage swap: the clicked
-  // button unmounts, which would drop focus to the body and leave a screen
-  // reader silent. Only after an actual click — never on mount, where stealing
-  // focus from the host would be worse.
-  const envButtonsRef = useRef<HTMLDivElement>(null)
-  const engineButtonsRef = useRef<HTMLDivElement>(null)
-  const interacted = useRef(false)
-  useEffect(() => {
-    if (!interacted.current) return
-    const target = envId ? engineButtonsRef.current : envButtonsRef.current
-    target?.querySelector("button")?.focus()
-  }, [envId])
-  const pickStage = (id: string | null) => {
-    interacted.current = true
-    setEnvId(id)
-  }
-
-  if (!activeGroup) {
-    return (
-      <div ref={envButtonsRef} className="mt-1 flex flex-wrap gap-2">
-        {groups.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            onClick={() => pickStage(g.id)}
-            className={chooserButtonCls}
-          >
-            {g.id}
-            <span className="inline-flex gap-1" aria-hidden>
-              {g.engines.map((e) => (
-                <EngineHealthDot key={e.id} engineId={e.id} />
-              ))}
-            </span>
-            <span className="text-muted-foreground">
-              {translator(locale, "cockpit.landing.env.count", {
-                count: formatNumber(g.engines.length),
-              })}
-            </span>
-            <Icon icon={ArrowRight} dense />
-          </button>
-        ))}
-      </div>
-    )
-  }
-  // Always name the environment the listed engines belong to (except the lone
-  // implicit default group) — after a refresh collapses the groups, an
-  // unlabeled engine list could silently belong to a different environment
-  // than the one the user picked.
-  const showEnvironmentLabel = groups.length > 1 || activeGroup.id !== DEFAULT_ENVIRONMENT_ID
   return (
-    <div className="mt-1 flex flex-col gap-2">
-      {showEnvironmentLabel && (
-        <div className="flex items-center gap-2">
-          {groups.length > 1 && (
-            <button
-              type="button"
-              onClick={() => pickStage(null)}
-              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 self-start rounded text-sm outline-none focus-visible:ring-2"
-            >
-              <Icon icon={ChevronLeft} dense />
-              {translator(locale, "cockpit.landing.env.back")}
-            </button>
-          )}
-          <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-            {activeGroup.id}
-          </span>
+    <header className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex min-w-0 items-center gap-4">
+        <KometMark />
+        <div className="min-w-0">
+          <p
+            data-brand-signature=""
+            className="text-muted-foreground text-small font-semibold"
+            style={{ display: "var(--brand-mark-display, block)" }}
+          >
+            {translator(locale, "cockpit.signature")}
+          </p>
+          <h1 className="text-title text-foreground font-bold tracking-tight">
+            {translator(locale, "cockpit.landing.title")}
+          </h1>
+          {subtitle && <p className="text-muted-foreground text-dense mt-1">{subtitle}</p>}
         </div>
-      )}
-      <div ref={engineButtonsRef} className="flex flex-wrap gap-2">
-        {activeGroup.engines.map((e) => (
-          <EngineChoice key={e.id} engineId={e.id} onEnter={() => onEnterEngine(e.id)} />
-        ))}
       </div>
-    </div>
+      {action}
+    </header>
   )
 }
 
+/**
+ * The landing (#322 U15): a dense engine list grouped by environment, each
+ * engine with its state in words — the real artefact first, no template
+ * hero. The cross-engine view is one secondary entry beside the title (an
+ * analytics feature, offered only with analytics confirmed).
+ */
 export function LandingChooser({
   engines,
+  defaultEngineId,
   onEnterEngine,
   onOpenFleet,
   notice,
 }: {
   engines: Array<{ id: string; environment?: string }>
+  /** The caller's saved default engine — marked in the list; null when none is saved. */
+  defaultEngineId?: string | null
   onEnterEngine: (id: string) => void
   /**
    * Omitted when the analytics module is inactive: the cross-engine view is an
-   * analytics feature (landscape + fleet analyses), and the engine health it
-   * would add already sits on the picker's engine buttons.
+   * analytics feature (landscape + fleet analyses).
    */
   onOpenFleet?: () => void
   /** Shown above the chooser — e.g. why the cockpit left the engine it was on. */
   notice?: ReactNode
 }) {
   const locale = useLocale()
-  const environmentCount = groupEnginesByEnvironment(engines).length
-  // The landing chooser: with more than one engine, Open Cockpit offers two
-  // ways in — operate a single engine (picking its environment first when more
-  // than one is configured), or run cross-engine analyses (analytics only).
-  const subtitleKey = `cockpit.landing.subtitle${environmentCount > 1 ? ".env" : ""}${
-    onOpenFleet ? "" : ".noFleet"
-  }`
+  const tr = (key: string, params?: Record<string, unknown>) => translator(locale, key, params)
+  const groups = groupEnginesByEnvironment(engines)
+  const named = groups.length > 1 || groups[0]?.id !== DEFAULT_ENVIRONMENT_ID
+  const subtitle = tr(named ? "cockpit.landing.subtitle.env" : "cockpit.landing.subtitle", {
+    count: formatNumber(engines.length),
+    envCount: formatNumber(groups.length),
+  })
   return (
     <WidgetShell>
-      <div className="mx-auto flex max-w-2xl flex-col gap-6 py-10">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         {notice}
-        <div className="text-center">
-          <h1 className="text-foreground text-2xl font-bold">
-            {translator(locale, "cockpit.landing.title")}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {translator(locale, subtitleKey, {
-              count: formatNumber(engines.length),
-              envCount: formatNumber(environmentCount),
-            })}
-          </p>
-        </div>
-        <div className={`grid grid-cols-1 gap-4 ${onOpenFleet ? "sm:grid-cols-2" : ""}`}>
-          <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-5">
-            <div className="bg-accent text-accent-foreground grid size-8 place-items-center rounded-lg">
-              <Icon icon={LayoutDashboard} />
-            </div>
-            <div>
-              <h2 className="text-foreground font-semibold">
-                {translator(locale, "cockpit.landing.operate.title")}
+        <LandingHeader
+          subtitle={subtitle}
+          action={
+            onOpenFleet && (
+              <Button type="button" variant="outline" onClick={onOpenFleet}>
+                <Icon icon={Layers} />
+                {tr("cockpit.landing.fleet.open")}
+              </Button>
+            )
+          }
+        />
+        {groups.map((g) => (
+          <section
+            key={g.id}
+            aria-label={named ? tr("cockpit.landing.envLabel", { env: g.id }) : undefined}
+            className="flex flex-col gap-2"
+          >
+            {named && (
+              <h2 className="text-muted-foreground text-small font-semibold tracking-wide uppercase">
+                {g.id}
               </h2>
-              <p className="text-muted-foreground text-sm">
-                {translator(locale, "cockpit.landing.operate.desc")}
-              </p>
-            </div>
-            <OperateCardBody engines={engines} onEnterEngine={onEnterEngine} />
-          </div>
-          {onOpenFleet && (
-            <button
-              type="button"
-              onClick={onOpenFleet}
-              className="border-border bg-card hover:bg-muted focus-visible:ring-ring flex flex-col gap-3 rounded-xl border p-5 text-left outline-none focus-visible:ring-2"
-            >
-              <div className="bg-accent text-accent-foreground grid size-8 place-items-center rounded-lg">
-                <Icon icon={ArrowLeftRight} />
-              </div>
-              <div>
-                <h2 className="text-foreground font-semibold">
-                  {translator(locale, "cockpit.landing.fleet.title")}
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                  {translator(locale, "cockpit.landing.fleet.desc")}
-                </p>
-              </div>
-              <span className="text-link mt-1 inline-flex items-center gap-1 text-sm font-medium">
-                {translator(locale, "cockpit.landing.fleet.open")}
-                <Icon icon={ArrowRight} dense />
-              </span>
-            </button>
-          )}
-        </div>
+            )}
+            <ul className="border-border bg-card divide-border divide-y overflow-hidden rounded-md border">
+              {g.engines.map((e) => (
+                <li key={e.id}>
+                  <EngineRow
+                    engineId={e.id}
+                    isDefault={e.id === defaultEngineId}
+                    onEnter={() => onEnterEngine(e.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
       </div>
     </WidgetShell>
   )

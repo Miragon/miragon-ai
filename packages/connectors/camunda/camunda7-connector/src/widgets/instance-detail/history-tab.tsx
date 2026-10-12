@@ -20,10 +20,13 @@ export function HistoryTab({
   instanceId,
   definitionId,
   engineId,
+  incidentActivityIds,
 }: {
   instanceId: string
   definitionId: string
   engineId?: string
+  /** The instance's activities with an open incident — the timeline marks them. */
+  incidentActivityIds: readonly string[]
 }) {
   const { ask } = useHandOff()
   return (
@@ -35,7 +38,11 @@ export function HistoryTab({
         />
       </div>
       {/* Mounted on first tab activation — the lazy-load point. */}
-      <PagedHistoryView processInstanceId={instanceId} engine={engineId} />
+      <PagedHistoryView
+        processInstanceId={instanceId}
+        engine={engineId}
+        incidentActivityIds={incidentActivityIds}
+      />
     </>
   )
 }

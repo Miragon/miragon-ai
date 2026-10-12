@@ -55,7 +55,7 @@ operaton | camunda7`) and `auth` — overrides the single-engine shorthand
   above. To group engines by environment, either set `environment` per entry
   or write the JSON as a map keyed by environment id
   (`{"<environment>": [engines…]}`) — pickers and `camunda7_list_engines`
-  then offer a two-stage environment → engine selection. Engine ids stay
+  then group the engines by environment. Engine ids stay
   globally unique across environments.
 - `PROMETHEUS_URL` — unset defaults to `http://localhost:9090`, which does
   **not** match the playground stack (host port 8460); every analytics query

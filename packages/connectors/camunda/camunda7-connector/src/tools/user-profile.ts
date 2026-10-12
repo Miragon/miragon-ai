@@ -21,6 +21,7 @@ import {
   defaultUserProfile,
   toUserProfile,
   userProfileToolSaveInput,
+  type ProfileReadOnlyReason,
   type UserProfile,
   type UserProfileView,
 } from "../lib/profile-schema.js"
@@ -50,6 +51,21 @@ function summarize(p: UserProfile): string {
     engines,
     defaultDashboard,
   })
+}
+
+/**
+ * Which of the two gates keeps the panel read-only, so it can name the way
+ * out — the missing sign-in FIRST: a request without a profile key (HTTP
+ * without OAuth, the default deployment) cannot save on any toolset, so
+ * "switch to operations" would send the operator to a second read-only
+ * panel. The toolset is the reason only for a caller who could save.
+ */
+function readOnlyReason(
+  toolsetAllowsSave: boolean,
+  key: string | undefined,
+): ProfileReadOnlyReason | null {
+  if (key === undefined) return "noSignIn"
+  return toolsetAllowsSave ? null : "toolset"
 }
 
 /**
@@ -101,6 +117,7 @@ export function registerUserProfileTools(
       // profile key the save tool refuses, so the panel must render read-only
       // instead of a Save button whose click errors.
       canSave: canSave && key !== undefined,
+      readOnlyReason: readOnlyReason(canSave, key),
     }
   }
 

@@ -8,7 +8,6 @@ import {
 } from "../tools/test-support/fake-engine.js"
 import {
   buildCockpitDashboardData,
-  buildJobPanelData,
   buildProcessInstancesData,
   buildProcessListData,
 } from "./cockpit-data.js"
@@ -212,6 +211,8 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
         id: "p1",
         businessKey: "BK-1",
         processDefinitionKey: "K1",
+        // A scoped list's rows run on its definition: named by its key lookup.
+        processDefinitionName: "Order",
         version: 7,
         suspended: false,
         hasIncident: false,
@@ -220,6 +221,7 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
         id: "p2",
         businessKey: null,
         processDefinitionKey: "K1",
+        processDefinitionName: "Order",
         version: 7,
         suspended: true,
         hasIncident: true,
@@ -229,6 +231,7 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
         businessKey: null,
         // A bare generated id names no key — a scoped list's rows run on its key.
         processDefinitionKey: "K1",
+        processDefinitionName: "Order",
         version: null,
         suspended: false,
         hasIncident: false,
@@ -310,7 +313,11 @@ describe("buildProcessInstancesData — totals and page-scoped incident flags (#
 
     const data = await buildProcessInstancesData(client, "engine-a", {})
 
-    expect(calls(engine, "/process-definition")).toEqual([])
+    // No key lookup — only the page's names, ONE read over its versions (#322 U13).
+    expect(calls(engine, "/process-definition").map((r) => r.query)).toEqual([
+      { processDefinitionIdIn: "K1:7:dep,legacy-id", maxResults: "2" },
+    ])
+    expect(data.instances.map((i) => i.processDefinitionName)).toEqual(["Order", "Order", null])
     // Only p3's bare id needs the statistics; they do not list it — null, not "legacy-id".
     expect(calls(engine, "/process-definition/statistics")).toHaveLength(1)
     expect(data.instances.map((i) => i.processDefinitionKey)).toEqual(["K1", "K1", null])
@@ -386,76 +393,5 @@ describe("buildProcessInstancesData — each row's real definition key", () => {
 
     expect(keysOf(data)).toEqual([LONG_KEY])
     expect(calls(engine, "/process-definition/statistics")).toEqual([])
-  })
-})
-
-describe("buildJobPanelData — exact totals from /job/count", () => {
-  const jobRoutes = {
-    "GET /job": {
-      body: [
-        {
-          id: "j1",
-          processInstanceId: "p1",
-          retries: 0,
-          suspended: false,
-          priority: 0,
-          failedActivityId: "charge",
-        },
-      ],
-    },
-    "GET /job/count": (r: RecordedRequest) => ({
-      body: { count: r.query.noRetriesLeft ? 3 : 120 },
-    }),
-    "GET /process-definition": { body: [{ id: "K1:1:a", key: "K1", version: 1 }] },
-  }
-
-  it("reports both global totals; the page follows failedOnly", async () => {
-    const { engine, client } = await engineWith(jobRoutes)
-
-    const all = await buildJobPanelData(client, "engine-a", { processDefinitionKey: "K1" })
-    const failed = await buildJobPanelData(client, "engine-a", { failedOnly: true })
-
-    expect([all.totalCount, all.failedCount]).toEqual([120, 3])
-    expect([failed.totalCount, failed.failedCount]).toEqual([3, 3])
-    expect(calls(engine, "/job").map((r) => r.query)).toEqual([
-      {
-        processDefinitionKey: "K1",
-        firstResult: "0",
-        maxResults: "50",
-        sortBy: "jobId",
-        sortOrder: "desc",
-      },
-      {
-        noRetriesLeft: "true",
-        firstResult: "0",
-        maxResults: "50",
-        sortBy: "jobId",
-        sortOrder: "desc",
-      },
-    ])
-    // A scoped panel checks its key exists (an unknown key is not-found, not "0 jobs").
-    expect(calls(engine, "/process-definition").map((r) => r.query)).toEqual([
-      { key: "K1", latestVersion: "true", sortBy: "version", sortOrder: "desc", maxResults: "1" },
-    ])
-  })
-
-  it("nulls the optional job fields instead of shipping undefined", async () => {
-    const { client } = await engineWith(jobRoutes)
-
-    const data = await buildJobPanelData(client, "engine-a", {})
-
-    expect(data.jobs[0]).toEqual({
-      id: "j1",
-      processInstanceId: "p1",
-      processDefinitionKey: null,
-      processDefinitionId: null,
-      activityId: "charge",
-      retries: 0,
-      exceptionMessage: null,
-      dueDate: null,
-      suspended: false,
-      priority: 0,
-      createTime: null,
-    })
   })
 })

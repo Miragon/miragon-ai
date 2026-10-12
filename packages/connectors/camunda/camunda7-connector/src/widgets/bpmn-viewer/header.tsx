@@ -1,7 +1,9 @@
-import { Badge, StatusBadge } from "@miragon/mcp-toolkit-ui"
+import { StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
 import { HandOffButton, formatNumber } from "@miragon-ai/widget-shell/widgets"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { EngineMeta } from "../lib/engine-context.js"
+import { InstanceLabel } from "../lib/identity.js"
 import { useT } from "../../messages/use-t.js"
 
 /**
@@ -43,30 +45,30 @@ export function BpmnViewerHeader({ data }: { data: BpmnViewerData | null }) {
   const totalIncidents = data.incidentActivityIds.length
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-xl font-semibold">{t("bpmnHeader.title")}</h2>
-        {data.processInstanceId && (
-          <Badge variant="secondary" className="font-mono text-xs">
-            {data.processInstanceId}
-          </Badge>
-        )}
-        {totalActive > 0 && (
-          <StatusBadge tone="success" className="py-0.5">
-            {t("bpmnHeader.activeCount", { count: formatNumber(totalActive) })}
-          </StatusBadge>
-        )}
-        {totalIncidents > 0 && (
-          <Badge variant="destructive">
-            {t("bpmnHeader.incidentsCount", { count: formatNumber(totalIncidents) })}
-          </Badge>
-        )}
-      </div>
-      <HandOffButton
-        action="explainDiagram"
-        variant="primary"
-        prompt={ask(explainDiagramHandOff(data))}
-      />
-    </div>
+    <WidgetHeader
+      // Names before ids (#322 U13): the process's name, the instance by its
+      // label (business key, then the id chip), as the instance detail does.
+      title={data.processDefinitionName ?? t("bpmnHeader.title")}
+      sub={
+        <>
+          <EngineMeta engineId={data.engineId} />
+          {data.processInstanceId && (
+            <InstanceLabel id={data.processInstanceId} businessKey={data.businessKey} />
+          )}
+          {/* Running tokens are a state in progress (info); incidents are danger. */}
+          {totalActive > 0 && (
+            <StatusBadge tone="info">
+              {t("bpmnHeader.activeCount", { count: formatNumber(totalActive) })}
+            </StatusBadge>
+          )}
+          {totalIncidents > 0 && (
+            <StatusBadge tone="danger">
+              {t("bpmnHeader.incidentsCount", { count: formatNumber(totalIncidents) })}
+            </StatusBadge>
+          )}
+        </>
+      }
+      actions={<HandOffButton action="explainDiagram" prompt={ask(explainDiagramHandOff(data))} />}
+    />
   )
 }

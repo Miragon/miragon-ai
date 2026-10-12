@@ -4,7 +4,7 @@ import type { ComponentType } from "react"
 import { cleanup, render, screen } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { formatNumber, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
 import { ClusterDetailWidget, describeCluster } from "./cluster-detail.js"
 import type { ClusterDetailData } from "../view-models.js"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
@@ -23,6 +23,7 @@ beforeAll(async () => {
 
 const CLUSTER: ClusterDetailData = {
   activityId: "callWMS",
+  activityName: null,
   incidentType: "failedExternalTask",
   messageSignature: "connection timeout to wms after <n>ms",
   incidentCount: 40,
@@ -39,6 +40,7 @@ const CLUSTER: ClusterDetailData = {
       processInstanceId: "pi-1",
       businessKey: "ORDER-4711",
       processDefinitionKey: "shipping",
+      processDefinitionName: null,
       incidentTimestamp: "2026-06-11T14:00:00.000Z",
     },
     {
@@ -46,6 +48,7 @@ const CLUSTER: ClusterDetailData = {
       processInstanceId: "a1b2c3d4-0000-0000-0000-000000000000",
       businessKey: null,
       processDefinitionKey: "shipping",
+      processDefinitionName: null,
       incidentTimestamp: "2026-06-11T13:00:00.000Z",
     },
   ],
@@ -74,18 +77,53 @@ describe("ClusterDetailWidget (fixture render)", () => {
     // Full sample failure message.
     expect(screen.getByText("Connection timeout to WMS after 30000ms")).toBeTruthy()
 
-    // Instance rows: business key first, UUID fallback when absent; the list
-    // footer shows the honest total plus an explicit Load-more control.
+    // Instance rows (#322 U13): the business key, else the short id — the
+    // UUID a copyable chip; the list footer shows the honest total plus an
+    // explicit Load-more control.
     expect(screen.getByText("ORDER-4711")).toBeTruthy()
-    expect(screen.getByText(/Instance a1b2c3d4/)).toBeTruthy()
+    expect(screen.getByText("a1b2c3d4…")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copy a1b2c3d4…" })).toBeTruthy()
     expect(screen.getByText(/Showing 2 of 40 instances/)).toBeTruthy()
     expect(screen.getByText("Load more")).toBeTruthy()
 
     // Each row drills deterministically to instance + incident detail.
-    expect(screen.getAllByText("Instance")).toHaveLength(2)
-    expect(screen.getAllByText("Incident")).toHaveLength(2)
+    expect(screen.getAllByRole("button", { name: /^Open instance / })).toHaveLength(2)
+    expect(screen.getAllByRole("button", { name: /^Open incident detail for / })).toHaveLength(2)
+    expect(screen.getByRole("button", { name: "Open instance a1b2c3d4…" })).toBeTruthy()
     // The scan holds the whole cluster: no capped-list note.
     expect(screen.queryByText(/The list covers the newest/)).toBeNull()
+  })
+
+  // #322 U12, U13: the head's line names the processes by name and says when
+  // the cluster was first seen — a point in time, not a KPI tile it would not
+  // fit in; the tiles hold the counts only.
+  it("names the processes and the first sighting in the head's line", () => {
+    const named: ClusterDetailData = {
+      ...CLUSTER,
+      processDefinitionKeys: ["shipping", "returns"],
+      incidents: CLUSTER.incidents.map((row) => ({
+        ...row,
+        processDefinitionName: "Ship order",
+      })),
+    }
+    render(<WidgetFixtureHost widget={Widget} data={named as unknown as Record<string, unknown>} />)
+
+    const firstSeen = formatTimestamp("2026-06-11T08:00:00.000Z")
+    expect(
+      screen.getByText(`40 affected · in Ship order, returns · first seen ${firstSeen}`),
+    ).toBeTruthy()
+    expect(screen.queryByText("First seen")).toBeNull()
+    // Two processes: the rows say which one each instance runs on.
+    expect(screen.getByText("Process", { selector: "th" })).toBeTruthy()
+    expect(screen.getAllByText("Ship order")).toHaveLength(2)
+  })
+
+  it("leaves the process column out when the cluster spans one process", () => {
+    render(
+      <WidgetFixtureHost widget={Widget} data={CLUSTER as unknown as Record<string, unknown>} />,
+    )
+    expect(screen.queryByText("Process", { selector: "th" })).toBeNull()
+    expect(screen.getByText(/^40 affected · in shipping · first seen /)).toBeTruthy()
   })
 
   it("renders a cluster larger than the scan as a lower bound, its unknowns as —", () => {
@@ -107,8 +145,10 @@ describe("ClusterDetailWidget (fixture render)", () => {
     const scanned = formatNumber(1000)
     expect(screen.getByText(`≥${scanned}`)).toBeTruthy()
     expect(screen.getByText(`≥${scanned} affected · in shipping`)).toBeTruthy()
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3)
+    expect(screen.getAllByText("—")).toHaveLength(2)
     expect(screen.queryByText("0")).toBeNull()
+    // A first sighting the scan cannot vouch for is left out, never guessed.
+    expect(screen.queryByText(/^first seen /)).toBeNull()
     expect(
       screen.getByText(`The list covers the newest ${scanned} incidents of this cluster.`),
     ).toBeTruthy()

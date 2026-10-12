@@ -2,7 +2,8 @@ import type { IncidentInstance } from "../../view-models.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { recoveryOf } from "../lib/incident-recovery.js"
 import { useEngineAction, type ActionConfirmation, type TargetLine } from "../lib/engine-action.js"
-import { instanceName, writeFeedback } from "../lib/write-feedback.js"
+import { engineTargetLines, useEngineEnvironment } from "../lib/engine-context.js"
+import { instanceName, instanceTargetLines, writeFeedback } from "../lib/write-feedback.js"
 
 /** The button an incident row offers. */
 export type RowAction = "resolve" | "retry"
@@ -11,7 +12,8 @@ export type RowAction = "resolve" | "retry"
 export type RecoverableIncident = Pick<
   IncidentInstance,
   "id" | "incidentType" | "processInstanceId" | "recovery"
->
+> &
+  Partial<Pick<IncidentInstance, "businessKey">>
 
 interface ResolveArgs extends Record<string, unknown> {
   incidentId: string
@@ -30,17 +32,22 @@ interface ExternalTaskRetryArgs extends Record<string, unknown> {
   engine?: string
 }
 
-/** The resolve question, naming the incident, its type, its instance and engine. */
+/**
+ * The resolve question, naming the incident, its type, its instance by its
+ * label (business key, then short id, #322 U13) and the engine with its
+ * environment — a write on prod says so before it runs (#322 U4).
+ */
 export function resolveConfirmation(
   t: T,
   incident: RecoverableIncident,
   engineId: string | undefined,
+  environment: string | null = null,
 ): ActionConfirmation {
   const lines: TargetLine[] = [
     [t("confirmDialog.incidentType"), incident.incidentType],
-    [t("confirmDialog.instance"), incident.processInstanceId],
+    ...instanceTargetLines(t, incident.processInstanceId, incident.businessKey),
+    ...engineTargetLines(t, engineId, environment),
   ]
-  if (engineId) lines.push([t("confirmDialog.engine"), engineId])
   return {
     title: t("confirmDialog.resolveTitle"),
     description: t("confirmDialog.resolveDescription"),
@@ -69,6 +76,7 @@ export function useIncidentRecovery(
   { resetOn, available = true }: { resetOn: unknown; available?: boolean },
 ) {
   const t = useT()
+  const environment = useEngineEnvironment(engineId)
   const resolve = useEngineAction<ResolveArgs>({
     tool: "camunda7_resolve_incident",
     target: (args) => args.incidentId,
@@ -91,7 +99,7 @@ export function useIncidentRecovery(
   /** The action that clears `incident`, the target it runs on, and how to start it — null when none does. */
   function remedyOf(incident: RecoverableIncident, jobId?: string | null) {
     const recovery = recoveryOf(incident, jobId)
-    const instance = instanceName(incident.processInstanceId)
+    const instance = instanceName(incident.processInstanceId, incident.businessKey)
     switch (recovery.action) {
       case "resolve":
         return {
@@ -102,7 +110,7 @@ export function useIncidentRecovery(
             resolve.run(
               { incidentId: incident.id, engine: engineId },
               {
-                confirm: resolveConfirmation(t, incident, engineId),
+                confirm: resolveConfirmation(t, incident, engineId, environment),
                 feedback: writeFeedback.resolve(t, instance),
               },
             ),

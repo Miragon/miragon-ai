@@ -22,9 +22,9 @@ import {
   type IncidentLike,
   type ScanCoverage,
 } from "./cluster-scan.js"
-import { resolveDefinitionKeys } from "./definition-info.js"
-import { countOf, DAY_MS, rowsOf } from "./engine-reads.js"
-import { isOnOrAfter } from "./incident-scan.js"
+import { fetchNamesByDefinition, resolveDefinitionKeys } from "./definition-info.js"
+import { countOf, DAY_MS, optional, rowsOf } from "./engine-reads.js"
+import { fetchBusinessKeys, isOnOrAfter } from "./incident-scan.js"
 
 /** How many affected incidents the cluster detail lists (the rest is counted). */
 const CLUSTER_DETAIL_ROWS = 50
@@ -106,14 +106,28 @@ export async function buildClusterDetailData(
   const pageSize = args.maxResults ?? CLUSTER_DETAIL_ROWS
   const page = listed.slice(first, first + pageSize)
 
-  const [counts, businessKeyById, keyOf] = await Promise.all([
+  const [counts, businessKeyById, keyOf, names] = await Promise.all([
     clusterCounts(client, args, { coverage, matching, nowMs }),
-    resolveBusinessKeys(client, page),
+    // Enrichment: a failed lookup names the rows by their short ids.
+    optional(
+      fetchBusinessKeys(
+        client,
+        page.map((i) => i.processInstanceId),
+      ),
+    ).then((keys) => keys ?? new Map<string, string | null>()),
     resolveDefinitionKeys(
       client,
       matching.map((i) => i.processDefinitionId),
     ),
+    // Names before ids (#322 U13): the activity's from the newest incident's
+    // diagram, each row's process from its own version — enrichment.
+    fetchNamesByDefinition(client, [
+      matching[0]?.processDefinitionId,
+      ...page.map((i) => i.processDefinitionId),
+    ]),
   ])
+  const nameIn = (definitionId: string | null | undefined, id: string) =>
+    (definitionId ? names.get(definitionId)?.[id] : null) ?? null
   const defKey = (i: IncidentLike) =>
     (i.processDefinitionId ? keyOf(i.processDefinitionId) : null) ?? UNKNOWN
   const kpis = aggregateClusterKpis(matching, defKey)
@@ -123,11 +137,13 @@ export async function buildClusterDetailData(
     processInstanceId: i.processInstanceId ?? "",
     businessKey: i.processInstanceId ? (businessKeyById.get(i.processInstanceId) ?? null) : null,
     processDefinitionKey: defKey(i),
+    processDefinitionName: nameIn(i.processDefinitionId, defKey(i)),
     incidentTimestamp: i.incidentTimestamp ?? "",
   }))
 
   return {
     activityId: args.activityId,
+    activityName: nameIn(matching[0]?.processDefinitionId, args.activityId),
     incidentType: args.incidentType,
     messageSignature: args.messageSignature ?? null,
     ...counts,
@@ -216,34 +232,4 @@ function clusterCounts(
     lastHourCount,
     last24hCount,
   }))
-}
-
-/**
- * Business-key enrichment is best-effort: a failed lookup degrades to "—"
- * keys, it must not turn a working cluster view into a tool error.
- */
-async function resolveBusinessKeys(
-  client: Client,
-  page: IncidentLike[],
-): Promise<Map<string, string | null>> {
-  const instanceIds = [
-    ...new Set(page.map((i) => i.processInstanceId).filter((x): x is string => !!x)),
-  ]
-  const instancesRaw =
-    instanceIds.length > 0
-      ? await getProcessInstances({
-          client,
-          query: { processInstanceIds: instanceIds.join(","), maxResults: instanceIds.length },
-        }).catch(() => [])
-      : []
-  return new Map(
-    (
-      (Array.isArray(instancesRaw) ? instancesRaw : []) as Array<{
-        id?: string | null
-        businessKey?: string | null
-      }>
-    )
-      .filter((i): i is { id: string; businessKey: string | null } => !!i.id)
-      .map((i) => [i.id, i.businessKey ?? null]),
-  )
 }

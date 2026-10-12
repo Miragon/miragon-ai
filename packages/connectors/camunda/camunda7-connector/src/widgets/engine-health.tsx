@@ -1,23 +1,24 @@
+import { useId } from "react"
 import {
-  Alert,
-  AlertDescription,
   Button,
   DrillButton,
+  ErrorState,
+  FOCUS_RING,
   KpiGrid,
   StatusBadge,
   WidgetHeader,
+  cn,
   type ToneVariant,
 } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
   Icon,
-  RowCard,
+  ViewDataState,
   WidgetShell,
   formatNumber,
-  formatTime,
   viewRefreshState,
 } from "@miragon-ai/widget-shell/widgets"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, TriangleAlert } from "lucide-react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "../view-models.js"
@@ -27,12 +28,26 @@ import { remediationHandOff, UNKNOWN_KEY as UNKNOWN } from "./remediation.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { formatCount, formatCountAtLeast } from "./lib/format-count.js"
 import { healthVerdictLine } from "./lib/health-verdict.js"
+import { EngineMeta, useEngineInChrome } from "./lib/engine-context.js"
+import { NamedId } from "./lib/identity.js"
 import { useT } from "../messages/use-t.js"
 
 const STATUS: Record<EngineHealthStatus, { tone: ToneVariant; labelKey: string }> = {
   ok: { tone: "success", labelKey: "engineHealth.statusStable" },
   degraded: { tone: "warning", labelKey: "engineHealth.statusDegraded" },
   critical: { tone: "danger", labelKey: "engineHealth.statusCritical" },
+}
+
+/**
+ * The verdict as the header badge says it (#322 U14). An engine with nothing
+ * deployed is neither stable nor broken: neutral, "Keine Prozesse
+ * bereitgestellt" — never a green check over an empty engine.
+ */
+function verdictBadge(data: EngineHealthData): { tone: ToneVariant; labelKey: string } {
+  if (data.summary.totalDefinitions === 0 && data.summary.totalIncidents === 0) {
+    return { tone: "neutral", labelKey: "engineHealth.statusNothingDeployed" }
+  }
+  return STATUS[data.status]
 }
 
 /** The activity ids of the incident clusters, most affected first. */
@@ -117,7 +132,14 @@ export function diagnoseHandOff(engine: string | undefined, message: string): Ha
   }
 }
 
-/** One cross-process incident cluster: deterministic facts + two handoffs (drill / ask). */
+/**
+ * One cross-process incident cluster (#322 U12): titled by its activity's
+ * NAME (the BPMN id a quiet mono line under it), the cause — the cluster's
+ * failure message — as the line below, then how many it hit, how many are
+ * new and where. The incident type is a neutral chip: the cluster's state
+ * is the count, not a red badge on every row. Drill first, the chat
+ * hand-off after it.
+ */
 function ClusterRow({
   cluster,
   engine,
@@ -131,6 +153,7 @@ function ClusterRow({
   const { ask, surface } = useHandOff()
   const { handOff, canFix } = remediationHandOff(cluster, engine, surface)
   const primaryKey = cluster.processDefinitionKeys.find((k) => k !== UNKNOWN)
+  const name = cluster.activityName ?? cluster.activityId
   // Drill keeps the cluster scope: activity + type + message signature travel
   // into the cluster-detail view (instead of falling back to a per-process or
   // global incident list that loses the root-cause filter).
@@ -140,6 +163,7 @@ function ClusterRow({
       activityId: cluster.activityId,
       incidentType: cluster.incidentType,
       messageSignature: cluster.messageSignature,
+      label: cluster.activityName ?? undefined,
     })
 
   const scope =
@@ -147,39 +171,44 @@ function ClusterRow({
       ? t("engineHealth.scopeProcesses", {
           count: formatNumber(cluster.processDefinitionKeys.length),
         })
-      : (primaryKey ?? UNKNOWN)
+      : (cluster.processDefinitionName ?? primaryKey ?? UNKNOWN)
+  const facts = [
+    t("engineHealth.clusterAffected", {
+      count: formatCountAtLeast(cluster.incidentCount, cluster.scannedIncidentCount),
+    }),
+    cluster.last24hCount !== null && cluster.last24hCount > 0
+      ? t("engineHealth.clusterNew24h", { count: formatNumber(cluster.last24hCount) })
+      : null,
+    scope,
+  ].filter((part): part is string => part !== null)
 
   return (
-    <RowCard
-      title={
-        <>
-          <span className="truncate font-mono">{cluster.activityId}</span>
-          <StatusBadge tone="danger">{cluster.incidentType}</StatusBadge>
-        </>
-      }
-      subtitle={
-        <>
-          {t("engineHealth.clusterAffected", {
-            count: formatCountAtLeast(cluster.incidentCount, cluster.scannedIncidentCount),
-          })}
-          {cluster.last24hCount !== null && cluster.last24hCount > 0
-            ? ` · ${t("engineHealth.clusterNew24h", { count: formatNumber(cluster.last24hCount) })}`
-            : ""}{" "}
-          · {scope}
-        </>
-      }
-      actions={
-        <>
-          <DrillButton
-            onDrill={drill}
-            ariaLabel={t("engineHealth.clusterViewAria", { activity: cluster.activityId })}
-          >
-            {t("engineHealth.clusterOpen")}
-          </DrillButton>
-          <HandOffButton action={canFix ? "planFix" : "explainError"} prompt={ask(handOff)} />
-        </>
-      }
-    />
+    <li className="border-border flex flex-wrap items-start justify-between gap-3 rounded-md border p-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-wrap items-start gap-2">
+          <NamedId name={cluster.activityName} id={cluster.activityId} />
+          <span className="border-input text-muted-foreground text-small rounded-sm border px-1.5 font-mono">
+            {cluster.incidentType}
+          </span>
+        </div>
+        {cluster.representativeMessage && (
+          <p className="text-foreground text-dense line-clamp-2 break-words">
+            <span className="sr-only">{t("engineHealth.clusterCause")} </span>
+            {cluster.representativeMessage}
+          </p>
+        )}
+        <p className="text-muted-foreground text-small">{facts.join(" · ")}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <DrillButton
+          onDrill={drill}
+          ariaLabel={t("engineHealth.clusterViewAria", { activity: name })}
+        >
+          {t("engineHealth.clusterOpen")}
+        </DrillButton>
+        <HandOffButton action={canFix ? "planFix" : "explainError"} prompt={ask(handOff)} />
+      </div>
+    </li>
   )
 }
 
@@ -197,44 +226,37 @@ function HealthUnavailable({
 }) {
   const t = useT()
   const { ask } = useHandOff()
-  if (error) {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <Alert variant="destructive">
-          <AlertDescription>
-            {t("engineHealth.unavailable", { message: error.message })}
-          </AlertDescription>
-        </Alert>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onRetry}>
-            {t("viewState.retry")}
-          </Button>
-          <HandOffButton action="findCause" prompt={ask(diagnoseHandOff(engine, error.message))} />
-        </div>
-      </div>
-    )
-  }
   return (
-    <div className="text-muted-foreground p-2 text-sm">
-      {loading ? t("engineHealth.loading") : t("engineHealth.noData")}
+    <div className="flex flex-col items-start gap-3">
+      <ViewDataState
+        loading={loading}
+        error={error}
+        onRetry={onRetry}
+        loadingText={t("engineHealth.loading")}
+        emptyText={t("engineHealth.noData")}
+        className="w-full"
+      />
+      {/* An unreachable engine is a failure to understand too: the chat can
+          look for the cause while the operator retries. */}
+      {error && (
+        <HandOffButton action="findCause" prompt={ask(diagnoseHandOff(engine, error.message))} />
+      )}
     </div>
   )
 }
 
-function HealthKpis({
-  summary,
-  status,
-  go,
-}: {
-  summary: EngineHealthData["summary"]
-  status: (typeof STATUS)[EngineHealthStatus]
-  go: OnNavigate
-}) {
+/**
+ * The headline numbers. Only the open incidents carry a state (danger when
+ * there are any, the one severity ladder of every view); running instances
+ * and the affected activities and processes are counts — neutral, never a
+ * coloured digit (#322 U14).
+ */
+function HealthKpis({ summary, go }: { summary: EngineHealthData["summary"]; go: OnNavigate }) {
   const t = useT()
   return (
     <KpiGrid
       boxed
-      header={{ label: t("engineHealth.kpiHealth"), badge: t(status.labelKey) }}
+      ariaLabel={t("engineHealth.kpiHealth")}
       cells={[
         {
           label: t("engineHealth.kpiRunningInstances"),
@@ -257,7 +279,7 @@ function HealthKpis({
               : summary.last24hIncidents > 0
                 ? ` ${t("engineHealth.kpiIn24h", { count: formatNumber(summary.last24hIncidents) })}`
                 : undefined,
-          tone: summary.totalIncidents > 0 ? status.tone : undefined,
+          tone: summary.totalIncidents > 0 ? "danger" : undefined,
           onClick: () => go({ type: "incidents" }),
           actionHint: t("engineHealth.kpiOpenIncidentsAria"),
         },
@@ -265,13 +287,11 @@ function HealthKpis({
           label: t("engineHealth.kpiAffectedActivities"),
           // null: the incident scan was capped — "—", never a guessed count.
           value: formatCount(summary.affectedActivities),
-          tone: (summary.affectedActivities ?? 0) > 0 ? "warning" : undefined,
         },
         {
           label: t("engineHealth.kpiAffectedProcesses"),
           value: formatNumber(summary.affectedDefinitions),
           fraction: ` /${formatNumber(summary.totalDefinitions)}`,
-          tone: summary.affectedDefinitions > 0 ? "danger" : undefined,
         },
       ]}
     />
@@ -285,7 +305,7 @@ function Throughput24h({ summary }: { summary: EngineHealthData["summary"] }) {
   const t = useT()
   if (summary.started24h === null && summary.completed24h === null) return null
   return (
-    <p className="text-muted-foreground text-xs">
+    <p className="text-muted-foreground text-small">
       {t("engineHealth.throughput24h")}{" "}
       {summary.started24h !== null
         ? t("engineHealth.throughputStarted", { count: formatNumber(summary.started24h) })
@@ -310,16 +330,22 @@ function ClustersSection({
   go: OnNavigate
 }) {
   const t = useT()
+  // Per instance: two engine-health views on one page keep their own label.
+  const headingId = useId()
   if (clusters.length === 0) return null
   return (
-    <section aria-label={t("engineHealth.clustersAria")} className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">{t("engineHealth.clustersHeading")}</h3>
-      {clusters.map((cluster) => (
-        // Fall back to the engine the data was fetched against (standalone
-        // renders pass no `engine` prop) so the remediation prompt never
-        // inlines a placeholder as a tool-call engine id.
-        <ClusterRow key={cluster.id} cluster={cluster} engine={engine ?? engineId} go={go} />
-      ))}
+    <section aria-labelledby={headingId} className="flex flex-col gap-2">
+      <h2 id={headingId} className="text-section text-foreground">
+        {t("engineHealth.clustersHeading")}
+      </h2>
+      <ul className="flex flex-col gap-2">
+        {clusters.map((cluster) => (
+          // Fall back to the engine the data was fetched against (standalone
+          // renders pass no `engine` prop) so the remediation prompt never
+          // inlines a placeholder as a tool-call engine id.
+          <ClusterRow key={cluster.id} cluster={cluster} engine={engine ?? engineId} go={go} />
+        ))}
+      </ul>
     </section>
   )
 }
@@ -361,53 +387,73 @@ export function EngineHealthView({
   )
   const { data, loading, error, refetch } = view
   const { refreshError, refreshing } = viewRefreshState(view)
+  // Inside the cockpit its head holds the one Refresh (#322 U27); a
+  // standalone overview keeps its own.
+  const inCockpit = useEngineInChrome()
 
   if (!data) {
     return <HealthUnavailable engine={engine} loading={loading} error={error} onRetry={refetch} />
   }
 
-  const status = STATUS[data.status]
+  const badge = verdictBadge(data)
+  const engineId = engine ?? data.engineId
 
   return (
     <>
       <HostModelContext content={context(describeHealth(data, engine))}>{null}</HostModelContext>
       <WidgetHeader
-        title={t("engineHealth.title")}
-        sub={<span>{healthVerdictLine(t, data)}</span>}
+        badge={<StatusBadge tone={badge.tone}>{t(badge.labelKey)}</StatusBadge>}
+        // The engine in the title (#322 U4): prod-leasing and test-leasing
+        // never share a heading.
+        title={t("engineHealth.titleFor", { engine: engineId })}
+        sub={
+          <>
+            <EngineMeta engineId={engineId} asOf={data.fetchedAt} />
+            <span>{healthVerdictLine(t, data)}</span>
+            {!inCockpit && (
+              <button
+                type="button"
+                onClick={refetch}
+                disabled={refreshing}
+                className={cn(
+                  "hover:text-foreground inline-flex items-center gap-1 rounded font-medium disabled:opacity-50",
+                  FOCUS_RING,
+                )}
+              >
+                <Icon icon={RefreshCw} dense />
+                {refreshing ? t("engineHealth.refreshing") : t("engineHealth.refresh")}
+              </button>
+            )}
+          </>
+        }
         actions={
-          <HandOffButton
-            action="assess"
-            variant="primary"
-            prompt={ask(triageHandOff(data, engine))}
-          />
+          <>
+            {/* The deterministic next step leads (#322 U11): with open
+                incidents, look at them; the chat assessment follows. */}
+            {data.summary.totalIncidents > 0 && (
+              <Button type="button" size="sm" onClick={() => go({ type: "incidents" })}>
+                <Icon icon={TriangleAlert} />
+                {t("engineHealth.openIncidents")}
+              </Button>
+            )}
+            <HandOffButton action="assess" prompt={ask(triageHandOff(data, engine))} />
+          </>
         }
       />
 
-      {/* Ops trust: show how fresh the verdict is and let the operator re-pull
-          it — during an active incident this is the screen they stare at. */}
-      <div className="text-muted-foreground -mt-2 flex items-center gap-2 text-xs">
-        <span>
-          {t("engineHealth.asOf", { time: formatTime(data.fetchedAt, { seconds: false }) })}
-        </span>
-        <span aria-hidden="true">·</span>
-        <button
-          type="button"
-          onClick={refetch}
-          disabled={refreshing}
-          className="hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded font-medium outline-none focus-visible:ring-2 disabled:opacity-50"
-        >
-          <Icon icon={RefreshCw} dense />
-          {refreshing ? t("engineHealth.refreshing") : t("engineHealth.refresh")}
-        </button>
-        {/* A failed re-pull keeps the last verdict — and says it is not current. */}
-        {refreshError && !refreshing && (
-          <span role="alert" className="text-danger-ink">
-            {t("engineHealth.refreshFailed", { message: refreshError.message })}
-          </span>
-        )}
-      </div>
+      {/* A failed re-pull keeps the last verdict — and says it is not current. */}
+      {refreshError && !refreshing && (
+        <ErrorState
+          variant="inline"
+          tone="warning"
+          title={t("engineHealth.refreshFailedTitle")}
+          description={t("engineHealth.refreshFailedHint")}
+          details={refreshError.message}
+          onRetry={refetch}
+        />
+      )}
 
-      <HealthKpis summary={data.summary} status={status} go={go} />
+      <HealthKpis summary={data.summary} go={go} />
 
       <Throughput24h summary={data.summary} />
 

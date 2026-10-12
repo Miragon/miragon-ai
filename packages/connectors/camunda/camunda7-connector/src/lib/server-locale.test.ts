@@ -33,12 +33,12 @@ describe("localizeFor", () => {
     const store = createInMemoryProfileStore()
     await store.save("user-1", { language: "de" })
     const t = await localizeFor(store, CTX)
-    expect(t("profile.heading")).toBe("Profil & Einstellungen")
+    expect(t("profile.heading")).toBe("Einstellungen")
   })
 
   it("still returns a working translate when the store is down", async () => {
     const t = await localizeFor(outageStore, CTX)
-    expect(t("profile.heading")).toBe("Profile & settings")
+    expect(t("profile.heading")).toBe("Settings")
   })
 })
 
@@ -50,7 +50,7 @@ describe("localizeViewFor", () => {
     expect(title("viewTitle.processList")).toBe("Prozessdefinitionen")
     expect(title("viewTitle.clusterDetail", { activity: "ship" })).toBe("Cluster: ship")
     // The model summary follows the same language.
-    expect(t("profile.heading")).toBe("Profil & Einstellungen")
+    expect(t("profile.heading")).toBe("Einstellungen")
   })
 
   it("an English profile gets the English title", async () => {
@@ -67,15 +67,15 @@ describe("localizeViewFor", () => {
     await store.save("user-1", { language: "system" })
     const { t, title } = await localizeViewFor(store, CTX)
     expect(title("viewTitle.processList")).toBeUndefined()
-    expect(t("profile.heading")).toBe("Profile & settings")
+    expect(t("profile.heading")).toBe("Settings")
   })
 
   it("a language already read titles the same way (the settings view's own record)", () => {
-    expect(viewLocaleOf("de").title("viewTitle.userProfile")).toBe("Profil & Einstellungen")
-    expect(viewLocaleOf("en").title("viewTitle.userProfile")).toBe("Profile & settings")
+    expect(viewLocaleOf("de").title("viewTitle.userProfile")).toBe("Einstellungen")
+    expect(viewLocaleOf("en").title("viewTitle.userProfile")).toBe("Settings")
     for (const language of ["system", undefined, "fr"]) {
       expect(viewLocaleOf(language).title("viewTitle.userProfile")).toBeUndefined()
-      expect(viewLocaleOf(language).t("viewTitle.userProfile")).toBe("Profile & settings")
+      expect(viewLocaleOf(language).t("viewTitle.userProfile")).toBe("Settings")
     }
   })
 
@@ -88,7 +88,7 @@ describe("localizeViewFor", () => {
       await localizeViewFor(outageStore, CTX),
     ]) {
       expect(view.title("viewTitle.processList")).toBeUndefined()
-      expect(view.t("profile.heading")).toBe("Profile & settings")
+      expect(view.t("profile.heading")).toBe("Settings")
     }
   })
 })

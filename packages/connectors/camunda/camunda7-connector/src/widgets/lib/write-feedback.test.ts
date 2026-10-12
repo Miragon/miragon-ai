@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { translator } from "../../messages/index.js"
 import type { T } from "../../messages/use-t.js"
-import { instanceName, writeFeedback } from "./write-feedback.js"
+import { instanceName, instanceTargetLines, writeFeedback } from "./write-feedback.js"
 
 const tFor =
   (locale: "en" | "de"): T =>
@@ -15,6 +15,17 @@ describe("instanceName", () => {
     )
     expect(instanceName("5f0ce78e-6b1d-11ef-9c3a-0242ac120002", null)).toBe("5f0ce78e…")
     expect(instanceName("pi-1")).toBe("pi-1")
+  })
+})
+
+describe("instanceTargetLines", () => {
+  it("leads with the business key, then the short id — never the bare UUID", () => {
+    const id = "5f0ce78e-6b1d-11ef-9c3a-0242ac120002"
+    expect(instanceTargetLines(tFor("de"), id, "LEA-2026-00424")).toEqual([
+      ["Geschäftsschlüssel", "LEA-2026-00424"],
+      ["Prozessinstanz", "5f0ce78e…"],
+    ])
+    expect(instanceTargetLines(tFor("en"), id, null)).toEqual([["Process instance", "5f0ce78e…"]])
   })
 })
 

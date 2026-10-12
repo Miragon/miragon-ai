@@ -1,7 +1,12 @@
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
-import { scanColors, scanGlyphs, scanIconSizes } from "@miragon-ai/widget-shell/testing"
+import {
+  scanColors,
+  scanGlyphs,
+  scanIconSizes,
+  scanTypeScale,
+} from "@miragon-ai/widget-shell/testing"
 
 /**
  * The camunda7 package under the kit's code gates (CLAUDE.md invariant 6,
@@ -32,13 +37,14 @@ describe("camunda7 widget code colours through role names only", () => {
   it("no palette class or raw colour outside the reasoned allowances", () => {
     // Shrink-only: the colour pass (M5) moves these onto the role tokens, and
     // a file that loses its raw colours fails here until its entry goes.
-    expect(
-      scanColors(join(SRC, "widgets"), {
-        allow: {
-          "history-timeline.tsx":
-            "the categorical activity-type dots; neutral dots plus a state marker in M5",
-        },
-      }),
-    ).toEqual([])
+    expect(scanColors(join(SRC, "widgets"))).toEqual([])
+  })
+})
+
+describe("camunda7 widget code sets text on the type scale", () => {
+  // CI §4 as the toolkit's TYPE_SCALE (#322 M6): title 28, section 21, body
+  // 16, dense 14 (tables, controls), small 13 — the floor. No Tailwind sizes.
+  it("no text size off the five steps and nothing below 13 px", () => {
+    expect(scanTypeScale(join(SRC, "widgets"))).toEqual([])
   })
 })

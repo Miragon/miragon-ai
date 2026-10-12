@@ -1,9 +1,19 @@
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
-import { Badge, Button, KpiGrid, PagedListFooter } from "@miragon/mcp-toolkit-ui"
+import {
+  Button,
+  CountPill,
+  KpiGrid,
+  PagedListFooter,
+  StatusBadge,
+  WidgetHeader,
+  type ToneVariant,
+} from "@miragon/mcp-toolkit-ui"
 
 import type { JobPanelData } from "../view-models.js"
 import {
   HandOffButton,
+  Icon,
+  IdText,
   ListTable,
   LogText,
   TableEmptyState,
@@ -14,8 +24,12 @@ import {
   formatTimestamp,
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
+import { Check } from "lucide-react"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
-import { useEngineAction } from "./lib/engine-action.js"
+import { useEngineAction, type EngineAction } from "./lib/engine-action.js"
+import { EngineMeta } from "./lib/engine-context.js"
+import { NamedId } from "./lib/identity.js"
+import { MoreActions } from "./lib/more-actions.js"
 import { instanceName, writeFeedback } from "./lib/write-feedback.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
@@ -152,6 +166,133 @@ export function draftJobTicketHandOff(job: Job, engineId: string | undefined): H
   }
 }
 
+/**
+ * A job's retries as a state (#322 U14): none left is danger (it holds an
+ * incident), a failure with retries left is warning (the engine tries
+ * again), anything else a plain count.
+ */
+function retriesTone(job: Job): ToneVariant {
+  if (job.retries === 0) return "danger"
+  return job.exceptionMessage ? "warning" : "neutral"
+}
+
+/**
+ * What a job is about, in ONE cell (#322 U2, U13): the failing activity by
+ * name (its id the quiet mono line), the process it runs in under it — so an
+ * inline frame keeps its width for the error and the retry.
+ */
+function JobSubject({ job }: { job: Job }) {
+  const t = useT()
+  const process = job.processDefinitionName ?? job.processDefinitionKey
+  // The cell's floor: an id breaks anywhere, so without one the table would
+  // squeeze the names into a column a word wide.
+  return (
+    <div className="flex min-w-48 flex-col gap-0.5">
+      {job.activityId ? (
+        <NamedId name={job.activityName} id={job.activityId} />
+      ) : (
+        <span className="text-muted-foreground">{"—"}</span>
+      )}
+      {process && (
+        <span className="text-muted-foreground text-small break-words">
+          {t("jobPanel.inProcess", { process })}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * One job of the panel (#322 U2, U11, U13): what it is about (activity and
+ * process by name), the instance as a copyable id chip, the retries as a
+ * state; the retry pinned at the row's end, the two chat hand-offs behind its
+ * "more" button. A retry that went through shows "Neu eingeplant" with a
+ * check — a success, never a dimmed row that reads as disabled.
+ */
+function JobRow({
+  job,
+  retry,
+  engineId,
+}: {
+  job: Job
+  retry: EngineAction<RetryArgs, unknown>
+  engineId: string | undefined
+}) {
+  const t = useT()
+  const { ask } = useHandOff()
+  const retried = retry.done.has(job.id)
+  const retryError = retry.error(job.id)
+  const name = job.activityName ?? job.activityId ?? job.id
+  return (
+    <tr className="hover:bg-muted transition-colors">
+      <Td>
+        <JobSubject job={job} />
+      </Td>
+      <Td className="whitespace-nowrap">
+        <IdText value={job.processInstanceId} />
+      </Td>
+      <Td align="right">
+        <CountPill tone={retried ? "neutral" : retriesTone(job)}>
+          {formatNumber(retried ? 1 : job.retries)}
+        </CountPill>
+      </Td>
+      <Td>
+        <LogText text={job.exceptionMessage} />
+      </Td>
+      <Td align="right" className="text-muted-foreground text-small whitespace-nowrap">
+        {formatTimestamp(job.createTime)}
+      </Td>
+      <Td align="right">
+        {retried ? (
+          <StatusBadge tone="success" className="whitespace-nowrap">
+            <Icon icon={Check} dense />
+            {t("jobPanel.retried")}
+          </StatusBadge>
+        ) : (
+          job.retries === 0 && (
+            <div className="inline-flex items-center justify-end gap-1">
+              {retry.allowed && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={retry.pending(job.id)}
+                  onClick={() =>
+                    retry.run(
+                      { jobId: job.id, retries: 1, engine: engineId },
+                      {
+                        feedback: writeFeedback.jobRetry(t, instanceName(job.processInstanceId)),
+                      },
+                    )
+                  }
+                >
+                  {t("jobPanel.retry")}
+                </Button>
+              )}
+              <MoreActions label={t("jobPanel.moreActions", { name })}>
+                <HandOffButton
+                  action="explainError"
+                  variant="menuitem"
+                  prompt={ask(explainJobHandOff(job, engineId))}
+                />
+                <HandOffButton
+                  action="draftTicket"
+                  variant="menuitem"
+                  prompt={ask(draftJobTicketHandOff(job, engineId))}
+                />
+              </MoreActions>
+            </div>
+          )
+        )}
+        {retryError && (
+          <p role="alert" className="text-danger-ink text-small mt-1">
+            {t("jobPanel.retryError", { message: retryError })}
+          </p>
+        )}
+      </Td>
+    </tr>
+  )
+}
+
 export function JobPanelWidget({
   data: initialData = null,
   engine,
@@ -217,38 +358,33 @@ export function JobPanelWidget({
       <HostModelContext content={context(describeJobPanel(data, engineId, jobs.length))}>
         {null}
       </HostModelContext>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold">{t("jobPanel.title")}</h2>
-          <Badge variant="secondary">
-            {t("jobPanel.badgeTotal", { count: formatNumber(totalCount) })}
-          </Badge>
-          {failedCount > 0 && (
-            <Badge variant="destructive">
-              {t("jobPanel.badgeFailed", { count: formatNumber(failedCount) })}
-            </Badge>
-          )}
-        </div>
-        {failedJobs.length > 0 && (
-          <HandOffButton
-            action="assess"
-            variant="primary"
-            prompt={ask(triageJobsHandOff(data, engineId))}
-          />
-        )}
-      </div>
+      <WidgetHeader
+        title={t("jobPanel.title")}
+        sub={
+          <>
+            <EngineMeta engineId={engineId} />
+            <span>{t("jobPanel.badgeTotal", { count: formatNumber(totalCount) })}</span>
+          </>
+        }
+        actions={
+          failedJobs.length > 0 && (
+            <HandOffButton action="assess" prompt={ask(triageJobsHandOff(data, engineId))} />
+          )
+        }
+      />
+      {/* Only the jobs without retries carry a state; the other two are counts. */}
       <KpiGrid
         variant="soft"
         className="grid-cols-2 gap-3 sm:grid-cols-3"
         ariaLabel={t("jobPanel.summaryLabel")}
         cells={[
           { label: t("jobPanel.totalJobs"), value: formatNumber(totalCount) },
-          { label: t("jobPanel.stuck"), value: formatNumber(failedCount), tone: "danger" },
           {
-            label: t("jobPanel.healthy"),
-            value: formatNumber(totalCount - failedCount),
-            tone: "success",
+            label: t("jobPanel.stuck"),
+            value: formatNumber(failedCount),
+            tone: failedCount > 0 ? "danger" : undefined,
           },
+          { label: t("jobPanel.healthy"), value: formatNumber(totalCount - failedCount) },
         ]}
       />
 
@@ -256,94 +392,21 @@ export function JobPanelWidget({
         <TableEmptyState>{t("jobPanel.noJobs")}</TableEmptyState>
       ) : (
         <>
+          {/* Jobs without retries come first — the feed sorts by retries. */}
           <ListTable
             ariaLabel={t("jobPanel.tableLabel")}
             columns={[
               { label: t("jobPanel.colActivity") },
-              { label: t("jobPanel.colProcess") },
+              { label: t("jobPanel.colInstance"), hideBelow: "lg" },
               { label: t("jobPanel.colRetries"), align: "right" },
               { label: t("jobPanel.colError") },
               { label: t("jobPanel.colCreated"), align: "right", hideBelow: "md" },
               { plain: true, sticky: true },
             ]}
           >
-            {jobs.map((job) => {
-              const retried = retry.done.has(job.id)
-              const retryError = retry.error(job.id)
-              return (
-                <tr
-                  key={job.id}
-                  className={retried ? "opacity-50" : "hover:bg-muted transition-colors"}
-                >
-                  <Td>
-                    <span className="font-mono text-sm">{job.activityId ?? "\u2014"}</span>
-                  </Td>
-                  <Td>
-                    <span className="font-mono text-sm">
-                      {job.processDefinitionKey ?? "\u2014"}
-                    </span>
-                  </Td>
-                  <Td align="right">
-                    <Badge
-                      variant={
-                        retried ? "secondary" : job.retries === 0 ? "destructive" : "secondary"
-                      }
-                      className="tabular-nums"
-                    >
-                      {formatNumber(retried ? 1 : job.retries)}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <LogText text={job.exceptionMessage} />
-                  </Td>
-                  <Td align="right" className="text-muted-foreground font-mono text-xs">
-                    {formatTimestamp(job.createTime)}
-                  </Td>
-                  <Td align="right">
-                    {job.retries === 0 && !retried && (
-                      <div className="inline-flex items-center justify-end gap-1">
-                        {retry.allowed && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={retry.pending(job.id)}
-                            onClick={() =>
-                              retry.run(
-                                { jobId: job.id, retries: 1, engine: engineId },
-                                {
-                                  feedback: writeFeedback.jobRetry(
-                                    t,
-                                    instanceName(job.processInstanceId),
-                                  ),
-                                },
-                              )
-                            }
-                          >
-                            {t("jobPanel.retry")}
-                          </Button>
-                        )}
-                        <HandOffButton
-                          action="explainError"
-                          variant="icon"
-                          prompt={ask(explainJobHandOff(job, engineId))}
-                        />
-                        <HandOffButton
-                          action="draftTicket"
-                          variant="icon"
-                          prompt={ask(draftJobTicketHandOff(job, engineId))}
-                        />
-                      </div>
-                    )}
-                    {retried && <Badge variant="secondary">{t("jobPanel.retried")}</Badge>}
-                    {retryError && (
-                      <p role="alert" className="text-danger-ink mt-1 text-xs">
-                        {t("jobPanel.retryError", { message: retryError })}
-                      </p>
-                    )}
-                  </Td>
-                </tr>
-              )
-            })}
+            {jobs.map((job) => (
+              <JobRow key={job.id} job={job} retry={retry} engineId={engineId} />
+            ))}
           </ListTable>
           <PagedListFooter paged={paged} noun={t("jobPanel.footerNoun")} />
         </>

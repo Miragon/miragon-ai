@@ -10,6 +10,7 @@ import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { IncidentsDashboardData } from "../../view-models.js"
 import { CAMUNDA7_INCIDENTS_DATA } from "../../tool-names.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { EngineMeta } from "../lib/engine-context.js"
 import { useT } from "../../messages/use-t.js"
 import { formatCount } from "../lib/format-count.js"
 import { dashboardScope, incidentsFeed } from "./scope.js"
@@ -83,12 +84,17 @@ export function IncidentOverviewKpiView({
     )
   }
 
+  const engineId = engine ?? data.engineId
   return (
     <>
       <WidgetHeader
-        title={t("incidentsKpi.title")}
+        // The engine in the title (#322 U4): "prod-leasing · Incidents".
+        title={
+          engineId ? t("incidentsKpi.titleFor", { engine: engineId }) : t("incidentsKpi.title")
+        }
         sub={
           <>
+            <EngineMeta engineId={engineId} />
             <LivePill>{t("incidentsKpi.live")}</LivePill>
             <span>
               {t("incidentsKpi.openSummary", {
@@ -107,16 +113,13 @@ export function IncidentOverviewKpiView({
           </>
         }
         actions={
-          <HandOffButton
-            action="assess"
-            variant="primary"
-            prompt={ask(triageIncidentsHandOff(data, engine ?? data.engineId))}
-          />
+          <HandOffButton action="assess" prompt={ask(triageIncidentsHandOff(data, engineId))} />
         }
       />
+      {/* Only the open incidents carry a state (#322 U14); the rest are counts. */}
       <KpiGrid
         boxed
-        header={{ label: t("incidentsKpi.overviewLabel"), badge: t("incidentsKpi.overviewBadge") }}
+        ariaLabel={t("incidentsKpi.overviewLabel")}
         cells={[
           {
             label: t("incidentsKpi.cellOpenIncidents"),
@@ -134,7 +137,6 @@ export function IncidentOverviewKpiView({
           {
             label: t("incidentsKpi.cellLast24h"),
             value: `+${formatNumber(data.last24hCount)}`,
-            tone: data.last24hCount > 0 ? "danger" : undefined,
           },
         ]}
       />

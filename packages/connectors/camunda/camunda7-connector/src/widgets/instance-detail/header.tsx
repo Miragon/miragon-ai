@@ -5,11 +5,14 @@ import {
   WidgetHeader,
   type ToneVariant,
 } from "@miragon/mcp-toolkit-ui"
-import { HandOffButton, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, IdText, VersionChip, formatNumber } from "@miragon-ai/widget-shell/widgets"
 
 import type { InstanceDetailData } from "../../view-models.js"
 import { type T, useT } from "../../messages/use-t.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
+import { EngineMeta } from "../lib/engine-context.js"
+import { definitionVersionOf } from "../lib/identity.js"
+import { instanceName } from "../lib/write-feedback.js"
 
 export interface InstanceStatus {
   label: string
@@ -28,7 +31,9 @@ export function instanceStatus(
       : isSuspended
         ? t("instanceDetail.statusSuspended")
         : t("instanceDetail.statusRunning")
-  const tone = cancelled || ended ? ("neutral" as const) : isSuspended ? "warning" : "success"
+  // Running is a state in progress — info, the same in every view (#322
+  // U14); green would claim "done well", and ended or cancelled is no alarm.
+  const tone = cancelled || ended ? ("neutral" as const) : isSuspended ? "warning" : "info"
   return { label, tone }
 }
 
@@ -73,6 +78,7 @@ export function diagnoseInstanceHandOff({
 /** Header — identity, status badge, and the action home (AI diagnose, suspend, cancel). */
 export function InstanceHeader({
   instance,
+  processName,
   status,
   engineId,
   activeActivityIds,
@@ -84,6 +90,8 @@ export function InstanceHeader({
   onRequestCancel,
 }: {
   instance: InstanceDetailData["instance"]
+  /** The process's name (from its diagram) — null without one. */
+  processName: string | null
   status: InstanceStatus
   engineId?: string
   activeActivityIds: string[]
@@ -98,25 +106,22 @@ export function InstanceHeader({
 }) {
   const t = useT()
   const { ask } = useHandOff()
+  const version = definitionVersionOf(instance.definitionId)
   return (
     <WidgetHeader
       size="detail"
       badge={<StatusBadge tone={status.tone}>{status.label}</StatusBadge>}
-      title={t("instanceDetail.title")}
+      // The instance by its ONE label (#322 U13): its business key, else its
+      // short id — the process it runs on, by name, right under it.
+      title={instanceName(instance.id, instance.businessKey)}
       sub={
         <>
-          <span>
-            {t("instanceDetail.idLabel")} <code className="font-mono">{instance.id}</code>
+          <span className="inline-flex items-center gap-1.5">
+            {processName ?? t("instanceDetail.title")}
+            {version !== null && <VersionChip version={version} />}
           </span>
-          {instance.businessKey && (
-            <span>
-              {t("instanceDetail.businessKeyLabel")}{" "}
-              <code className="font-mono">{instance.businessKey}</code>
-            </span>
-          )}
-          <span className="font-mono text-xs">
-            {t("instanceDetail.definitionLabel", { id: instance.definitionId })}
-          </span>
+          <IdText value={instance.id} />
+          <EngineMeta engineId={engineId} />
         </>
       }
       actions={
@@ -144,7 +149,6 @@ export function InstanceHeader({
           )}
           <HandOffButton
             action="findCause"
-            variant="primary"
             prompt={ask(
               diagnoseInstanceHandOff({
                 instance,

@@ -8,11 +8,10 @@ import type { IncidentDetailData, IncidentRecovery } from "../view-models.js"
 import { CAMUNDA7_INCIDENT_DETAIL_DATA } from "../tool-names.js"
 import { BpmnDiagram, type BpmnHighlight } from "./bpmn-diagram.js"
 import { DetailPage } from "./detail-page.js"
-import { FailureTab } from "./incident-detail/failure-tab.js"
+import { FailureSummary, StacktraceTab } from "./incident-detail/failure-tab.js"
 import { recoveryOf } from "./lib/incident-recovery.js"
 import { IncidentDetailHeader } from "./incident-detail/header.js"
 import { InstanceTab } from "./incident-detail/instance-tab.js"
-import { IncidentKpis } from "./incident-detail/kpis.js"
 import { EngineActionDialog } from "./lib/engine-action-dialog.js"
 import {
   useIncidentRecovery,
@@ -41,12 +40,17 @@ function retryToolFor(data: IncidentDetailData) {
   return null
 }
 
-/** The incident as the shared recovery reads it — with the feed's (or the old payload's) remedy. */
+/**
+ * The incident as the shared recovery reads it — with the feed's (or the old
+ * payload's) remedy and the instance's business key, so the confirmation and
+ * the toasts name the instance as the head does (#322 U13).
+ */
 function recoverable(data: IncidentDetailData): RecoverableIncident {
   return {
     id: data.incidentId,
     incidentType: data.incidentType,
     processInstanceId: data.processInstanceId,
+    businessKey: data.businessKey,
     recovery: detailRecovery(data),
   }
 }
@@ -192,20 +196,24 @@ export function IncidentDetailWidget({
   const remedy = remedyProps(recovery, recoverable(data))
   const { resolved, retried } = remedy
 
+  // The failure first (#322 U12): what went wrong and what clears it right
+  // under the head — then where it happened (the diagram), then the depth.
   return (
     <DetailPage
       header={
         <>
           {notice}
           <IncidentDetailHeader data={data} resolved={resolved} />
+          <FailureSummary data={data} {...remedy} />
         </>
       }
-      kpi={<IncidentKpis data={data} resolved={resolved} />}
       diagram={
         <section>
           <SectionHeading
             title={t("incidentDetail.processFlowTitle")}
-            hint={t("incidentDetail.processFlowHint", { activity: data.activityId })}
+            hint={t("incidentDetail.processFlowHint", {
+              activity: data.activityName ?? data.activityId,
+            })}
           />
           {data.bpmnXml ? (
             <BpmnDiagram bpmnXml={data.bpmnXml} highlights={highlights} />
@@ -218,9 +226,9 @@ export function IncidentDetailWidget({
       }
       tabs={[
         {
-          id: "failure",
-          label: t("incidentDetail.tabFailure"),
-          content: <FailureTab data={data} {...remedy} />,
+          id: "stacktrace",
+          label: t("incidentDetail.tabStacktrace"),
+          content: <StacktraceTab data={data} />,
         },
         {
           id: "instance",
@@ -237,11 +245,12 @@ export function IncidentDetailWidget({
               processInstanceId={data.processInstanceId}
               engine={engineId}
               variant="table"
+              incidentActivityIds={resolved || retried ? [] : [data.activityId]}
             />
           ),
         },
       ]}
-      defaultTab="failure"
+      defaultTab="stacktrace"
     >
       {/* Rendered in-component (not via the adapter's describeForModel) because
           this widget self-fetches in the cockpit, where the adapter has no data. */}

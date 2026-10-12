@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import {
@@ -64,7 +64,9 @@ const JOBS: JobPanelData = {
       processInstanceId: "pi-1",
       processDefinitionKey: "invoice",
       processDefinitionId: "invoice:1:abc",
+      processDefinitionName: null,
       activityId: "chargeCard",
+      activityName: null,
       retries: 0,
       exceptionMessage: "Card declined",
       dueDate: null,
@@ -109,7 +111,9 @@ describe("the gate fails closed and hides only the write", () => {
     renderWith(JobPanel, { allowedActions: [], modelTools: readOnlyModelTools })
     await feedSettled()
     expect(screen.queryByText("Retry job")).toBeNull()
-    expect(screen.getByLabelText("Explain error in chat")).toBeTruthy()
+    // The hand-offs wait behind the row's "more" button (#322 U11).
+    fireEvent.click(screen.getByRole("button", { name: "More actions for the job at chargeCard" }))
+    expect(screen.getByRole("menuitem", { name: "Explain error in chat" })).toBeTruthy()
   })
 
   it("fails closed while the feed has not answered", () => {

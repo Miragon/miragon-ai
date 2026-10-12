@@ -1,3 +1,4 @@
+import { FOCUS_RING, cn } from "@miragon/mcp-toolkit-ui"
 import { Icon } from "@miragon-ai/widget-shell/widgets"
 import { ChevronRight } from "lucide-react"
 import { translator } from "../../messages/index.js"
@@ -29,7 +30,7 @@ export function NavBreadcrumb({
   return (
     <nav
       aria-label={translator(locale, "cockpit.aria.breadcrumb")}
-      className="text-muted-foreground mb-4 flex flex-wrap items-center gap-1.5 text-sm"
+      className="text-muted-foreground text-dense mb-4 flex flex-wrap items-center gap-1.5"
     >
       {entries.map((entry, position) => (
         <span key={position} className="inline-flex items-center gap-1.5">
@@ -38,7 +39,7 @@ export function NavBreadcrumb({
             <button
               type="button"
               onClick={() => onPop(entry.index)}
-              className="hover:text-foreground focus-visible:ring-ring rounded outline-none focus-visible:ring-2"
+              className={cn("hover:text-foreground rounded", FOCUS_RING)}
             >
               {entry.label}
             </button>

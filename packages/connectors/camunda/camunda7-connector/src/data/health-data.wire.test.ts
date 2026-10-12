@@ -113,6 +113,55 @@ describe("buildEngineHealthData — exact totals", () => {
     expect(data.clusters[0].latestIncident).toBe(AFTER_FALL_BACK)
   })
 
+  it("titles each cluster by its activity's and process's names, ids where unreadable", async () => {
+    const xml =
+      '<definitions><process id="order" name="Order to cash"><serviceTask id="charge" name="Charge card"/></process></definitions>'
+    const { engine, client } = await engineWith({
+      "GET /incident": {
+        body: [
+          incident("a", ago(MINUTE)),
+          incident("b", ago(2 * MINUTE)),
+          { ...incident("c", ago(3 * MINUTE), "ship"), processDefinitionId: "ship:1:s1" },
+        ],
+      },
+      "GET /incident/count": windowedCount({ total: 3, lastHour: 3, last24h: 3 }),
+      "GET /process-definition/statistics": {
+        body: [
+          {
+            id: "order:2:d2",
+            instances: 9,
+            incidents: [{ incidentCount: 2 }],
+            definition: { key: "order", name: "Order to cash", version: 2 },
+          },
+          {
+            id: "ship:1:s1",
+            instances: 1,
+            incidents: [{ incidentCount: 1 }],
+            definition: { key: "ship", version: 1 },
+          },
+        ],
+      },
+      "GET /history/process-instance/count": { body: { count: 0 } },
+      "GET /process-definition/order:2:d2/xml": { body: { id: "order:2:d2", bpmn20Xml: xml } },
+      "GET /process-definition/ship:1:s1/xml": { status: 500, body: { message: "boom" } },
+    })
+
+    const data = await buildEngineHealthData(client, "fake")
+
+    expect(
+      data.clusters.map((c) => [c.activityId, c.activityName, c.processDefinitionName]),
+    ).toEqual([
+      ["charge", "Charge card", "Order to cash"],
+      // Its diagram failed and its process has no name: the ids stand in.
+      ["ship", null, null],
+    ])
+    // One diagram per version behind the clusters, never one per incident.
+    expect(engine.requests.filter((r) => r.path.endsWith("/xml")).map((r) => r.path)).toEqual([
+      "/process-definition/order:2:d2/xml",
+      "/process-definition/ship:1:s1/xml",
+    ])
+  })
+
   it("reports what a capped scan cannot vouch for as unknown — totals, cluster sizes, 24h", async () => {
     // A mass failure: the newest 2000 of 5000 incidents, all from the last
     // half hour — the scan reaches back neither to the clusters' start nor 24h.
@@ -256,7 +305,36 @@ describe("buildClusterDetailData — the real definition keys", () => {
     })
 
     expect(data.processDefinitionKeys).toEqual(["order"])
-    expect(engine.requests.some((r) => r.path.startsWith("/process-definition"))).toBe(false)
+    // The world's diagram is unreadable here: the ids stand in for the names.
+    expect([data.activityName, data.incidents[0].processDefinitionName]).toEqual([null, null])
+    // Only the diagram that names the activity (enrichment), never the statistics.
+    expect(
+      engine.requests.filter((r) => r.path.startsWith("/process-definition")).map((r) => r.path),
+    ).toEqual(["/process-definition/order:2:d2/xml"])
+  })
+})
+
+describe("buildClusterDetailData — names before ids (#322 U13)", () => {
+  it("names the activity and each row's process from the diagrams, once per version", async () => {
+    const xml =
+      '<definitions><process id="order" name="Order to cash"><serviceTask id="charge" name="Charge card"/></process></definitions>'
+    const { engine, client } = await engineWith({
+      "GET /incident": { body: [incident("a", ago(MINUTE)), incident("b", ago(2 * MINUTE))] },
+      "GET /process-instance": { body: [{ id: "pi-a", businessKey: "LEA-1" }] },
+      "GET /process-definition/order:2:d2/xml": { body: { id: "order:2:d2", bpmn20Xml: xml } },
+    })
+
+    const data = await buildClusterDetailData(client, "fake", {
+      activityId: "charge",
+      incidentType: "failedJob",
+    })
+
+    expect(data.activityName).toBe("Charge card")
+    expect(data.incidents.map((i) => [i.businessKey, i.processDefinitionName])).toEqual([
+      ["LEA-1", "Order to cash"],
+      [null, "Order to cash"],
+    ])
+    expect(engine.requests.filter((r) => r.path.endsWith("/xml"))).toHaveLength(1)
   })
 })
 

@@ -61,7 +61,7 @@ export function TaskCompleteForm({
         </Alert>
       )
     }
-    return <p className="text-muted-foreground py-2 text-sm">{t("taskForm.loading")}</p>
+    return <p className="text-muted-foreground text-dense py-2">{t("taskForm.loading")}</p>
   }
 
   return (
@@ -162,7 +162,7 @@ function TaskCompleteFormBody({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       {schema.fields.length === 0 && manualEntries.length === 0 && (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-dense">
           {schema.formKey || schema.formRef
             ? t("taskForm.externalForm", { formKey: schema.formKey ?? schema.formRef ?? "" })
             : t("taskForm.empty")}
@@ -282,8 +282,8 @@ function FieldRow({
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between">
-          <label className="text-muted-foreground text-sm font-medium">{label}</label>
-          <span className="text-muted-foreground text-xs">{meta}</span>
+          <label className="text-muted-foreground text-dense font-medium">{label}</label>
+          <span className="text-muted-foreground text-small">{meta}</span>
         </div>
         <div className="flex flex-wrap gap-1">
           {field.suggestedValues.map((suggested) => {
@@ -311,10 +311,10 @@ function FieldRow({
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between">
-          <label className={`text-sm font-medium ${disabled ? "text-muted-foreground" : ""}`}>
+          <label className={`text-dense font-medium ${disabled ? "text-muted-foreground" : ""}`}>
             {label}
           </label>
-          <span className="text-muted-foreground text-xs">{meta}</span>
+          <span className="text-muted-foreground text-small">{meta}</span>
         </div>
         {/* The engine value stays "true"/"false"; the screen says Ja/Nein. */}
         <div className="flex gap-1">
@@ -341,11 +341,11 @@ function FieldRow({
       <div className="flex items-baseline justify-between">
         <label
           htmlFor={`field-${field.name}`}
-          className={`text-sm font-medium ${disabled ? "text-muted-foreground" : ""}`}
+          className={`text-dense font-medium ${disabled ? "text-muted-foreground" : ""}`}
         >
           {label}
         </label>
-        <span className="text-muted-foreground text-xs">{meta}</span>
+        <span className="text-muted-foreground text-small">{meta}</span>
       </div>
       <Input
         id={`field-${field.name}`}
@@ -381,7 +381,7 @@ function ManualEntryRow({
       />
       <NativeSelect
         aria-label={t("taskForm.variableType")}
-        className="h-8 text-xs"
+        className="text-small h-8"
         value={entry.type}
         onChange={(e) => onChange({ ...entry, type: e.target.value })}
       >

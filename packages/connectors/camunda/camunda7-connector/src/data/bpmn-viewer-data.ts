@@ -13,7 +13,8 @@ import {
   collectIncidentActivityIds,
   countActivityInstances,
 } from "../lib/activity-tree.js"
-import { fetchDefinitionXml, findLatestDefinition } from "./definition-info.js"
+import { extractActivityNames } from "../lib/bpmn-parse.js"
+import { definitionKeyInId, fetchDefinitionXml, findLatestDefinition } from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 
 export interface BpmnViewerTarget {
@@ -47,7 +48,7 @@ export async function buildBpmnViewerData(
   target: BpmnViewerTarget,
 ): Promise<BpmnViewerData> {
   const processInstanceId = target.processInstanceId ?? null
-  const definitionId = await resolveDefinitionId(client, target)
+  const { definitionId, businessKey } = await resolveTarget(client, target)
 
   if (!definitionId) {
     return emptyViewerData(processInstanceId, engineId)
@@ -61,10 +62,16 @@ export async function buildBpmnViewerData(
       : definitionOverlays(client, definitionId),
   ])
 
+  // Names before ids (#322 U13): the process element of the diagram names
+  // the view (no extra read); its key is the target's, or the id's segment.
+  const processKey = target.processDefinitionKey ?? definitionKeyInId(definitionId)
   return {
     bpmnXml,
     processInstanceId,
+    businessKey,
     processDefinitionId: definitionId,
+    processDefinitionName:
+      (bpmnXml && processKey ? extractActivityNames(bpmnXml)[processKey] : null) ?? null,
     ...overlays,
     engineId,
   }
@@ -123,18 +130,33 @@ async function definitionOverlays(client: Client, definitionId: string): Promise
   }
 }
 
-/** Resolves the viewer target to a concrete definition id, `null` when nothing matches. */
-async function resolveDefinitionId(
+/**
+ * Resolves the viewer target to a concrete definition id (`null` when
+ * nothing matches) — and, for an instance, its business key from the same
+ * read.
+ */
+async function resolveTarget(
   client: Client,
   target: BpmnViewerTarget,
-): Promise<string | null> {
+): Promise<{ definitionId: string | null; businessKey: string | null }> {
   if (target.processInstanceId) {
     const instance = (await getProcessInstance({
       client,
       path: { id: target.processInstanceId },
-    })) as { definitionId?: string } | null
-    return instance?.definitionId ?? null
+    })) as { definitionId?: string; businessKey?: string | null } | null
+    return {
+      definitionId: instance?.definitionId ?? null,
+      businessKey: instance?.businessKey ?? null,
+    }
   }
+  return { definitionId: await resolveDefinitionId(client, target), businessKey: null }
+}
+
+/** A definition target's concrete definition id, `null` when nothing matches. */
+async function resolveDefinitionId(
+  client: Client,
+  target: BpmnViewerTarget,
+): Promise<string | null> {
   if (target.processDefinitionKey === undefined) return null
   if (target.version === undefined) {
     // The highest version over every tenant — the definition view's lookup.
@@ -154,7 +176,9 @@ function emptyViewerData(processInstanceId: string | null, engineId: string): Bp
   return {
     bpmnXml: null,
     processInstanceId,
+    businessKey: null,
     processDefinitionId: null,
+    processDefinitionName: null,
     activeActivityIds: [],
     incidentActivityIds: [],
     activityStats: [],

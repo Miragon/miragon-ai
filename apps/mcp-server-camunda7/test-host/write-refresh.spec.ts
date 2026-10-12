@@ -13,8 +13,8 @@ import { HEALTHY_ENGINE } from "./engines.js"
  * the refetch reaches the server's app-only feed.
  *
  * Runs on the `camunda7:operations` deployment (`HOST_SIM_OPERATIONS_URL`) —
- * the read-only default offers no write — against the stub engine's one
- * failed job, which this scenario owns.
+ * the read-only default offers no write — against the stub engine's failed
+ * `job-1`, which this scenario owns (its other failed jobs are never written).
  */
 
 const RENDER_TOOL = "camunda7_show_job_panel"
@@ -42,11 +42,13 @@ test("a write in a standalone view refetches its feed and re-renders — no re-e
   const app = page.frameLocator("#app")
 
   // The delivered result renders; the deployment offers the retry.
-  await expect(app.getByText("Card declined")).toBeVisible({ timeout: 15_000 })
-  await app.getByRole("button", { name: "Retry job" }).click()
+  const owned = app.getByRole("row").filter({ hasText: "Card declined" })
+  await expect(owned).toBeVisible({ timeout: 15_000 })
+  await owned.getByRole("button", { name: "Retry job" }).click()
 
   // The retried job left the failed-only list: the view re-read its feed.
-  await expect(app.getByText("No jobs in this selection.")).toBeVisible()
+  await expect(owned).toHaveCount(0)
+  await expect(app.getByRole("row").filter({ hasText: "Card expired" })).toBeVisible()
   const log = await hostLog(page)
   const calls = log.toolCalls.filter((c) => c.name !== "camunda7_widget_actions_data")
   const write = calls.findIndex((c) => c.name === "camunda7_set_job_retries")

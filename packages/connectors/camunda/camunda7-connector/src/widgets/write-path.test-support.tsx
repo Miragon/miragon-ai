@@ -76,6 +76,7 @@ export function instance(over: Partial<InstanceDetailData> = {}): InstanceDetail
       suspended: false,
       ended: false,
     },
+    processDefinitionName: null,
     activityTree: null,
     variables: { amount: { value: 42, type: "Integer" } },
     incidents: [],
@@ -98,6 +99,7 @@ export const FAILED_JOB_INCIDENT: IncidentInstance = {
   incidentMessage: "Card declined",
   incidentTimestamp: "2026-10-10T08:00:00.000+0000",
   cockpitInstanceUrl: null,
+  businessKey: null,
   recovery: { action: "retry-job", jobId: "job-1" },
 }
 

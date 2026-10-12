@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
 import type { ComponentType } from "react"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
 import { formatNumber } from "@miragon-ai/widget-shell/widgets"
@@ -42,12 +42,14 @@ const DEGRADED: EngineHealthData = {
     {
       id: "callWMS::failedExternalTask",
       activityId: "callWMS",
+      activityName: null,
       incidentType: "failedExternalTask",
       messageSignature: "connection timeout to wms",
       incidentCount: 40,
       scannedIncidentCount: 40,
       last24hCount: 10,
       processDefinitionKeys: ["shipping"],
+      processDefinitionName: null,
       representativeMessage: "Connection timeout to WMS",
       representativeIncidentId: "inc-1",
       latestIncident: "2026-06-11T14:00:00.000Z",
@@ -55,12 +57,14 @@ const DEGRADED: EngineHealthData = {
     {
       id: "checkCustomer::failedJob",
       activityId: "checkCustomer",
+      activityName: null,
       incidentType: "failedJob",
       messageSignature: "customerid is null",
       incidentCount: 8,
       scannedIncidentCount: 8,
       last24hCount: 2,
       processDefinitionKeys: ["onboarding", "shipping"],
+      processDefinitionName: null,
       representativeMessage: "customerId is null",
       representativeIncidentId: "inc-2",
       latestIncident: "2026-06-11T13:00:00.000Z",
@@ -92,6 +96,20 @@ const HEALTHY: EngineHealthData = {
 const Widget = EngineHealthVerdict as unknown as ComponentType<Record<string, unknown>>
 
 describe("EngineHealthVerdict (fixture render)", () => {
+  it("labels each view's clusters section by its own heading — two views on one page included", () => {
+    const Two = () => (
+      <>
+        <EngineHealthVerdict data={DEGRADED} />
+        <EngineHealthVerdict data={{ ...DEGRADED, engineId: "other" }} />
+      </>
+    )
+    render(<WidgetFixtureHost widget={Two} data={{}} tools={tools} />)
+    const sections = screen.getAllByRole("region", { name: "Top failures, grouped by cause" })
+    expect(sections).toHaveLength(2)
+    const ids = sections.map((s) => s.getAttribute("aria-labelledby"))
+    expect(new Set(ids).size).toBe(2)
+  })
+
   it("renders the verdict header, KPIs and the incident clusters with drill + ask handoffs", async () => {
     render(
       <WidgetFixtureHost
@@ -101,9 +119,11 @@ describe("EngineHealthVerdict (fixture render)", () => {
       />,
     )
 
-    // Verdict header (title + deterministic headline) and the top-level AI handoff.
-    expect(screen.getByText("Engine overview")).toBeTruthy()
+    // Verdict header (the engine in the title, #322 U4, + the deterministic
+    // headline), the one primary next step and the AI hand-off after it.
+    expect(screen.getByRole("heading", { name: "default · Overview" })).toBeTruthy()
     expect(screen.getByText("51 open incidents across 3 activities")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "View incidents" })).toBeTruthy()
     expect(await screen.findByText("Assess in chat")).toBeTruthy()
 
     // KPI row.
@@ -148,6 +168,41 @@ describe("EngineHealthVerdict (fixture render)", () => {
     expect(prompts[0]).toContain('Ids: engine="default"')
     expect(prompts[0]).not.toContain("Tools:")
     queryClient.setQueryDefaults(["camunda7-widget-actions"], {})
+  })
+
+  // #322 U12: names before ids, the cause as the sub-line.
+  it("titles each cluster by its activity's name, the cause under it", () => {
+    const named: EngineHealthData = {
+      ...DEGRADED,
+      clusters: [
+        {
+          ...DEGRADED.clusters[0],
+          activityName: "Call warehouse",
+          processDefinitionName: "Shipping",
+        },
+      ],
+    }
+    render(<WidgetFixtureHost widget={Widget} data={named as unknown as Record<string, unknown>} />)
+    const cluster = screen.getByText("Call warehouse").closest("li")!
+    // The BPMN id is the quiet second line; the cause and the process follow.
+    expect(within(cluster).getByText("callWMS")).toBeTruthy()
+    expect(within(cluster).getByText("Connection timeout to WMS")).toBeTruthy()
+    expect(within(cluster).getByText(/· Shipping$/)).toBeTruthy()
+    // The type is a neutral chip, not a red badge on every row.
+    expect(within(cluster).getByText("failedExternalTask").closest("[data-tone]")).toBeNull()
+  })
+
+  it("an engine with nothing deployed is neutral: no green 'stable' over an empty engine", () => {
+    const empty: EngineHealthData = {
+      ...HEALTHY,
+      summary: { ...HEALTHY.summary, runningInstances: 0, totalDefinitions: 0 },
+    }
+    render(<WidgetFixtureHost widget={Widget} data={empty as unknown as Record<string, unknown>} />)
+    const badge = screen.getByText("Empty").closest("[data-slot='status-badge']")!
+    expect(badge.getAttribute("data-tone")).toBe("neutral")
+    expect(screen.getByText("No processes deployed")).toBeTruthy()
+    // No open incidents: no primary to look at them.
+    expect(screen.queryByRole("button", { name: "View incidents" })).toBeNull()
   })
 
   it("renders the stable verdict with no cluster list when there are no incidents", () => {
@@ -241,7 +296,7 @@ describe("the verdict line and the hand-offs speak the view's language", () => {
 
   it("a German view: German title, verdict, status badge and chat hand-offs, no English left", async () => {
     const { container } = renderIn("de", DEGRADED)
-    expect(screen.getByText("Engine-Übersicht")).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "default · Übersicht" })).toBeTruthy()
     expect(screen.getByText("Beeinträchtigt")).toBeTruthy()
     // The hand-offs name the chat and draw the icon of their function.
     const assess = await screen.findByRole("button", { name: "Im Chat bewerten" })

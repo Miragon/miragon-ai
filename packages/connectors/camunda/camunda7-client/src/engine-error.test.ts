@@ -226,6 +226,30 @@ describe("network failures", () => {
     expect(e.message).toBe("connection to engine prod-a failed (UND_ERR_SOCKET)")
   })
 
+  it("a POST query (POST /job, a read with a body) carries no write caveat; a POST write does", () => {
+    const dropped = (method: string, path: string) =>
+      (
+        toEngineRequestError(new TypeError("fetch failed", { cause: { code: "ECONNRESET" } }), {
+          request: new Request(`http://engine.invalid/engine-rest${path}`, { method }),
+          engineId: "prod-a",
+          timeoutMs: 1,
+          timedOut: false,
+        }) as EngineRequestError
+      ).message
+    expect(dropped("POST", "/job")).toBe("connection to engine prod-a failed (ECONNRESET)")
+    expect(dropped("POST", "/job/")).toBe("connection to engine prod-a failed (ECONNRESET)")
+    for (const [method, path] of [
+      ["POST", "/job/retries"],
+      ["POST", "/job/j-1/execute"],
+      ["PUT", "/job"],
+      ["DELETE", "/job"],
+    ]) {
+      expect(dropped(method, path), `${method} ${path}`).toMatch(
+        new RegExp(`— the ${method} may still have been applied`),
+      )
+    }
+  })
+
   it("only connect-phase failures — the engine cannot have seen the request — read 'unreachable'", () => {
     const post = new Request("http://engine.invalid/x", { method: "POST" })
     const map = (code?: string) =>

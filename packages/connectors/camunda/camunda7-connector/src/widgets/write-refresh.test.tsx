@@ -53,6 +53,7 @@ const INSTANCE_ROWS: ProcessInstancesData = {
       id: "pi-1",
       businessKey: "INV-7",
       processDefinitionKey: "invoice",
+      processDefinitionName: null,
       version: 1,
       suspended: false,
       hasIncident: true,
