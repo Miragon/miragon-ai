@@ -1,52 +1,58 @@
 import type { ReactNode } from "react"
-import { Alert, AlertDescription, AlertTitle, Skeleton } from "@miragon/mcp-toolkit-ui"
+import { ErrorState, Skeleton, useLocale } from "@miragon/mcp-toolkit-ui"
+import { describeError } from "./describe-error.js"
+import { kitLabels } from "./kit-labels.js"
+import { LoadingStatus } from "./view-data-state.js"
 
 /**
- * Fallback for self-fetching widgets while their query has no data yet:
- * renders the skeleton while loading, and a destructive alert once the query
- * errored — the branch several dashboard widgets forgot, leaving them on an
- * eternal skeleton after a failed fetch.
+ * Fallback for self-fetching widgets while their query has no data yet: the
+ * skeleton under a polite loading status while loading, and the toolkit's
+ * `ErrorState` once the query errored — the branch several dashboard widgets
+ * forgot, leaving them on an eternal skeleton after a failed fetch.
  *
- * The alert says what happened (`errorTitle`, one line: the toolkit's
- * `AlertTitle` clamps to it), the cause the query reported, and what the
- * user can do (`errorHint`) — the two-part error text brand-tone asks for.
+ * The error says what happened and what you can do ({@link describeError}:
+ * "Die Engine prod ist nicht erreichbar (HTTP 503)", "Prüf, ob die Engine
+ * läuft …"), keeps the raw reason collapsed under "Details" and always
+ * offers the retry. `errorTitle` names what failed to load in the caller's
+ * words; it heads an error the kit cannot classify.
  */
 export function QueryFallback({
   isError,
   error,
+  onRetry,
   errorTitle,
-  errorHint,
+  loadingText,
   skeleton,
 }: {
   isError: boolean
   error?: unknown
-  /** Caller-localized headline for the error state: what happened, one line. */
-  errorTitle: string
-  /** Caller-localized next step under the cause: what the user can do. */
-  errorHint?: string
+  /** Re-run the failed query (its refetch). */
+  onRetry: () => void
+  /** Caller-localized headline for an unclassified error: what failed, one line. */
+  errorTitle?: string
+  /** The loading status for screen readers (default: the active locale's "Loading view…"). */
+  loadingText?: string
   skeleton: ReactNode
 }) {
+  const locale = useLocale()
   if (isError) {
-    const message = error instanceof Error ? error.message : ""
+    const described = describeError(error, locale, { fallbackTitle: errorTitle })
     return (
-      <Alert variant="destructive">
-        <AlertTitle>{errorTitle}</AlertTitle>
-        {message || errorHint ? (
-          <AlertDescription>
-            {message ? <p>{message}</p> : null}
-            {errorHint ? <p>{errorHint}</p> : null}
-          </AlertDescription>
-        ) : null}
-      </Alert>
+      <ErrorState
+        title={described.title}
+        description={described.hint}
+        details={described.details ?? undefined}
+        onRetry={onRetry}
+      />
     )
   }
-  return <>{skeleton}</>
+  return <LoadingStatus text={loadingText ?? kitLabels(locale).loadingView} skeleton={skeleton} />
 }
 
 /** The dashboards' standard table placeholder (bordered card + two bars). */
 export function TableSkeleton() {
   return (
-    <div className="rounded-lg border p-4" aria-busy="true">
+    <div className="rounded-lg border p-4">
       <Skeleton className="mb-3 h-5 w-40" />
       <Skeleton className="h-32 w-full" />
     </div>

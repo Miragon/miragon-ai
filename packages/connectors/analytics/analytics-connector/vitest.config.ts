@@ -30,8 +30,10 @@ export default mergeConfig(
         // 90.53 / 75.27 / 91.51 / 92.35. Raised again with the ma3 review
         // fixes (the settings section's error state, the heatmap's
         // missing-diagram cause, the measured window lengths under test):
-        // measured 92.8 / 79.36 / 92.95 / 94.67.
-        thresholds: { statements: 90, branches: 77, functions: 90, lines: 92 },
+        // measured 92.8 / 79.36 / 92.95 / 94.67. Raised again with the kit
+        // layout (the query gate's retry and the settings save's toasts under
+        // test): measured 95.08 / 83.15 / 95.21 / 97.21.
+        thresholds: { statements: 93, branches: 81, functions: 93, lines: 95 },
       },
     },
   }),

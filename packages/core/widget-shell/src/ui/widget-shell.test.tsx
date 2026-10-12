@@ -27,6 +27,18 @@ describe("WidgetShell", () => {
     expect(frameOf("fullscreen").className).toContain("max-w-full")
   })
 
+  it("pads on the CI grid (24 px, 16 px below 640 px) and lets its content shrink", () => {
+    render(
+      <WidgetShell>
+        <p data-testid="content">a</p>
+      </WidgetShell>,
+    )
+    const frame = frameOf("content").className.split(" ")
+    expect(frame).toEqual(expect.arrayContaining(["p-4", "sm:p-6", "min-w-0"]))
+    expect(frame).not.toContain("px-9")
+    expect(frameOf("content").parentElement!.className).toContain("min-w-0")
+  })
+
   it("nested under another shell keeps only the section stack", () => {
     render(
       <WidgetShell>
@@ -37,7 +49,7 @@ describe("WidgetShell", () => {
     )
 
     const inner = frameOf("inner")
-    expect(inner.className).toBe("flex flex-col gap-6 extra")
+    expect(inner.className).toBe("flex min-w-0 flex-col gap-6 extra")
     // Exactly one card surface: the outer shell's.
     expect(document.querySelectorAll(".bg-card")).toHaveLength(1)
   })

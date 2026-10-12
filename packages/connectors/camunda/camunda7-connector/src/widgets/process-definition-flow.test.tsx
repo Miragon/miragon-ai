@@ -196,11 +196,14 @@ describe("definition view flow — a heatmap diagram bpmn-js cannot import", () 
     expect(await screen.findByTestId("incident-overlay")).toBeTruthy()
     fireEvent.click(await within(modeGroup()).findByRole("button", { name: "Frequency" }))
 
+    // The kit's inline error state: what happened, what to do, the parser's
+    // raw cause collapsed under Details.
     const alert = await screen.findByRole("alert")
     expect(alert.textContent).toBe(
       "The diagram could not be rendered" +
-        "unparsable content <bpmn:foo> detected" +
-        "Open the model in your modeler and check it.",
+        "Open the model in your modeler and check it." +
+        "Details" +
+        "unparsable content <bpmn:foo> detected",
     )
   })
 })

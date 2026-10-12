@@ -1,22 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-} from "@miragon/mcp-toolkit-ui"
+import { useEffect, useRef } from "react"
+import { ErrorState, useLocale } from "@miragon/mcp-toolkit-ui"
 import {
   buildGradientLut,
   buildHeatPoints,
   drawHeatLayer,
   HEAT_GRADIENT_CSS,
+  HEAT_PEAK_ALPHA,
+  weightRange,
   type HeatPoint,
 } from "./bpmn-heatmap/heat-utils.js"
 import { DEFAULT_HEATMAP_LABELS, type BpmnHeatmapLabels } from "./bpmn-heatmap-labels.js"
 import { BpmnZoomControls } from "./bpmn-zoom-controls.js"
+import { kitLabels } from "./kit-labels.js"
 import { useBpmnViewer } from "./use-bpmn-viewer.js"
 
 // Stable default for the omitted-edges case: a `= {}` parameter default would
@@ -31,12 +26,13 @@ export interface BpmnHeatmapProps {
   nodeFrequencies: Record<string, number>
   /** Per-edge value keyed by `${sourceId}->${targetId}`. Metrics carry none → `{}`. */
   edgeFrequencies?: Record<string, number>
+  /** A fixed frame height; default: the diagram's own (240–560 px, `diagramHeight`). */
   height?: number
   /** Heat radius in diagram coordinates. Scales with zoom. */
   diagramRadius?: number
   /** Accessible name for the diagram (localize per module; English fallback). */
   diagramAriaLabel?: string
-  /** Title of the import-error alert (English fallback): what happened, one line. */
+  /** Title of the import-error state (English fallback): what happened, one line. */
   errorTitle?: string
   /**
    * Next step under the import error: what the user can do. No fallback, so
@@ -57,12 +53,18 @@ export interface BpmnHeatmapProps {
  * overlay on a canvas synced to the viewbox. The viewer mounts once per diagram
  * (`bpmnXml`); changing `nodeFrequencies` (e.g. the frequency↔duration toggle)
  * only repaints the overlay — no re-import / refit.
+ *
+ * The heat is ONE hue (`--cd-info-soft` → `--cd-blau`, never red: red is for
+ * incidents), every element with a value above zero at a visible minimum.
+ * The whole frame is a forced-light island: the paper, the zoom bar and the
+ * "no values" chip stay light in a dark host. Pair it with
+ * {@link HeatmapLegend} and the values as a table ({@link HeatValuesTable}).
  */
 export function BpmnHeatmap({
   bpmnXml,
   nodeFrequencies,
   edgeFrequencies = EMPTY_EDGES,
-  height = 480,
+  height,
   diagramRadius = 55,
   diagramAriaLabel = DEFAULT_HEATMAP_LABELS.diagramAriaLabel,
   errorTitle = DEFAULT_HEATMAP_LABELS.errorTitle,
@@ -80,13 +82,20 @@ export function BpmnHeatmap({
     dataRef.current = { nodeFrequencies, edgeFrequencies, diagramRadius }
   })
 
-  const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
+  const {
+    containerRef,
+    height: autoHeight,
+    importError,
+    zoomIn,
+    zoomOut,
+    fit,
+  } = useBpmnViewer({
     bpmnXml,
-    onImported: (viewer) => {
+    onImported: (imported) => {
       const gradientLut = buildGradientLut()
-      const canvas = viewer.get("canvas")
-      const elementRegistry = viewer.get("elementRegistry")
-      const eventBus = viewer.get("eventBus")
+      const canvas = imported.get("canvas")
+      const elementRegistry = imported.get("elementRegistry")
+      const eventBus = imported.get("eventBus")
 
       const redraw = () => {
         const heatCanvas = heatCanvasRef.current
@@ -109,7 +118,7 @@ export function BpmnHeatmap({
 
         const { nodeFrequencies: nf, edgeFrequencies: ef, diagramRadius: dr } = dataRef.current
         const heatPoints = buildHeatPoints(elementRegistry.getAll(), nf, ef)
-        const maxWeight = heatPoints.reduce((m, p) => (p.weight > m ? p.weight : m), 0)
+        const range = weightRange(heatPoints.map((p) => p.weight)) ?? { min: 0, max: 0 }
         const vb = canvas.viewbox()
         const scale = vb.scale
         // Project diagram coordinates → screen pixels (CSS px).
@@ -126,7 +135,7 @@ export function BpmnHeatmap({
           heatCanvas.width,
           heatCanvas.height,
           screenPoints,
-          maxWeight,
+          range,
           radiusPx,
           gradientLut,
         )
@@ -161,33 +170,38 @@ export function BpmnHeatmap({
     Object.values(edgeFrequencies).some((v) => v > 0)
 
   return (
-    <div className="relative w-full" style={{ height: `${height}px` }}>
+    <div
+      data-theme-mode="light"
+      className="relative w-full"
+      style={{ height: `${height ?? autoHeight}px` }}
+    >
       <div
         ref={containerRef}
         role="img"
         aria-label={diagramAriaLabel}
-        className="border-border absolute inset-0 size-full rounded-lg border"
+        className="border-border absolute inset-0 size-full rounded-md border"
       />
       <canvas
         ref={heatCanvasRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 size-full rounded-lg"
+        className="pointer-events-none absolute inset-0 size-full rounded-md"
         style={{ mixBlendMode: "multiply" }}
       />
       {importError ? (
-        <Alert className="absolute inset-x-3 top-3">
-          <AlertTitle>{errorTitle}</AlertTitle>
-          <AlertDescription>
-            <p>{importError}</p>
-            {errorHint ? <p>{errorHint}</p> : null}
-          </AlertDescription>
-        </Alert>
+        <div className="absolute inset-x-3 top-3">
+          <ErrorState
+            variant="inline"
+            title={errorTitle}
+            description={errorHint}
+            details={importError}
+          />
+        </div>
       ) : (
         <>
           {hasHeat ? null : (
             <div
               role="status"
-              className="border-border bg-card text-muted-foreground pointer-events-none absolute top-3 left-3 rounded border px-2 py-1 text-xs shadow-sm"
+              className="border-border bg-card text-muted-foreground text-small shadow-1 pointer-events-none absolute top-3 left-3 rounded-sm border px-2 py-1"
             >
               {noHeatLabel}
             </div>
@@ -199,123 +213,55 @@ export function BpmnHeatmap({
   )
 }
 
+/**
+ * The heat ramp's legend: the swatch (on the light paper, at the layer's
+ * opacity, so it matches the diagram) between the smallest value above zero
+ * and the largest (`min`/`max`, formatted by the caller) — or "Less"/"More"
+ * where the values are not at hand. The ends are the values they encode:
+ * the layer maps that range linearly onto the swatch (`heatIntensity`), so
+ * its middle is the middle value. One value for every element paints at the
+ * full end, so it shows once, there. Screen readers hear the range as one
+ * sentence ("1 to 1,234").
+ */
 export function HeatmapLegend({
+  min,
+  max,
   lessLabel = DEFAULT_HEATMAP_LABELS.less,
   moreLabel = DEFAULT_HEATMAP_LABELS.more,
 }: {
+  /** The smallest value above zero, formatted. */
+  min?: string
+  /** The largest value, formatted. */
+  max?: string
   lessLabel?: string
   moreLabel?: string
 }) {
+  const labels = kitLabels(useLocale())
+  const range = min !== undefined && max !== undefined
+  const single = range && min === max
+  const start = range ? (single ? null : min) : lessLabel
+  const end = range ? max : moreLabel
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="text-muted-foreground">{lessLabel}</span>
-      <div
+    <div className="text-small flex items-center gap-2">
+      {range && <span className="sr-only">{single ? max : labels.heatmapRange({ min, max })}</span>}
+      {start !== null && (
+        <span aria-hidden={range || undefined} className="text-muted-foreground tabular-nums">
+          {start}
+        </span>
+      )}
+      <span
         aria-hidden="true"
-        className="h-3 w-32 rounded"
-        style={{ background: HEAT_GRADIENT_CSS }}
-      />
-      <span className="text-muted-foreground">{moreLabel}</span>
-    </div>
-  )
-}
-
-export interface BpmnHeatmapData {
-  processDefinitionKey: string
-  bpmnXml: string | null
-  period: string
-  /** Per-element execution count over the window, keyed by activity id. */
-  frequency: Record<string, number>
-  /** Per-element average duration in seconds over the window, keyed by activity id. */
-  durationSec: Record<string, number>
-}
-
-type Mode = "frequency" | "duration"
-
-/**
- * Data-widget wrapper: one BPMN diagram, a Frequency↔Duration toggle that swaps
- * the per-element heat values (both fetched up front). Node-only — metrics carry
- * no per-instance path data, so sequence flows are not heated.
- */
-export function BpmnHeatmapWidget({
-  data,
-  labels,
-  meta,
-}: {
-  data: BpmnHeatmapData | null
-  labels?: BpmnHeatmapLabels
-  /**
-   * The view's reference frame under the title (a `ViewMeta`: period,
-   * engines, as-of time). Replaces the period badge, whose period it carries.
-   */
-  meta?: ReactNode
-}) {
-  const [mode, setMode] = useState<Mode>("frequency")
-  const l = { ...DEFAULT_HEATMAP_LABELS, ...labels }
-
-  if (!data) {
-    return (
-      <Alert>
-        <AlertDescription>{l.noData}</AlertDescription>
-      </Alert>
-    )
-  }
-  if (!data.bpmnXml) {
-    return (
-      <Alert>
-        <AlertDescription>{l.bpmnUnavailable}</AlertDescription>
-      </Alert>
-    )
-  }
-
-  const values = mode === "frequency" ? data.frequency : data.durationSec
-  const legendLabel = mode === "frequency" ? l.frequencyLegend : l.durationLegend
-
-  return (
-    <Card>
-      <CardContent>
-        <div className="mb-3 flex flex-wrap items-center gap-3">
-          <strong>{l.title}</strong>
-          <Badge>{data.processDefinitionKey}</Badge>
-          {!meta && (
-            <Badge variant="outline">
-              {l.window} {data.period}
-            </Badge>
-          )}
-          <div className="ml-auto flex gap-1">
-            <Button
-              size="sm"
-              variant={mode === "frequency" ? "default" : "outline"}
-              aria-pressed={mode === "frequency"}
-              onClick={() => setMode("frequency")}
-            >
-              {l.frequency}
-            </Button>
-            <Button
-              size="sm"
-              variant={mode === "duration" ? "default" : "outline"}
-              aria-pressed={mode === "duration"}
-              onClick={() => setMode("duration")}
-            >
-              {l.duration}
-            </Button>
-          </div>
-        </div>
-        {meta && <div className="-mt-1 mb-3">{meta}</div>}
-
-        <BpmnHeatmap
-          bpmnXml={data.bpmnXml}
-          nodeFrequencies={values}
-          diagramAriaLabel={l.diagramAriaLabel}
-          errorTitle={l.errorTitle}
-          errorHint={l.errorHint}
-          noHeatLabel={l.noHeat}
+        data-theme-mode="light"
+        className="bg-background border-border inline-flex h-3 w-32 overflow-hidden rounded-sm border"
+      >
+        <span
+          className="size-full"
+          style={{ background: HEAT_GRADIENT_CSS, opacity: HEAT_PEAK_ALPHA }}
         />
-
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <span className="text-muted-foreground text-xs">{legendLabel}</span>
-          <HeatmapLegend lessLabel={l.less} moreLabel={l.more} />
-        </div>
-      </CardContent>
-    </Card>
+      </span>
+      <span aria-hidden={range || undefined} className="text-muted-foreground tabular-nums">
+        {end}
+      </span>
+    </div>
   )
 }

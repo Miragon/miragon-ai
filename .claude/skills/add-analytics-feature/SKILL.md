@@ -205,8 +205,9 @@ The widget chain mirrors the camunda7 module:
 Rules while building:
 
 - Compose the component from `@miragon-ai/widget-shell/widgets` and the toolkit
-  `@miragon/mcp-toolkit-ui` — `ViewDataState` for the loading/error/no-data guard,
-  `Section`, `Th`/`Td`/`TableEmptyState`, `WidgetShell` from the kit; `WidgetHeader` (no
+  `@miragon/mcp-toolkit-ui` — `ViewDataState` for the loading/error/no-data guard
+  (`onRetry` required, a `skeleton` slot under a polite sr-only status),
+  `Section`, `Th`/`Td`, `WidgetShell` from the kit; `WidgetHeader` (no
   icon tile, `as` for the heading level), `KpiGrid` (incl. `variant="soft"`),
   `StatusBadge`/`CountPill`, the `TONE_*` maps and `cn` from the toolkit;
   formatting via `formatTimestamp`/`formatNumber`/`formatPercent`/`formatPercentPoints`/
@@ -214,6 +215,21 @@ Rules while building:
   "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage"). Never re-inline these primitives, write
   local format helpers, or call `toFixed`, a `toLocaleString()` without a locale or a
   hand-built `Intl.NumberFormat`.
+- Tables: the kit's `ListTable` (a named, keyboard-reachable scroll region with a
+  required `ariaLabel`, so a wide breakdown never widens the document at 760 px;
+  `hideBelow: "sm" | "md" | "lg"` on a column a narrow view can do without, by the
+  region's width; `sticky: true` on the last column when it holds row actions; rows stay
+  `<tr>` + `Td`, one cell per column, numbers `tabular-nums` right-aligned). Nothing to
+  show: `TableEmptyState` (`variant="done"` for "nothing failing", the quiet default for
+  no data). Type on the toolkit's scale: `text-section` for a card heading, `text-dense`
+  for table text, `text-small` (13 px, the floor) for captions, never `text-xs`.
+- The heatmap is the kit's `BpmnHeatmapWidget`: ONE hue from `--cd-info-soft` to
+  `--cd-blau` (red is for incidents), every element above zero at a visible minimum, a
+  legend with the smallest and largest value (`HeatmapLegend` `min`/`max`, formatted),
+  the values per element as a table under the diagram (`HeatValuesTable`), the frame
+  height from the diagram's size (its height at the scale bpmn-js draws it, 240–560 px)
+  and the paper light in every theme; the legend's ends are exact: the ramp maps the
+  range linearly (`heatIntensity`).
 - Status and comparison colour come from the toolkit's tone model (`ToneVariant`, `TONE_*`
   maps, `resolveTone` for a tone from the wire, CLAUDE.md invariant 6): a dot, edge or icon next to neutral digits, black text on a tint
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
@@ -241,10 +257,15 @@ Rules while building:
   (`deltaVerdict` in `src/widgets/comparison-shared.tsx`); volume stays neutral and a
   suppressed comparison reads "nicht belastbar".
 - Self-fetching widgets guard skeleton + error via `QueryFallback` (+ `TableSkeleton`):
-  a missing `isError` branch means an eternal skeleton. The error is two-part: what
-  happened in `errorTitle` (one line, the toolkit's `AlertTitle` clamps it) and what you
-  can do in `errorHint` (`aCommon.loadError` + `aCommon.loadErrorHint` in `QueryGate`);
-  the heatmap's import error takes the same split through its `errorHint` label.
+  a missing `isError` branch means an eternal skeleton, and `onRetry` (the query's
+  `refetch`) is required. The error words itself through the kit's `describeError`:
+  "Prometheus ist nicht erreichbar", a timeout, a tool this server lacks … each with
+  what you can do, the raw text collapsed under the toolkit `ErrorState`'s "Details";
+  `errorTitle` (`aCommon.loadError` in `QueryGate`) heads only a failure the kit cannot
+  classify. The heatmap's import error is an inline `ErrorState` (`errorTitle`,
+  `errorHint`, the parser's text under Details).
+- A save confirms in a toast and says why it failed there too (the kit's
+  `useActionFeedback().succeeded/failed`, reference: `settings-section.tsx`).
 - The model description (`adaptDataWidget`'s third argument, in
   `src/widgets/model-descriptions.ts`) returns `modelContextText(…)` with
   `surface: ANALYTICS_ONLY_SURFACE` — a static `summary`, data only in

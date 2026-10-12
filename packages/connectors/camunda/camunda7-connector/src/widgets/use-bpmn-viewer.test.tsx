@@ -18,6 +18,10 @@ const mock = vi.hoisted(() => {
       return this.level
     }
     addMarker = () => {}
+    resizedCalls = 0
+    resized = () => {
+      this.resizedCalls++
+    }
   }
 
   class MockViewer {
@@ -64,7 +68,7 @@ function Harness({
 }) {
   // Destructured at the call like the real widgets do — the container ref is
   // only ever handed to JSX, never read during render.
-  const { containerRef, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
+  const { containerRef, height, importError, zoomIn, zoomOut, fit } = useBpmnViewer({
     bpmnXml: xml,
     reimportKey,
     onImported,
@@ -72,7 +76,7 @@ function Harness({
   // Published to the suite from an effect, so the render itself stays pure —
   // every assertion below reads it after the commit anyway.
   useEffect(() => {
-    latest = { containerRef, importError, zoomIn, zoomOut, fit }
+    latest = { containerRef, height, importError, zoomIn, zoomOut, fit }
   })
   return <div ref={containerRef} />
 }
@@ -90,8 +94,10 @@ describe("useBpmnViewer", () => {
     const viewer = mock.MockViewer.instances[0]
     expect(viewer.container).toBe(container.firstElementChild)
     expect(viewer.importedXml).toEqual([XML])
-    // fit-to-viewport followed by the shared 0.95 breathing-room factor.
+    // fit-to-viewport followed by the shared 0.95 breathing-room factor, on
+    // a viewbox diagram-js recomputes first (it caches the container size).
     await waitFor(() => expect(viewer.canvas.zoomCalls).toEqual(["fit-viewport", 0.8 * 0.95]))
+    expect(viewer.canvas.resizedCalls).toBe(1)
     expect(latest.importError).toBeNull()
   })
 

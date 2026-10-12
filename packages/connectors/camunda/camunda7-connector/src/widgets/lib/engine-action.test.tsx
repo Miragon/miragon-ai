@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react"
-import { AppQueryProvider, queryClient } from "@miragon/mcp-toolkit-ui"
+import { AppQueryProvider, queryClient, ToastProvider } from "@miragon/mcp-toolkit-ui"
 import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_WIDGET_ACTIONS_DATA } from "../../tool-names.js"
 import { useEngineAction, type ActionConfirmation } from "./engine-action.js"
 import { WRITE_POLICY } from "./write-policy.js"
@@ -39,6 +39,8 @@ function retryAction(resetOn?: unknown) {
   )
 }
 
+const FEEDBACK = { success: "Job retried", failure: "Couldn't retry the job" }
+
 const CONFIRM: ActionConfirmation = {
   title: "Resolve this incident?",
   description: "Marks it resolved.",
@@ -65,7 +67,7 @@ describe("useEngineAction — the gate", () => {
     const { result } = retryAction()
     await waitFor(() => expect(queryClient.isFetching()).toBe(0))
     expect(result.current.allowed).toBe(false)
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
     expect(write).not.toHaveBeenCalled()
   })
 
@@ -89,7 +91,7 @@ describe("useEngineAction — the gate", () => {
     )
     await waitFor(() => expect(queryClient.isFetching()).toBe(0))
     expect(result.current.allowed).toBe(false)
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
     expect(write).not.toHaveBeenCalled()
 
     rerender({ available: true })
@@ -104,7 +106,7 @@ describe("useEngineAction — the write", () => {
     const { result } = retryAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
 
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
     expect(result.current.pending("job-1")).toBe(true)
     expect(result.current.pending("job-2")).toBe(false)
     expect(result.current.pending()).toBe(true)
@@ -129,13 +131,13 @@ describe("useEngineAction — the write", () => {
     const { result } = retryAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
 
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { onError }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { onError, feedback: FEEDBACK }))
     await waitFor(() => expect(result.current.error("job-1")).toBe("job gone"))
     expect(result.current.error("job-2")).toBeNull()
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: "job gone" }))
     expect(invalidate).not.toHaveBeenCalled()
 
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
     expect(result.current.error("job-1")).toBeNull()
     await waitFor(() => expect(result.current.done.has("job-1")).toBe(true))
   })
@@ -145,8 +147,8 @@ describe("useEngineAction — the write", () => {
     write.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
     const { result } = retryAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
     act(() => finish({ success: true }))
     await waitFor(() => expect(result.current.pending()).toBe(false))
     expect(write).toHaveBeenCalledTimes(1)
@@ -155,7 +157,12 @@ describe("useEngineAction — the write", () => {
   it("drops the success marks when fresh server data arrives", async () => {
     const { result, rerender } = retryAction({ rows: 1 })
     await waitFor(() => expect(result.current.allowed).toBe(true))
-    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { onSuccess: () => {} }))
+    act(() =>
+      result.current.run(
+        { jobId: "job-1", retries: 1 },
+        { onSuccess: () => {}, feedback: FEEDBACK },
+      ),
+    )
     await waitFor(() => expect(result.current.done.size).toBe(1))
     rerender({ reset: { rows: 0 } })
     expect(result.current.done.size).toBe(0)
@@ -178,7 +185,7 @@ describe("useEngineAction — a write that asks first", () => {
   it("withdraws an unanswered question when the state stops allowing the write", async () => {
     const { result, rerender } = resolveAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
-    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, feedback: FEEDBACK }))
     expect(result.current.confirmation).not.toBeNull()
 
     // The instance ended while the dialog was open.
@@ -196,7 +203,7 @@ describe("useEngineAction — a write that asks first", () => {
     write.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
     const { result, rerender } = resolveAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
-    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, feedback: FEEDBACK }))
     act(() => result.current.confirm())
 
     rerender({ available: false })
@@ -210,7 +217,9 @@ describe("useEngineAction — a write that asks first", () => {
   it("refuses to run without a confirmation that names its target", async () => {
     const { result } = resolveAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
-    expect(() => result.current.run({ incidentId: "inc-1" })).toThrow(/asks first/)
+    expect(() => result.current.run({ incidentId: "inc-1" }, { feedback: FEEDBACK })).toThrow(
+      /asks first/,
+    )
     expect(write).not.toHaveBeenCalled()
   })
 
@@ -219,7 +228,12 @@ describe("useEngineAction — a write that asks first", () => {
     const { result } = resolveAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
 
-    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, onSuccess }))
+    act(() =>
+      result.current.run(
+        { incidentId: "inc-1" },
+        { confirm: CONFIRM, onSuccess, feedback: FEEDBACK },
+      ),
+    )
     expect(result.current.confirmation).toEqual({ target: "inc-1", spec: CONFIRM })
     expect(write).not.toHaveBeenCalled()
 
@@ -236,7 +250,7 @@ describe("useEngineAction — a write that asks first", () => {
     })
     const { result } = resolveAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
-    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, feedback: FEEDBACK }))
     act(() => result.current.confirm())
     await waitFor(() => expect(result.current.error("inc-1")).toBe("not resolvable"))
     expect(result.current.confirmation).not.toBeNull()
@@ -246,7 +260,7 @@ describe("useEngineAction — a write that asks first", () => {
     expect(result.current.error("inc-1")).toBe("not resolvable")
 
     // Asking again starts a fresh question — the old failure does not greet it.
-    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, feedback: FEEDBACK }))
     expect(result.current.error("inc-1")).toBeNull()
   })
 
@@ -255,7 +269,7 @@ describe("useEngineAction — a write that asks first", () => {
     write.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
     const { result } = resolveAction()
     await waitFor(() => expect(result.current.allowed).toBe(true))
-    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM }))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, feedback: FEEDBACK }))
     act(() => result.current.confirm())
     act(() => result.current.dismiss())
     act(() => result.current.confirm())
@@ -263,5 +277,79 @@ describe("useEngineAction — a write that asks first", () => {
     act(() => finish({ success: true }))
     await waitFor(() => expect(result.current.confirmation).toBeNull())
     expect(write).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("useEngineAction — the feedback (U9: a write is never silent)", () => {
+  function toastWrapper({ children }: { children: ReactNode }) {
+    return (
+      <AppQueryProvider callTool={callTool}>
+        <ToastProvider>{children}</ToastProvider>
+      </AppQueryProvider>
+    )
+  }
+
+  const toast = (title: string) =>
+    document.querySelector(`[data-slot="toast"]`)?.textContent?.includes(title)
+      ? document.querySelector(`[data-slot="toast"]`)
+      : null
+
+  function action<TResult = unknown>(
+    tool: "camunda7_set_job_retries" | "camunda7_resolve_incident" = "camunda7_set_job_retries",
+  ) {
+    return renderHook(
+      () =>
+        useEngineAction<Record<string, unknown>, TResult>({
+          tool,
+          target: (args) => String(args.jobId ?? args.incidentId),
+        }),
+      { wrapper: toastWrapper },
+    )
+  }
+
+  it("confirms a success with a toast naming the object", async () => {
+    const { result } = action()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
+    await waitFor(() => expect(toast("Job retried")?.getAttribute("data-tone")).toBe("success"))
+  })
+
+  it("lets the result word the success", async () => {
+    write.mockReturnValue({ outcome: "resolved" })
+    const { result } = action<{ outcome: string }>()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() =>
+      result.current.run(
+        { jobId: "job-1" },
+        { feedback: { success: (r) => `Outcome ${r.outcome}`, failure: "x" } },
+      ),
+    )
+    await waitFor(() => expect(toast("Outcome resolved")).not.toBeNull())
+  })
+
+  it("reports a failure as a danger toast: the object, then the reason in words", async () => {
+    write.mockImplementation(() => {
+      throw new Error("[503 ProcessEngineException] down (engine prod)")
+    })
+    const { result } = action()
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ jobId: "job-1", retries: 1 }, { feedback: FEEDBACK }))
+    await waitFor(() => expect(toast("Couldn't retry the job")).not.toBeNull())
+    const shown = toast("Couldn't retry the job")!
+    expect(shown.getAttribute("data-tone")).toBe("danger")
+    expect(shown.textContent).toContain("Engine prod is unreachable (HTTP 503).")
+    expect(shown.textContent).not.toContain("ProcessEngineException")
+  })
+
+  it("leaves a confirmed write's failure to its dialog — no second, toast-shaped copy", async () => {
+    write.mockImplementation(() => {
+      throw new Error("not resolvable")
+    })
+    const { result } = action("camunda7_resolve_incident")
+    await waitFor(() => expect(result.current.allowed).toBe(true))
+    act(() => result.current.run({ incidentId: "inc-1" }, { confirm: CONFIRM, feedback: FEEDBACK }))
+    act(() => result.current.confirm())
+    await waitFor(() => expect(result.current.error("inc-1")).toBe("not resolvable"))
+    expect(document.querySelector(`[data-slot="toast"]`)).toBeNull()
   })
 })

@@ -18,6 +18,8 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
   document), renders it as `srcdoc` in a `sandbox="allow-scripts"` iframe
   under the CSP built from the resource's `_meta.ui.csp`, answers
   `ui/initialize`, and proxies every `tools/call` the view makes to the server.
+- A scenario can size the frame (`width=<px>`; default 960): the layout
+  scenarios render at the 760 px a chat gives an inline view.
 - The rendering tool is the real `camunda7_show_process_list` against the
   stub (the BPMN scenario: `camunda7_show_bpmn_viewer`; the KPI one: the
   framework's `render-view` with a `shell:kpi-grid`; the write one:
@@ -30,7 +32,7 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | in-widget query            | user types; the stub holds the search's answer    | feed refetches + filters (`dedupe`); in flight: focus kept, rows marked                            |
 | strip                      | result WITHOUT `structuredContent` (claude.ai)    | **exactly one** re-execution with the invocation's arguments, then renders with "Reloaded at"      |
 | slow tool                  | result 4 s after `initialized`                    | waits past the old grace timer, renders once, **zero** re-executions (K13, 2.8)                    |
-| `isError`                  | real engine 503 through the server                | **zero** re-executions, the error state with a retry (toolkit#176 K14, 2.7)                        |
+| `isError`                  | real engine 503 through the server                | **zero** re-executions, the kit's words (`describeError`), raw text under Details, a retry         |
 | cancel                     | `ui/notifications/tool-cancelled`                 | cancellation text, **zero** re-executions                                                          |
 | dark host + dark OS        | `theme: "dark"`, OS dark                          | dark tokens (control for the scenario below)                                                       |
 | dark host + light OS       | `theme: "dark"`, OS light                         | the host wins: `.dark`, `data-theme`, `color-scheme` dark, light text (#339)                       |
@@ -49,6 +51,9 @@ simulation (test:host)". It renders exactly what an MCP Apps host renders:
 | fullscreen                 | `availableDisplayModes: ["inline", "fullscreen"]` | the toggle requests fullscreen and follows the host's switch                                       |
 | BPMN on a dark host        | `camunda7_show_bpmn_viewer`, `theme: "dark"`      | light canvas, dark flows/labels, every zoom button clickable past the logo                         |
 | kit foundation             | `camunda7_show_job_panel`, fullscreen offered     | Miragon roles (link `--cd-blau-link`), Lucide stroke 2.5, 2 dense, neutral KPI                     |
+| layout at 760 px           | `width: 760` (a chat's inline column)             | no horizontal document scroll, the table in a named region, 24 px shell padding                    |
+| column priority            | `camunda7_show_job_panel` at 760 px               | `hideBelow` column hidden, the row actions `sticky` and inside the region                          |
+| axe                        | process list + job panel, light and dark, 760 px  | zero WCAG 2.1 A/AA violations (`@axe-core/playwright`)                                             |
 | write refresh (operations) | `camunda7_show_job_panel`, user clicks Retry      | the retry refetches the seeded feed and re-renders, **zero** re-executions                         |
 | cockpit on an engine       | `camunda7_open_cockpit` with `engine`             | opens on that engine (sidebar switcher), not on the engine picker                                  |
 | cockpit picker             | `camunda7_open_cockpit` without `engine`          | the engine picker (two engines, no saved default)                                                  |

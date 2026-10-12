@@ -52,7 +52,6 @@ export function InstanceDetailWidget({
     loadingText: t("instanceDetail.loading"),
     emptyText: t("instanceDetail.noData"),
     retryText: t("viewState.retry"),
-    refreshErrorText: (message) => t("viewState.refreshError", { message }),
   })
   // Every write is offered for the CURRENT state only (`useInstanceActions`).
   const actions = useInstanceActions({ engine, data, unconfirmed: refreshError !== null })

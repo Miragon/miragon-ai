@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
+import AxeBuilder from "@axe-core/playwright"
 import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test"
 import { SERVED_FONT_PATH } from "@miragon-ai/widget-shell/server"
 import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
@@ -38,7 +39,6 @@ const HOST_THEME_ISSUE = "https://github.com/Miragon/miragon-ai/issues/339"
 const CHROME = {
   loading: "Loading view…",
   cancelled: "Cancelled. Ask in the chat to open this view again.",
-  errorTitle: "This view couldn't be loaded",
   retry: "Try again",
   enterFullscreen: "Fullscreen",
   exitFullscreen: "Exit fullscreen",
@@ -100,6 +100,8 @@ interface Scenario {
   failTools?: string[]
   /** Build the frame's CSP without the resource's resourceDomains (a host that ignores them). */
   ignoreResourceDomains?: boolean
+  /** The frame's width in px (the host sim's default: 960). */
+  width?: number
 }
 
 async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocator> {
@@ -120,6 +122,7 @@ async function openView(page: Page, scenario: Scenario = {}): Promise<FrameLocat
   if (scenario.initDelayMs) query.set("initDelayMs", String(scenario.initDelayMs))
   if (scenario.failTools) query.set("failTools", scenario.failTools.join(","))
   if (scenario.ignoreResourceDomains) query.set("resourceDomains", "ignore")
+  if (scenario.width) query.set("width", String(scenario.width))
   await page.goto(`${base}/?${query.toString()}`)
   return page.frameLocator("#app")
 }
@@ -485,6 +488,11 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
     { annotation: { type: "issue", description: TOOLKIT_LIFECYCLE_ISSUE } },
     async ({ page }) => {
       const app = await openView(page, { args: { engine: BROKEN_ENGINE } })
+      // The kit's words for the engine's 503 (describeError, U1): what
+      // happened and what to do; the raw engine text only under "Details".
+      const described = app.getByRole("heading", {
+        name: `Engine ${BROKEN_ENGINE} is unreachable (HTTP 503)`,
+      })
 
       await waitForDelivery(page, "result")
       const log = await hostLog(page)
@@ -495,7 +503,14 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       await page.waitForTimeout(RECOVERY_GRACE_MS + OUTLAST_GRACE_MS)
 
       expect(await reExecutions(page)).toHaveLength(0)
-      await expect(app.getByRole("heading", { name: CHROME.errorTitle })).toBeVisible()
+      await expect(described).toBeVisible()
+      await expect(
+        app.getByText("Check that the engine is running, or pick another engine."),
+      ).toBeVisible()
+      const raw = app.getByText(/^\[503 ProcessEngineException\] Engine is shutting down/)
+      await expect(raw).toBeHidden()
+      await app.getByText("Details", { exact: true }).click()
+      await expect(raw).toBeVisible()
       await expect(app.getByText("Loading view…")).toHaveCount(0)
       await expect(definitionsTable(app)).toHaveCount(0)
 
@@ -505,7 +520,7 @@ test.describe("real camunda7 view (camunda7_show_process_list)", () => {
       await expect
         .poll(() => reExecutions(page))
         .toEqual([{ name: RENDER_TOOL, arguments: { engine: BROKEN_ENGINE } }])
-      await expect(app.getByRole("heading", { name: CHROME.errorTitle })).toBeVisible()
+      await expect(described).toBeVisible()
       await page.waitForTimeout(OUTLAST_GRACE_MS)
       expect(await reExecutions(page)).toHaveLength(1)
     },
@@ -995,6 +1010,290 @@ test.describe("kit foundation (camunda7_show_job_panel)", () => {
     expect(card.tint, "the state is the card's tint").not.toBe(card.pageBackground)
     expect(card.digits, "a KPI number stays neutral").toBe(card.foreground)
     expect(card.digitSize, "a KPI figure is the CI page-title size").toBe("28px")
+  })
+})
+
+/** The inline width a chat column gives a view (the before-shots' 760 px frame). */
+const INLINE_WIDTH = 760
+
+/** A frame narrow enough that the job table (one failed job) is wider than its region. */
+const NARROW_WIDTH = 420
+
+/** A row of twelve unbroken values: far wider than any inline region. */
+const WIDE_ROW = Object.fromEntries(
+  Array.from({ length: 12 }, (_, i) => [`column${i + 1}`, `value${"x".repeat(24)}${i + 1}`]),
+)
+
+/**
+ * Screenshots of the four 4 px strips just inside an element's box (top,
+ * bottom, left, right), each without the corners: a focus indicator drawn
+ * inside the box changes them along their whole length; one a clipping
+ * wrapper cut away changes none, and one the pinned action column paints
+ * over leaves the right side (and that column's stretch of the top and
+ * bottom) unchanged — see {@link changedShare}.
+ */
+async function edgeStrips(page: Page, target: Locator): Promise<Buffer[]> {
+  const box = await target.boundingBox()
+  const table = await target.locator("table").boundingBox()
+  if (!box || !table) throw new Error("the element has no box")
+  // The box as the browser paints it: snapped to whole pixels.
+  const left = Math.round(box.x)
+  const top = Math.round(box.y)
+  const right = Math.round(box.x + box.width)
+  const bottom = Math.round(box.y + box.height)
+  const band = 4
+  const corner = 8
+  // The sides along the table's rows only: below them a scrollbar may run,
+  // which a ring under the pinned column would still change.
+  const sideEnd = Math.min(bottom, Math.round(table.y + table.height)) - corner
+  const strips = [
+    { x: left + corner, y: top, width: right - left - 2 * corner, height: band },
+    { x: left + corner, y: bottom - band, width: right - left - 2 * corner, height: band },
+    { x: left, y: top + corner, width: band, height: sideEnd - top - corner },
+    { x: right - band, y: top + corner, width: band, height: sideEnd - top - corner },
+  ]
+  return await Promise.all(strips.map((clip) => page.screenshot({ clip })))
+}
+
+/**
+ * The share of a strip's length the focus changed: of its columns (`"x"`, a
+ * top or bottom strip) or rows (`"y"`, a side), those with a pixel that
+ * differs clearly between the two shots. The browser decodes the PNGs, so
+ * the check needs no image library; a ring a positioned cell covers in part
+ * leaves that part unchanged.
+ */
+async function changedShare(
+  page: Page,
+  before: Buffer,
+  after: Buffer,
+  along: "x" | "y",
+): Promise<number> {
+  return await page.evaluate(
+    async ({ a, b, along }) => {
+      const decode = async (base64: string) => {
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }))
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+        const context = canvas.getContext("2d")!
+        context.drawImage(bitmap, 0, 0)
+        return context.getImageData(0, 0, bitmap.width, bitmap.height)
+      }
+      const [shotA, shotB] = await Promise.all([decode(a), decode(b)])
+      const lines = along === "x" ? shotA.width : shotA.height
+      const across = along === "x" ? shotA.height : shotA.width
+      let changed = 0
+      for (let line = 0; line < lines; line++) {
+        for (let step = 0; step < across; step++) {
+          const [x, y] = along === "x" ? [line, step] : [step, line]
+          const k = (y * shotA.width + x) * 4
+          const diff =
+            Math.abs(shotA.data[k] - shotB.data[k]) +
+            Math.abs(shotA.data[k + 1] - shotB.data[k + 1]) +
+            Math.abs(shotA.data[k + 2] - shotB.data[k + 2])
+          if (diff > 60) {
+            changed++
+            break
+          }
+        }
+      }
+      return changed / lines
+    },
+    { a: before.toString("base64"), b: after.toString("base64"), along },
+  )
+}
+
+/** Whether the view's own document scrolls sideways (a table that widened it). */
+async function documentOverflow(app: FrameLocator) {
+  return await app.locator("html").evaluate((html) => ({
+    scrollWidth: html.scrollWidth,
+    clientWidth: html.clientWidth,
+  }))
+}
+
+test.describe("layout at the inline width (760 px, U2/U20, WCAG 1.4.10)", () => {
+  test("the process list: no horizontal document scroll, the table in a named region", async ({
+    page,
+  }) => {
+    const app = await openView(page, { width: INLINE_WIDTH })
+    await expectProcessList(app)
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+    const region = app.getByRole("region", {
+      name: "Deployed process definitions with version and status",
+    })
+    await expect(region).toBeVisible()
+    expect(await region.getAttribute("tabindex")).toBe("0")
+    // The shell pads on the CI grid: 24 px at this width (16 px below 640).
+    const padding = await app
+      .locator(".max-w-7xl")
+      .first()
+      .evaluate((frame) => getComputedStyle(frame).paddingLeft)
+    expect(padding).toBe("24px")
+  })
+
+  test("the job panel: low-priority columns hide, the row actions stay pinned and reachable", async ({
+    page,
+  }) => {
+    const app = await openView(page, { tool: "camunda7_show_job_panel", width: INLINE_WIDTH })
+    const region = app.getByRole("region", { name: "Jobs", exact: true })
+    await expect(region).toBeVisible({ timeout: 15_000 })
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+
+    const layout = await region.evaluate((el) => {
+      const head = el.querySelectorAll("thead th")
+      const last = head[head.length - 1]
+      const created = head[head.length - 2]
+      const rowAction = el.querySelector("tbody tr > :last-child")
+      return {
+        createdDisplay: getComputedStyle(created).display,
+        stickyHead: getComputedStyle(last).position,
+        stickyCell: rowAction ? getComputedStyle(rowAction).position : "",
+        actionRight: rowAction ? rowAction.getBoundingClientRect().right : 0,
+        regionRight: el.getBoundingClientRect().right,
+      }
+    })
+    expect(layout.createdDisplay, "the Created column hides below 768 px").toBe("none")
+    expect(layout.stickyHead).toBe("sticky")
+    expect(layout.stickyCell).toBe("sticky")
+    // The action column ends inside the region, never past its right edge.
+    expect(layout.actionRight).toBeLessThanOrEqual(layout.regionRight + 1)
+  })
+
+  test("a table wider than its region scrolls inside it — the document never does", async ({
+    page,
+  }) => {
+    const app = await openView(page, {
+      tool: "render-view",
+      width: INLINE_WIDTH,
+      args: {
+        title: "Wide",
+        keys: { "sim:wide": [WIDE_ROW, WIDE_ROW] },
+        layout: [{ row: [{ widget: "shell:data-table", props: { dataKey: "sim:wide" } }] }],
+      },
+    })
+    const region = app.getByRole("region", { name: "Data table" })
+    await expect(region).toBeVisible({ timeout: 15_000 })
+    const sizes = await region.evaluate((el) => ({
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+    }))
+    expect(sizes.scroll, "the table really overflows its region").toBeGreaterThan(sizes.client)
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+    // The card around it clips: without the region's own scroll, the last
+    // columns would be cut off out of reach while the document stays narrow.
+    const end = await region.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth
+      const box = el.getBoundingClientRect()
+      const last = el.querySelector("tbody tr > :last-child")!.getBoundingClientRect()
+      return { scrolled: el.scrollLeft, lastRight: last.right, regionRight: box.right }
+    })
+    expect(end.scrolled, "the region itself scrolls").toBeGreaterThan(0)
+    expect(end.lastRight, "the last column scrolls into view").toBeLessThanOrEqual(
+      end.regionRight + 1,
+    )
+  })
+
+  test("a job table that overflows: the row actions stay at the region's right edge while it scrolls", async ({
+    page,
+  }) => {
+    const app = await openView(page, { tool: "camunda7_show_job_panel", width: NARROW_WIDTH })
+    const region = app.getByRole("region", { name: "Jobs", exact: true })
+    await expect(region).toBeVisible({ timeout: 15_000 })
+    const sizes = await region.evaluate((el) => ({
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+    }))
+    expect(sizes.scroll, "the table really overflows its region").toBeGreaterThan(sizes.client)
+    const { scrollWidth, clientWidth } = await documentOverflow(app)
+    expect(scrollWidth, "the document never scrolls sideways").toBeLessThanOrEqual(clientWidth)
+
+    for (const end of ["start", "end"] as const) {
+      const edges = await region.evaluate((el, at) => {
+        el.scrollLeft = at === "end" ? el.scrollWidth : 0
+        const box = el.getBoundingClientRect()
+        const action = el.querySelector("tbody tr > :last-child")!.getBoundingClientRect()
+        return {
+          scrolled: el.scrollLeft,
+          // The padding box's right edge: where `right: 0` pins the column.
+          regionRight: box.left + el.clientLeft + el.clientWidth,
+          actionLeft: action.left,
+          actionRight: action.right,
+          regionLeft: box.left,
+        }
+      }, end)
+      if (end === "end") expect(edges.scrolled).toBeGreaterThan(0)
+      expect(Math.abs(edges.actionRight - edges.regionRight), `pinned at the ${end}`).toBeLessThan(
+        1.5,
+      )
+      expect(edges.actionLeft).toBeGreaterThan(edges.regionLeft)
+    }
+  })
+
+  test("keyboard focus on a table region shows inside its box, even in a clipping card (WCAG 2.4.7)", async ({
+    page,
+  }) => {
+    // shell:data-table sits in an `overflow-hidden` card edge to edge; the
+    // job panel's region pins a column over its right edge.
+    const views = [
+      {
+        scenario: {
+          tool: "render-view",
+          width: INLINE_WIDTH,
+          args: {
+            title: "Wide",
+            keys: { "sim:wide": [WIDE_ROW] },
+            layout: [{ row: [{ widget: "shell:data-table", props: { dataKey: "sim:wide" } }] }],
+          },
+        },
+        name: "Data table",
+      },
+      { scenario: { tool: "camunda7_show_job_panel", width: NARROW_WIDTH }, name: "Jobs" },
+    ]
+    for (const { scenario, name } of views) {
+      const app = await openView(page, scenario)
+      const region = app.getByRole("region", { name, exact: true })
+      await expect(region).toBeVisible({ timeout: 15_000 })
+      await region.scrollIntoViewIfNeeded()
+      const before = await edgeStrips(page, region)
+      await region.focus()
+      expect(await region.evaluate((el) => el.matches(":focus-visible"))).toBe(true)
+      const after = await edgeStrips(page, region)
+      const sides = [
+        ["top", "x"],
+        ["bottom", "x"],
+        ["left", "y"],
+        ["right", "y"],
+      ] as const
+      for (const [i, [side, along]] of sides.entries()) {
+        expect(
+          await changedShare(page, before[i], after[i], along),
+          `${name}: the ring shows along the whole ${side} edge`,
+        ).toBeGreaterThanOrEqual(0.9)
+      }
+    }
+  })
+
+  test("axe: the inline views pass WCAG 2.1 A/AA (light and dark)", async ({ page }) => {
+    for (const [tool, theme] of [
+      ["camunda7_show_process_list", "light"],
+      ["camunda7_show_job_panel", "light"],
+      ["camunda7_show_process_list", "dark"],
+      ["camunda7_show_job_panel", "dark"],
+    ] as const) {
+      const app = await openView(page, { tool, theme, width: INLINE_WIDTH })
+      await expect(app.getByRole("table").first()).toBeVisible({ timeout: 15_000 })
+      const results = await new AxeBuilder({ page })
+        .include("#app")
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze()
+      const violations = results.violations.map((v) => ({
+        id: v.id,
+        nodes: v.nodes.map((n) => n.target.join(" ")).slice(0, 5),
+      }))
+      expect(violations, `${tool} (${theme})`).toEqual([])
+    }
   })
 })
 

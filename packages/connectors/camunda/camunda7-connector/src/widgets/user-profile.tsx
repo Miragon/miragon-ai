@@ -19,6 +19,7 @@ import { groupEnginesByEnvironment } from "../lib/environments.js"
 import type { UserProfile, UserProfileView } from "../lib/profile-schema.js"
 import { useT } from "../messages/use-t.js"
 import { useEngineAction } from "./lib/engine-action.js"
+import { writeFeedback } from "./lib/write-feedback.js"
 import { ProfileModelContext } from "./user-profile-context.js"
 
 /** Subset of a dashboard summary the picker needs (from `list-dashboards`). */
@@ -297,6 +298,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
         engines.map((e) => e.id),
       ),
       {
+        feedback: writeFeedback.settings(t),
         onSuccess: () => {
           setBaseline(submitted)
           setSavedAt(formatTime(new Date().toISOString()))

@@ -32,7 +32,7 @@ describe("heatmap defaults", () => {
       frequency: "Frequency",
       duration: "Duration",
       frequencyLegend: "Executions per element",
-      durationLegend: "Avg duration per element (s)",
+      durationLegend: "Avg duration per element",
       noData: "No heatmap data.",
       noHeat: "No metric data in this window.",
       bpmnUnavailable:

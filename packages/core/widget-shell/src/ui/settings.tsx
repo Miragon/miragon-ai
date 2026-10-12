@@ -1,5 +1,6 @@
 import { cloneElement, useId, type ComponentProps, type ReactElement, type ReactNode } from "react"
 import { Card, CardContent, cn } from "@miragon/mcp-toolkit-ui"
+import { FIELD_CONTROL } from "./native-select.js"
 
 /**
  * Shared building blocks for settings sections. The settings page composes one
@@ -13,7 +14,7 @@ export function SettingsCard({ title, children }: { title: string; children: Rea
   return (
     <Card className="gap-0 py-0 shadow-none">
       <CardContent className="flex flex-col gap-4 p-4">
-        <h3 className="text-foreground text-sm font-semibold">{title}</h3>
+        <h3 className="text-foreground text-section">{title}</h3>
         {children}
       </CardContent>
     </Card>
@@ -42,11 +43,11 @@ export function SettingsField({
   return (
     <div className="flex flex-col gap-1.5">
       {group ? (
-        <span id={labelId} className="text-foreground text-sm font-medium">
+        <span id={labelId} className="text-foreground text-dense font-medium">
           {label}
         </span>
       ) : (
-        <label htmlFor={id} className="text-foreground text-sm font-medium">
+        <label htmlFor={id} className="text-foreground text-dense font-medium">
           {label}
         </label>
       )}
@@ -57,20 +58,12 @@ export function SettingsField({
       ) : (
         cloneElement(children, { id })
       )}
-      {help && <span className="text-muted-foreground text-xs">{help}</span>}
+      {help && <span className="text-muted-foreground text-small">{help}</span>}
     </div>
   )
 }
 
 /** Styled native `<input>` matching `NativeSelect` — for the rare free-form settings value. */
 export function SettingsInput({ className, ...props }: ComponentProps<"input">) {
-  return (
-    <input
-      {...props}
-      className={cn(
-        "border-border bg-background text-foreground focus-visible:ring-ring h-9 rounded-md border px-2 text-sm outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-    />
-  )
+  return <input {...props} className={cn(FIELD_CONTROL, className)} />
 }

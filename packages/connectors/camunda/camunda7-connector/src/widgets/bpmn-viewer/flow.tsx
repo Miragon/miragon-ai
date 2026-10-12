@@ -47,5 +47,5 @@ export function BpmnFlowViewer({ data }: { data: BpmnViewerData | null }) {
     )
   }
 
-  return <BpmnDiagram bpmnXml={data.bpmnXml} height={500} highlights={highlights} />
+  return <BpmnDiagram bpmnXml={data.bpmnXml} highlights={highlights} />
 }

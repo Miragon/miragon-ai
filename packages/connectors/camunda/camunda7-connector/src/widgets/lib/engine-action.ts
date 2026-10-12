@@ -1,13 +1,17 @@
 import { useState } from "react"
 import { queryClient, useToolMutation } from "@miragon/mcp-toolkit-ui"
-import { useResetOnChange } from "@miragon-ai/widget-shell/widgets"
+import {
+  useActionFeedback,
+  useResetOnChange,
+  type ConfirmTarget,
+} from "@miragon-ai/widget-shell/widgets"
 
 import type { CAMUNDA7_SAVE_USER_PROFILE, Camunda7WidgetAction } from "../../tool-names.js"
 import { useCanRun } from "../widget-actions.js"
 import { WRITE_POLICY, type WidgetWrite } from "./write-policy.js"
 
-/** One line of a confirmation's target block: what it is, and its id or name. */
-export type TargetLine = readonly [label: string, value: string]
+/** One line of a confirmation's target block: what it is, and its id or name (the kit's `ConfirmTarget`). */
+export type TargetLine = ConfirmTarget
 
 /**
  * What a confirmation must say before a write it guards runs: the target BY
@@ -28,9 +32,27 @@ export interface ActionConfirmation {
   destructive?: boolean
 }
 
+/**
+ * What a write says when it is done (U9) — the toasts' titles, each naming
+ * the object ("Job für Instanz 5f0ce78e… neu eingeplant"), never a silent
+ * row change. The kit's `useActionFeedback` raises them and words a
+ * failure's reason.
+ */
+export interface WriteFeedback<TResult> {
+  /** The success toast; a function when the result decides the words. */
+  success: string | ((result: TResult) => string)
+  /**
+   * The failure toast's title. Not raised for a confirmed write: its
+   * dialog stays open and shows the failure itself.
+   */
+  failure: string
+}
+
 export interface RunOptions<TResult> {
   /** Required for a write whose policy confirms (`WRITE_POLICY`). */
   confirm?: ActionConfirmation
+  /** The toasts after the write — every run says how it went. */
+  feedback: WriteFeedback<TResult>
   onSuccess?: (result: TResult) => void
   onError?: (error: Error) => void
 }
@@ -66,7 +88,7 @@ export interface EngineAction<TArgs, TResult> {
    */
   readonly allowed: boolean
   /** Start the write — through its confirmation when the policy asks for one. */
-  run: (args: TArgs, options?: RunOptions<TResult>) => void
+  run: (args: TArgs, options: RunOptions<TResult>) => void
   /** A call for `target` is in flight (any call when omitted). */
   pending: (target?: string) => boolean
   /**
@@ -141,7 +163,10 @@ function invalidateAfter(tool: WidgetWrite): void {
  *   for the tool are invalidated, so the views showing that data refetch —
  *   standalone too, since their tool results are query seeds;
  * - the optimistic state: `done` holds this session's successes until fresh
- *   server data (`resetOn`) arrives, then server truth wins again.
+ *   server data (`resetOn`) arrives, then server truth wins again;
+ * - the feedback: a success toast naming the object, and a failure toast
+ *   with the reason in words (`feedback`, the kit's `useActionFeedback`) —
+ *   a confirmed write shows its failure in its dialog instead.
  */
 export function useEngineAction<TArgs extends Record<string, unknown>, TResult = unknown>({
   tool,
@@ -154,6 +179,7 @@ export function useEngineAction<TArgs extends Record<string, unknown>, TResult =
   // Without a view decision the write is an engine write (`ActionGate`).
   const allowed = (viewAllows ?? canRun(tool)) && available
   const mutation = useToolMutation<TResult>(tool)
+  const toasts = useActionFeedback()
   const [state, setState] = useState<ActionState<TArgs, TResult>>({
     pending: new Set(),
     done: new Map(),
@@ -172,6 +198,7 @@ export function useEngineAction<TArgs extends Record<string, unknown>, TResult =
 
   function execute(args: TArgs, runOptions: RunOptions<TResult>) {
     const key = target(args)
+    const { feedback } = runOptions
     setState((s) => ({
       ...s,
       pending: new Set(s.pending).add(key),
@@ -185,6 +212,9 @@ export function useEngineAction<TArgs extends Record<string, unknown>, TResult =
           done: withEntry(s.done, key, { args, result }),
           asked: s.asked && target(s.asked.args) === key ? null : s.asked,
         }))
+        toasts.succeeded(
+          typeof feedback.success === "function" ? feedback.success(result) : feedback.success,
+        )
         runOptions.onSuccess?.(result)
         invalidateAfter(tool)
       },
@@ -195,12 +225,13 @@ export function useEngineAction<TArgs extends Record<string, unknown>, TResult =
           pending: withoutMember(s.pending, key),
           errors: withEntry(s.errors, key, error.message),
         }))
+        if (!runOptions.confirm) toasts.failed(feedback.failure, error)
         runOptions.onError?.(error)
       },
     )
   }
 
-  function run(args: TArgs, runOptions: RunOptions<TResult> = {}) {
+  function run(args: TArgs, runOptions: RunOptions<TResult>) {
     const key = target(args)
     if (!allowed || state.pending.has(key)) return
     if (WRITE_POLICY[tool].confirm) {

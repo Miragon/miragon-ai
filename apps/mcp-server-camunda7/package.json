@@ -40,6 +40,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@miragon/mcp-toolkit-ui": "2.8.0",
     "@modelcontextprotocol/client": "2.2.0",
     "@playwright/test": "1.63.0",

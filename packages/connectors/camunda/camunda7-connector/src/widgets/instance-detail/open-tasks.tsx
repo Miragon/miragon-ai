@@ -83,6 +83,7 @@ function OpenTaskCard({
           <div className="mt-3 border-t pt-3">
             <TaskCompleteForm
               taskId={task.id}
+              taskName={task.name ?? task.id}
               engine={engine}
               formSchema={task.formSchema}
               action={complete}

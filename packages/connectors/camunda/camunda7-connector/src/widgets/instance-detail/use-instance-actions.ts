@@ -2,6 +2,7 @@ import type { InstanceDetailData } from "../../view-models.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { useEngineAction, type ActionConfirmation, type TargetLine } from "../lib/engine-action.js"
 import { useIncidentRecovery } from "../process-incidents/use-incident-recovery.js"
+import { instanceName, writeFeedback } from "../lib/write-feedback.js"
 
 interface SuspensionArgs extends Record<string, unknown> {
   processInstanceId: string
@@ -126,7 +127,14 @@ export function useInstanceActions({
     if (!data) return
     suspension.run(
       { processInstanceId: data.instance.id, suspended: !isSuspended, engine: engineId },
-      { confirm: suspensionConfirmation(t, !isSuspended, data.instance, engineId) },
+      {
+        confirm: suspensionConfirmation(t, !isSuspended, data.instance, engineId),
+        feedback: writeFeedback.suspension(
+          t,
+          instanceName(data.instance.id, data.instance.businessKey),
+          !isSuspended,
+        ),
+      },
     )
   }
 
@@ -134,7 +142,13 @@ export function useInstanceActions({
     if (!data) return
     cancel.run(
       { processInstanceId: data.instance.id, engine: engineId },
-      { confirm: cancelConfirmation(t, data.instance, engineId) },
+      {
+        confirm: cancelConfirmation(t, data.instance, engineId),
+        feedback: writeFeedback.cancel(
+          t,
+          instanceName(data.instance.id, data.instance.businessKey),
+        ),
+      },
     )
   }
 

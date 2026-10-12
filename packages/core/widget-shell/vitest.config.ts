@@ -30,8 +30,11 @@ export default mergeConfig(
         // with its negative cases): measured 94.64 / 94.06 / 97.01 / 95.48.
         // Raised again with the toolkit 2.8 review fixes (the generic shell:*
         // widgets and the builder-text model guard fully covered): measured
-        // 95.14 / 94.82 / 97.06 / 96.05.
-        thresholds: { statements: 93, branches: 92, functions: 95, lines: 94 },
+        // 95.14 / 94.82 / 97.06 / 96.05. Raised again with the kit layout
+        // (describeError's mapping table, ListTable's region and column rules,
+        // the BPMN token module, the heat ramp and the type-scale gate, each
+        // with its suite): measured 97.33 / 95.32 / 97.44 / 98.45.
+        thresholds: { statements: 95, branches: 93, functions: 95, lines: 96 },
       },
     },
   }),

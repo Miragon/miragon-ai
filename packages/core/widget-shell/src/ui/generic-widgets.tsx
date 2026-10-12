@@ -1,7 +1,9 @@
 import type { WidgetProps } from "@miragon/mcp-toolkit-core"
-import { KpiGrid, resolveTone, type KpiCell } from "@miragon/mcp-toolkit-ui"
+import { KpiGrid, resolveTone, useLocale, type KpiCell } from "@miragon/mcp-toolkit-ui"
 import { humanizeKey } from "./humanize-key.js"
-import { TableEmptyState, Td, Th } from "./table.js"
+import { kitLabels, type KitLabels } from "./kit-labels.js"
+import { ListTable } from "./list-table.js"
+import { TableEmptyState, Td } from "./table.js"
 
 /**
  * Module-agnostic widgets — the standard composition targets for
@@ -11,8 +13,9 @@ import { TableEmptyState, Td, Th } from "./table.js"
  * data table.
  *
  * Registered by the server app under the `shell:` namespace (see
- * `../shell-catalogue.ts`, exported via `@miragon-ai/widget-shell/server`). All texts arrive via props —
- * the shell carries no module i18n.
+ * `../shell-catalogue.ts`, exported via `@miragon-ai/widget-shell/server`). Their texts arrive via
+ * props; what they say themselves (the empty state, a Boolean's "Yes"/"No",
+ * the table's name) follows the active locale through `kitLabels`.
  */
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -23,10 +26,13 @@ function isPrimitive(v: unknown): v is string | number | boolean {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean"
 }
 
-function cellValue(v: unknown): string | number {
+type YesNo = Pick<KitLabels, "yes" | "no">
+
+/** A cell as shown: numbers and text as they are, a Boolean in words, anything else a dash. */
+function cellValue(v: unknown, words: YesNo): string | number {
   if (typeof v === "number") return v
   if (typeof v === "string") return v
-  if (typeof v === "boolean") return String(v)
+  if (typeof v === "boolean") return v ? words.yes : words.no
   return "—"
 }
 
@@ -34,14 +40,14 @@ function cellValue(v: unknown): string | number {
  * Accepts either an array of `{ label, value, tone?, fraction? }` cells or a
  * plain `{ label: value }` object; everything else renders as empty.
  */
-function coerceKpiCells(raw: unknown): KpiCell[] {
+function coerceKpiCells(raw: unknown, words: YesNo): KpiCell[] {
   if (Array.isArray(raw)) {
     return raw
       .filter(isRecord)
       .filter((r) => typeof r.label === "string" && r.label.length > 0)
       .map((r) => ({
         label: r.label as string,
-        value: cellValue(r.value),
+        value: cellValue(r.value, words),
         // A tone from the wire: the five tones as is, a retired name
         // (`critical`) onto its tone, anything else neutral (no dot).
         tone: typeof r.tone === "string" ? resolveTone(r.tone) : undefined,
@@ -51,7 +57,7 @@ function coerceKpiCells(raw: unknown): KpiCell[] {
   if (isRecord(raw)) {
     return Object.entries(raw)
       .filter(([, v]) => isPrimitive(v))
-      .map(([label, v]) => ({ label, value: cellValue(v) }))
+      .map(([label, v]) => ({ label, value: cellValue(v, words) }))
   }
   return []
 }
@@ -62,15 +68,14 @@ function coerceKpiCells(raw: unknown): KpiCell[] {
  * `emptyText?`.
  */
 export function GenericKpiGridWidget({ keys, widgetProps }: WidgetProps) {
+  const labels = kitLabels(useLocale())
   const dataKey = typeof widgetProps?.dataKey === "string" ? widgetProps.dataKey : undefined
-  const cells = coerceKpiCells(dataKey ? keys[dataKey] : undefined)
+  const cells = coerceKpiCells(dataKey ? keys[dataKey] : undefined, labels)
   if (cells.length === 0) {
-    return (
-      <TableEmptyState>
-        {typeof widgetProps?.emptyText === "string"
-          ? widgetProps.emptyText
-          : `No KPI data under "${dataKey ?? "(missing dataKey prop)"}"`}
-      </TableEmptyState>
+    return typeof widgetProps?.emptyText === "string" ? (
+      <TableEmptyState>{widgetProps.emptyText}</TableEmptyState>
+    ) : (
+      <TableEmptyState description={labels.noDataHint}>{labels.noFiguresYet}</TableEmptyState>
     )
   }
   return (
@@ -125,6 +130,7 @@ function coerceColumns(raw: unknown, rows: Record<string, unknown>[]): ColumnSpe
  * row when omitted; a missing `label` is the key in words), `emptyText?`.
  */
 export function GenericDataTableWidget({ keys, widgetProps }: WidgetProps) {
+  const labels = kitLabels(useLocale())
   const dataKey = typeof widgetProps?.dataKey === "string" ? widgetProps.dataKey : undefined
   const raw = dataKey ? keys[dataKey] : undefined
   const rows = (
@@ -133,39 +139,29 @@ export function GenericDataTableWidget({ keys, widgetProps }: WidgetProps) {
   const columns = coerceColumns(widgetProps?.columns, rows)
 
   if (rows.length === 0 || columns.length === 0) {
-    return (
-      <TableEmptyState>
-        {typeof widgetProps?.emptyText === "string"
-          ? widgetProps.emptyText
-          : `No rows under "${dataKey ?? "(missing dataKey prop)"}"`}
-      </TableEmptyState>
+    return typeof widgetProps?.emptyText === "string" ? (
+      <TableEmptyState>{widgetProps.emptyText}</TableEmptyState>
+    ) : (
+      <TableEmptyState description={labels.noDataHint}>{labels.noRowsYet}</TableEmptyState>
     )
   }
 
   return (
-    <div className="border-border overflow-x-auto rounded-lg border">
-      <table className="w-full border-collapse text-sm">
-        <thead className="bg-muted">
-          <tr>
+    <div className="border-border overflow-hidden rounded-md border">
+      <ListTable
+        ariaLabel={labels.dataTable}
+        columns={columns.map((col) => ({ label: col.label, align: col.align }))}
+      >
+        {rows.map((row, i) => (
+          <tr key={i}>
             {columns.map((col) => (
-              <Th key={col.key} align={col.align}>
-                {col.label}
-              </Th>
+              <Td key={col.key} align={col.align}>
+                {cellValue(row[col.key], labels)}
+              </Td>
             ))}
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {columns.map((col) => (
-                <Td key={col.key} align={col.align}>
-                  {isPrimitive(row[col.key]) ? String(row[col.key]) : "—"}
-                </Td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        ))}
+      </ListTable>
     </div>
   )
 }

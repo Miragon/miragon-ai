@@ -60,7 +60,7 @@ export function IncidentOverviewKpiView({
   // to one fetch in the cockpit; standalone the data comes in via props and
   // is never refetched (its filters live in the echo, see incidentsFeed).
   const feed = incidentsFeed(engine)
-  const { data, loading, error } = useViewData<IncidentsDashboardData>(
+  const { data, loading, error, refetch } = useViewData<IncidentsDashboardData>(
     initialData,
     feed.key,
     CAMUNDA7_INCIDENTS_DATA,
@@ -76,6 +76,7 @@ export function IncidentOverviewKpiView({
       <ViewDataState
         loading={loading}
         error={error}
+        onRetry={refetch}
         loadingText={t("incidentsKpi.loading")}
         emptyText={t("incidentsKpi.noData")}
       />

@@ -22,7 +22,19 @@ package customers build their own connectors and composed servers on (see the
   so the catalogue lives here.
 - **Shared UI primitives** (`./widgets`) — what the kit adds on top of `@miragon/mcp-toolkit-ui`
   (`WidgetShell`, tables, `ListTable` + `PagedRows`, the dual-mode data hooks, formatters,
-  hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages. The
+  hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages.
+  Layout, states and feedback: `ListTable` scrolls inside a named, keyboard-reachable region
+  (column priorities via `hideBelow`, the row actions pinned with `sticky`), `IdCell`/`IdText`
+  show an id shortened in Geist Mono with a copy button, `describeError` turns an engine or
+  transport failure into what happened and what you can do (the toolkit's `ErrorState` in
+  `ViewDataState`, `QueryFallback`, `useDetailView`, raw text under "Details", retry
+  required), `useActionFeedback` raises the toolkit's toasts after a write (an engine
+  refusal's own reason quoted, a write whose answer never came flagged), `ConfirmDialog`
+  asks before one, `TableEmptyState` has an `empty` and a `done` variant, `KometMark` /
+  `AppEmptyState` carry the Miragon signature on app-level surfaces only (hidden by a brand
+  that sets `--brand-mark-display: none`), and the BPMN canvas reads one token module
+  (`BPMN_TOKENS`, `BPMN_OVERLAY_CSS`) with its height from the diagram's size at the scale
+  bpmn-js draws it (`diagramHeight`, read from the XML's DI before the import). The
   toolkit's own components and helpers (`KpiGrid`, `StatusBadge`/`LivePill`/`CountPill`,
   `FilterBar`, `WidgetHeader`, `PagedListFooter`, `SectionHeading`, the `TONE_*` maps,
   `resolveTone`, `MICRO_LABEL`, `cn`, `useDebouncedValue`, …) are imported from the toolkit:
@@ -33,7 +45,8 @@ package customers build their own connectors and composed servers on (see the
   view's locale (`formatNumber`, `formatPercent`, `formatPercentPoints`, `formatPeriod`,
   `formatDuration`).
 - **Brand gates** (`./testing`): the checks every widget package runs in its own tests:
-  `catalogTextFindings` (the voice rules over a message catalog), `scanGlyphs` (no Unicode glyphs,
+  `catalogTextFindings` (the voice rules over a message catalog), `scanTypeScale` (text on the
+  type scale's five steps, nothing below 13 px), `scanGlyphs` (no Unicode glyphs,
   emoji, lone symbols or sparkle imports as icons), `scanColors` (role names only: no palette
   classes, retired accents or raw colours, with a reasoned allow list), `stylesheetColorFindings`
   (no raw colour or retired accent variable in a stylesheet's rules) and `contrastFindings` with

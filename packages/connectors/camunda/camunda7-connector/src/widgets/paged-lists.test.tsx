@@ -403,7 +403,10 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
 
 describe("a failed first load says what happened, why, and what you can do", () => {
   const engineDown = () => {
-    throw new Error("connect ECONNREFUSED")
+    throw new Error("engine prod-a unreachable (ECONNREFUSED)")
+  }
+  const odd = () => {
+    throw new Error("something odd")
   }
 
   it.each([
@@ -420,10 +423,19 @@ describe("a failed first load says what happened, why, and what you can do", () 
       "Could not load the process instances",
     ],
   ])("%s", async (_name, Widget, feed, title) => {
+    // A known failure in the kit's words (U1); the raw text under Details; Retry.
     host(Widget, { [feed]: engineDown })
     const alert = await screen.findByRole("alert")
     expect(alert.textContent).toBe(
-      `${title}connect ECONNREFUSEDCheck that the engine is reachable, then open the view again.`,
+      "Engine prod-a is unreachable" +
+        "Check that the engine is running, or pick another engine." +
+        "Details" +
+        "engine prod-a unreachable (ECONNREFUSED)" +
+        "Try again",
     )
+    cleanup()
+    // One the kit cannot classify keeps the list's own title.
+    host(Widget, { [feed]: odd })
+    expect(await screen.findByRole("heading", { name: title })).toBeTruthy()
   })
 })

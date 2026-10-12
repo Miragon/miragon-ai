@@ -468,11 +468,6 @@ export const enSweep: MessageCatalog = {
   // A Boolean value on screen (task form choice, variables table).
   "value.no": "No",
   "value.yes": "Yes",
-  "viewState.refreshError":
-    "Could not refresh this view ({message}). You are seeing the last loaded state.",
-  // The second part under a load-error title (QueryFallback): what you can
-  // do. The title says what could not be loaded.
-  "viewState.loadErrorHint": "Check that the engine is reachable, then open the view again.",
   "viewState.retry": "Try again",
   "viewState.unknownError": "unknown error",
 }

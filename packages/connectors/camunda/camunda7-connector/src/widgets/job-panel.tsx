@@ -16,6 +16,7 @@ import {
 } from "@miragon-ai/widget-shell/widgets"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { useEngineAction } from "./lib/engine-action.js"
+import { instanceName, writeFeedback } from "./lib/write-feedback.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { useT } from "../messages/use-t.js"
 
@@ -193,6 +194,7 @@ export function JobPanelWidget({
         <ViewDataState
           loading={paged.loading}
           error={paged.error}
+          onRetry={paged.retry}
           loadingText={t("jobPanel.loading")}
           emptyText={t("jobPanel.noData")}
         />
@@ -261,8 +263,8 @@ export function JobPanelWidget({
               { label: t("jobPanel.colProcess") },
               { label: t("jobPanel.colRetries"), align: "right" },
               { label: t("jobPanel.colError") },
-              { label: t("jobPanel.colCreated"), align: "right" },
-              { plain: true },
+              { label: t("jobPanel.colCreated"), align: "right", hideBelow: "md" },
+              { plain: true, sticky: true },
             ]}
           >
             {jobs.map((job) => {
@@ -306,7 +308,15 @@ export function JobPanelWidget({
                             size="sm"
                             disabled={retry.pending(job.id)}
                             onClick={() =>
-                              retry.run({ jobId: job.id, retries: 1, engine: engineId })
+                              retry.run(
+                                { jobId: job.id, retries: 1, engine: engineId },
+                                {
+                                  feedback: writeFeedback.jobRetry(
+                                    t,
+                                    instanceName(job.processInstanceId),
+                                  ),
+                                },
+                              )
                             }
                           >
                             {t("jobPanel.retry")}

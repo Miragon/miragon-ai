@@ -7,6 +7,8 @@ interface GateQuery<T> {
   data: T | null | undefined
   isError: boolean
   error?: unknown
+  /** Re-runs the query: the error state's retry (a failed load is never a dead end). */
+  refetch: () => unknown
 }
 
 /**
@@ -38,7 +40,7 @@ export function QueryGate<T>({
           isError={query.isError}
           error={query.error}
           errorTitle={t("aCommon.loadError")}
-          errorHint={t("aCommon.loadErrorHint")}
+          onRetry={() => void query.refetch()}
           skeleton={skeleton}
         />
       </WidgetShell>

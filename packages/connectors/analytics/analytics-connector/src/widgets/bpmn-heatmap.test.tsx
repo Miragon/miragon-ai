@@ -47,27 +47,28 @@ function renderIn(language: "de" | "en") {
 }
 
 /**
- * The toolkit's AlertTitle clamps to one line, so a load error is two-part:
- * what happened in the title, the parser's cause, and what you can do under
- * it (the kit's `errorHint` label), never the next step riding in the title.
+ * The kit's inline error state (U1): what happened as its title, what you
+ * can do under it (the kit's `errorHint` label), and the parser's raw cause
+ * collapsed under "Details" — never the raw text as the headline.
  */
 describe("the BPMN heatmap — a diagram bpmn-js cannot import", () => {
   it.each([
     [
       "de" as const,
-      "Das Diagramm konnte nicht gezeichnet werden." +
-        "unparsable content <bpmn:foo> detected" +
-        "Frag im Chat noch mal nach der Heatmap.",
+      "Das Diagramm konnte nicht gezeichnet werden.",
+      "Frag im Chat noch mal nach der Heatmap.",
     ],
-    [
-      "en" as const,
-      "Could not draw the diagram." +
-        "unparsable content <bpmn:foo> detected" +
-        "Ask in the chat to show the heatmap again.",
-    ],
-  ])("says what happened, the cause and what you can do (%s)", async (language, text) => {
-    renderIn(language)
-    const alert = await screen.findByRole("alert")
-    expect(alert.textContent).toBe(text)
-  })
+    ["en" as const, "Could not draw the diagram.", "Ask in the chat to show the heatmap again."],
+  ])(
+    "says what happened and what you can do, the cause under Details (%s)",
+    async (language, title, hint) => {
+      renderIn(language)
+      const alert = await screen.findByRole("alert")
+      expect(alert.getAttribute("data-slot")).toBe("error-state")
+      expect(alert.textContent?.startsWith(title + hint)).toBe(true)
+      expect(
+        screen.getByText("unparsable content <bpmn:foo> detected").closest("details"),
+      ).toBeTruthy()
+    },
+  )
 })

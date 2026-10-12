@@ -477,11 +477,6 @@ export const deSweep: MessageCatalog = {
   // Ein Boolean auf dem Bildschirm (Auswahl im Aufgabenformular, Variablen).
   "value.no": "Nein",
   "value.yes": "Ja",
-  "viewState.refreshError":
-    "Die Ansicht konnte nicht aktualisiert werden ({message}). Du siehst den zuletzt geladenen Stand.",
-  // Der zweite Teil unter dem Titel einer Ladefehler-Meldung (QueryFallback):
-  // was du tun kannst. Der Titel sagt, was nicht geladen werden konnte.
-  "viewState.loadErrorHint": "Prüf, ob die Engine erreichbar ist, und öffne die Ansicht noch mal.",
   "viewState.retry": "Erneut versuchen",
   "viewState.unknownError": "unbekannter Fehler",
 }

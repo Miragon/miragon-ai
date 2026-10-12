@@ -47,6 +47,8 @@
       //                             not advertised)
       //   initDelayMs=<n>           answer ui/initialize n ms late (a slow
       //                             handshake)
+      //   width=<px>                the frame's width (default 960: the inline
+      //                             column a chat gives a view is ~760)
       //   failTools=a,b             answer the view's tools/call for these
       //                             names with an error, as a server without
       //                             them would (e.g. an analytics-only boot)
@@ -72,6 +74,7 @@
         initDelayMs: Number(q.get("initDelayMs") ?? 0),
         failTools: (q.get("failTools") ?? "").split(",").filter(Boolean),
         ignoreResourceDomains: q.get("resourceDomains") === "ignore",
+        width: q.has("width") ? Number(q.get("width")) : undefined,
       }
       document.body.dataset.hostTheme = scenario.theme
       // A themed page declares its color-scheme; an iframe whose scheme differs
@@ -101,6 +104,7 @@
       })
 
       const iframe = document.getElementById("app")
+      if (scenario.width) iframe.style.width = `${scenario.width}px`
       const post = (msg) => iframe.contentWindow.postMessage(msg, "*")
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
       let displayMode = "inline"

@@ -1,66 +1,23 @@
-import { type BpmnCanvas, type BpmnOverlays } from "@miragon-ai/widget-shell/widgets"
+import { BPMN_TOKENS, type BpmnCanvas, type BpmnOverlays } from "@miragon-ai/widget-shell/widgets"
 
 /**
- * Single source of truth for the explicit diagram-overlay colors that get
- * injected into the bpmn-js SVG via {@link HIGHLIGHT_CSS}. These are genuine
- * domain colors (green = running, red = incident, blue = instance count) that
- * must paint SVG strokes/fills, so they stay as concrete values rather than
- * Tailwind tokens — but they live here once instead of being copy-pasted
- * across the rule blocks below and the diagram legends. They paint onto the
- * fixed light BPMN canvas (`useBpmnViewer` paints it, both themes), so the legends
- * on the themed card use mid-ramp hues legible in light and dark alike.
+ * The diagram-overlay colours, by meaning: the kit's ONE BPMN token module
+ * (`BPMN_TOKENS`, widget-shell's `bpmn-tokens.ts` — every value a `--cd-*`
+ * corporate-design token, drift- and contrast-tested there). Red only for
+ * incidents; running and an open user task blue on the info tint (the task
+ * with a heavier dashed stroke, standing still — no pulse); counts white on
+ * blue or red. The marker classes and badges below are styled by the kit's
+ * `BPMN_OVERLAY_CSS` (`injectBpmnOverlayCss`); the legend swatches read the
+ * same tokens (`markerSwatch` / `badgeSwatch`), so legend and diagram cannot
+ * drift.
  */
 export const HIGHLIGHT_COLORS = {
-  running: { fill: "rgba(34, 197, 94, 0.15)", stroke: "#16a34a" },
-  openTask: { fill: "rgba(34, 197, 94, 0.22)", stroke: "#15803d" },
-  incident: { fill: "rgba(239, 68, 68, 0.15)", stroke: "#dc2626" },
-  instanceBadge: "#3b82f6",
-  incidentBadge: "#ef4444",
+  running: BPMN_TOKENS.running,
+  openTask: BPMN_TOKENS.openTask,
+  incident: BPMN_TOKENS.incident,
+  instanceBadge: BPMN_TOKENS.instanceBadge,
+  incidentBadge: BPMN_TOKENS.incidentBadge,
 } as const
-
-export const HIGHLIGHT_CSS = `
-.highlight-running:not(.djs-connection) .djs-visual > :nth-child(1) {
-  fill: ${HIGHLIGHT_COLORS.running.fill} !important;
-  stroke: ${HIGHLIGHT_COLORS.running.stroke} !important;
-  stroke-width: 2px !important;
-}
-.highlight-open-user-task:not(.djs-connection) .djs-visual > :nth-child(1) {
-  fill: ${HIGHLIGHT_COLORS.openTask.fill} !important;
-  stroke: ${HIGHLIGHT_COLORS.openTask.stroke} !important;
-  stroke-width: 3px !important;
-  animation: bpmn-active-task-pulse 1.6s ease-in-out infinite;
-}
-@keyframes bpmn-active-task-pulse {
-  0%, 100% { stroke-opacity: 1; }
-  50% { stroke-opacity: 0.45; }
-}
-.highlight-incident:not(.djs-connection) .djs-visual > :nth-child(1) {
-  fill: ${HIGHLIGHT_COLORS.incident.fill} !important;
-  stroke: ${HIGHLIGHT_COLORS.incident.stroke} !important;
-  stroke-width: 2px !important;
-}
-.bpmn-overlay-badge {
-  border-radius: 9999px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 0 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  color: white;
-}
-.bpmn-overlay-badge--instance-count {
-  background: ${HIGHLIGHT_COLORS.instanceBadge};
-  min-width: 22px;
-}
-.bpmn-overlay-badge--incident-count {
-  background: ${HIGHLIGHT_COLORS.incidentBadge};
-  min-width: 22px;
-}
-`
 
 /**
  * Semantic highlight modes for the BpmnDiagram widget. Each kind has one

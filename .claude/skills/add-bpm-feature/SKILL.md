@@ -183,9 +183,22 @@ a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widget
 toolkit `@miragon/mcp-toolkit-ui` (its components, tone maps and `cn` come from the toolkit
 itself; widget-shell neither forks nor re-exports them) — never re-inline these primitives:
 
-- `ViewDataState` — the loading/error/no-data guard (no inline Alert/loading ternary)
+- `ViewDataState` — the loading/error/no-data guard (no inline Alert/loading ternary):
+  `onRetry` is required (`paged.retry`, a query's `refetch`), loading is a `skeleton`
+  slot under a polite sr-only status ("Ansicht wird geladen…" unless `loadingText`),
+  no data the toolkit's `EmptyState`
 - Self-fetching widgets: skeleton + error via `QueryFallback` (+ `TableSkeleton`) — a
-  missing `isError` branch means an eternal skeleton
+  missing `isError` branch means an eternal skeleton; `onRetry` is required
+- Errors speak through the kit's `describeError(error, locale)`: an engine or transport
+  failure (503/unreachable, timeout, a tool this server lacks, 401/403, 404, an engine
+  exception) becomes what happened ("Die Engine prod ist nicht erreichbar (HTTP 503)")
+  and what you can do, the raw "[503 ProcessEngineException] …" collapsed under the
+  toolkit `ErrorState`'s "Details": never raw engine text as a headline or in a toast.
+  `ViewDataState`, `QueryFallback`, `useDetailView` (its stale notice: an inline warning
+  `ErrorState`), `ConfirmDialog`, `useActionFeedback` and the view's own failed call
+  (`LocalizedAppView`) all use it; a widget's own error line does too
+  (`ErrorState` with `describeError(...)`), and `errorTitle` heads only a failure the kit
+  cannot classify
 - A view that reads its feed directly calls the toolkit's `useViewData` with
   `{ initialDataMode: "seed" }` as its last argument: the handed-in tool result seeds a
   live query, so Refresh and a write's invalidation re-read it. Without the option the
@@ -196,7 +209,26 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   helpers, no `toFixed`, no `toLocaleString()` without a locale, no hand-built
   `Intl.NumberFormat` (canonical duration style
   "3m 7s" / German "3 Min. 7 s"; "3,7 %", "+0,2 Pp.", "7 Tage")
-- `Section` (collapsibles); `Th`/`Td`/`TableEmptyState` (tables); the toolkit's
+- Tables: `ListTable` is the frame: a named, keyboard-reachable scroll region
+  (`role="region"`, `tabIndex=0`; `ariaLabel` is required), so a wide table never widens
+  the document at 760 px (the host simulation pins it). A column a narrow view can do
+  without takes `hideBelow: "sm" | "md" | "lg"` (the REGION's width: 640/768/1024 px;
+  `md` hides inline, shows in fullscreen), the row actions are the LAST column with
+  `sticky: true` (pinned at the region's right edge, Retry never scrolled away). Rows
+  stay hand-composed `<tr>` + `Td`, one cell per column (the rules address cell
+  positions). An id column is `IdCell` (`IdText` inline): Geist Mono, shortened
+  ("5f0ce78e…", whole for screen readers and in `title`), a copy button with a toast.
+  Nothing to show: `TableEmptyState`, `variant="done"` (`CircleCheck`, success) for
+  "nothing left to do" ("Keine offenen Incidents"), the default `empty` (quiet `Inbox`)
+  for no data; `description`, `action`. The Komet (`KometMark`, `AppEmptyState`) only on
+  APP-level surfaces (landing, first start, "no engines"), never in a widget
+- Type roles (the toolkit's `TYPE_SCALE`): a widget's page title is the `WidgetHeader`
+  (28/700, an h2 below the view, `as`), a section `text-section` (21/600), running text
+  `text-body` (16), dense tables and controls `text-dense` (14), captions and meta
+  `text-small` (13, the floor); no `text-xs`/`text-[11px]`, no Tailwind sizes in kit
+  code (`scanTypeScale` from `/testing`; connectors adopt it with `rules:
+["below-floor"]` first)
+- `Section` (collapsibles); `Th`/`Td` (cells); the toolkit's
   `WidgetHeader` (`badge`/`titleSuffix`/`size="detail"`/`as`, no icon tile) + `VersionChip`
   (hero/detail headers); the toolkit's `KpiGrid` (KPI strips, incl. `variant="soft"`; a
   clickable cell says what the click does in `actionHint`, never `ariaLabel`);
@@ -224,11 +256,19 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   the noun's number (`countOf` from `messages/plural.ts`). The gates: `catalogTextFindings`
   over every catalog and en/de key parity (`messages/catalog-text.test.ts`), the glossary
   (`messages/glossary.test.ts`), `scanGlyphs` over all of `src` and `scanColors` over
-  `src/widgets` (`src/brand-gates.test.ts`, `@miragon-ai/widget-shell/testing`;
-  `HIGHLIGHT_COLORS` in `bpmn-highlights.ts` is an `allow` entry with its reason)
-- BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` +
-  `BpmnZoomControls`; highlight/legend colors via `HIGHLIGHT_COLORS` from
-  `src/widgets/bpmn-highlights.ts`
+  `src/widgets` (`src/brand-gates.test.ts`, `@miragon-ai/widget-shell/testing`)
+- BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` (the container
+  is a forced-light island, `data-theme-mode="light"`, on the paper token) +
+  `BpmnZoomControls` (light in every theme, Lucide). The frame height comes from the
+  diagram's size (`height` from the hook: its height at the scale bpmn-js draws it, never
+  past 1:1, 240–560 px, read from the XML's DI before the import, so the frame does not
+  jump): pass no fixed `height` to `BpmnDiagram` or `BpmnHeatmap` unless a layout needs
+  one. Overlay and legend colours are the kit's ONE
+  token module (`BPMN_TOKENS`, `widget-shell/src/ui/bpmn-tokens.ts`: incident = danger,
+  running/open task = blue on the info tint, counts white on blue or danger; strokes
+  ≥ 3:1, badge text ≥ 4.5:1, drift- and contrast-tested) through `HIGHLIGHT_COLORS`
+  (`src/widgets/bpmn-highlights.ts`) and `markerSwatch`/`badgeSwatch`; the CSS is
+  `injectBpmnOverlayCss()`. No pulse: an open user task is a heavier dashed stroke
 
 **Paged list recipe** (every list that can exceed one page follows it — reference:
 `src/widgets/process-instances/list.tsx`):
@@ -364,7 +404,13 @@ exception that uses `server.tool()` directly):
   `WRITE_POLICY` entry (`src/widgets/lib/write-policy.ts`: the query namespaces it
   changes, and `confirm: true` for irreversible/state-changing writes — then `run`
   needs a confirmation naming its target, rendered by `EngineActionDialog`, with
-  verb + object on both buttons). Optimistic state reads `action.done` (dropped when
+  verb + object on both buttons: the kit's `ConfirmDialog`, an `alertdialog` over the
+  scrim, the destructive confirm in the danger role, a failure shown inside it). Every
+  `run` passes `feedback`, the toasts' titles naming the object, from
+  `src/widgets/lib/write-feedback.ts` (`writeFeedback.jobRetry(t, instanceName(id,
+businessKey))` …; add an entry and its `feedback.*` keys in `messages/{en,de}.feedback.ts`
+  for a new write): a success toast, a failure toast with the reason in words
+  (`useActionFeedback`); a confirmed write's failure stays in its dialog. Optimistic state reads `action.done` (dropped when
   `resetOn` changes — pass the data the marked ROWS come from, not a sibling feed).
   `src/widget-actions.test.ts` enforces all of it structurally; add
   the new call site to `src/widgets/action-gating.sites.ts` + its renderer in

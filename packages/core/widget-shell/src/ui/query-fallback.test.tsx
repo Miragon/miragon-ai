@@ -1,58 +1,83 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
-import { cleanup, render, screen } from "@testing-library/react"
-import { QueryFallback } from "./query-fallback.js"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
+import { QueryFallback, TableSkeleton } from "./query-fallback.js"
 
 afterEach(cleanup)
 
 const SKELETON = <div>loading skeleton</div>
 
-describe("QueryFallback: a two-part error text", () => {
-  it("renders the skeleton while the query has not errored", () => {
-    render(<QueryFallback isError={false} errorTitle="Could not load" skeleton={SKELETON} />)
-    expect(screen.getByText("loading skeleton")).toBeTruthy()
+describe("QueryFallback: never an eternal skeleton, never a dead end (U1, U22)", () => {
+  it("renders the skeleton under a polite status while the query has not errored", () => {
+    render(<QueryFallback isError={false} onRetry={vi.fn()} skeleton={SKELETON} />)
+    expect(screen.getByText("loading skeleton").closest('[aria-hidden="true"]')).toBeTruthy()
+    expect(screen.getByRole("status").textContent).toContain("Loading view…")
     expect(screen.queryByRole("alert")).toBeNull()
   })
 
-  it("says what happened, the cause, and what the user can do — in that order", () => {
+  it("names the loading in the caller's words", () => {
+    render(
+      <QueryFallback isError={false} onRetry={vi.fn()} loadingText="Jobs…" skeleton={SKELETON} />,
+    )
+    expect(screen.getByRole("status").textContent).toContain("Jobs…")
+  })
+
+  it("says what happened and what to do, the raw cause under Details, and retries", () => {
+    const onRetry = vi.fn()
     render(
       <QueryFallback
         isError
-        error={new Error("fetch failed: ECONNREFUSED")}
+        error={new Error("engine prod unreachable (ECONNREFUSED)")}
+        onRetry={onRetry}
         errorTitle="Could not load the process definitions"
-        errorHint="Check that the engine is reachable, then open the view again."
         skeleton={SKELETON}
       />,
     )
-    const alert = screen.getByRole("alert")
-    expect(alert.textContent).toBe(
-      "Could not load the process definitions" +
-        "fetch failed: ECONNREFUSED" +
-        "Check that the engine is reachable, then open the view again.",
-    )
-    // The hint sits in the description, never in the one-line (clamped) title.
-    const title = screen.getByText("Could not load the process definitions")
-    expect(title.textContent).not.toContain("Check that")
+    expect(screen.getByRole("heading", { name: "Engine prod is unreachable" })).toBeTruthy()
+    expect(
+      screen.getByText("Check that the engine is running, or pick another engine."),
+    ).toBeTruthy()
+    expect(
+      screen.getByText("engine prod unreachable (ECONNREFUSED)").closest("details"),
+    ).toBeTruthy()
     expect(screen.queryByText("loading skeleton")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }))
+    expect(onRetry).toHaveBeenCalledTimes(1)
   })
 
-  it("keeps the hint when the query reports no message", () => {
+  it("heads an unclassified error with the caller's title, in the active locale", () => {
     render(
-      <QueryFallback
-        isError
-        error="not an Error"
-        errorTitle="Could not load"
-        errorHint="Open the view again."
-        skeleton={SKELETON}
-      />,
+      <LocaleProvider locale="de">
+        <QueryFallback
+          isError
+          error="nicht klassifizierbar"
+          onRetry={vi.fn()}
+          errorTitle="Die Liste konnte nicht geladen werden"
+          skeleton={SKELETON}
+        />
+      </LocaleProvider>,
     )
-    expect(screen.getByRole("alert").textContent).toBe("Could not loadOpen the view again.")
+    expect(
+      screen.getByRole("heading", { name: "Die Liste konnte nicht geladen werden" }),
+    ).toBeTruthy()
+    expect(
+      screen.getByText("Versuch es noch mal. Klappt es wieder nicht, frag im Chat nach."),
+    ).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeTruthy()
   })
 
-  it("renders the title alone without a cause or a hint", () => {
-    render(<QueryFallback isError errorTitle="Could not load" skeleton={SKELETON} />)
-    const alert = screen.getByRole("alert")
-    expect(alert.textContent).toBe("Could not load")
-    expect(alert.querySelector('[data-slot="alert-description"]')).toBeNull()
+  it("without a title or a cause still offers what to do and the retry", () => {
+    render(<QueryFallback isError onRetry={vi.fn()} skeleton={SKELETON} />)
+    expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeTruthy()
+    expect(screen.getByRole("alert").querySelector("details")).toBeNull()
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy()
+  })
+})
+
+describe("TableSkeleton", () => {
+  it("draws a card with two bars", () => {
+    const { container } = render(<TableSkeleton />)
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(2)
   })
 })

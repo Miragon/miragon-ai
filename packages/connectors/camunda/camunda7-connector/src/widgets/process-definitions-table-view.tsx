@@ -75,7 +75,7 @@ export function ProcessDefinitionsTableView({
           { label: t("cockpitDefs.colIncidents"), align: "right" },
         ] satisfies ListTableColumn[])
       : []),
-    ...(renderActions ? [{ plain: true }] : []),
+    ...(renderActions ? [{ plain: true, sticky: true }] : []),
   ]
 
   return (

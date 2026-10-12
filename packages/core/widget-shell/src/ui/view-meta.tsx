@@ -126,7 +126,7 @@ export function ViewMeta({ className, ...parts }: ViewMetaParts & { className?: 
   const text = formatViewMeta(parts)
   if (!text) return null
   return (
-    <p data-view-meta="" className={cn("text-muted-foreground text-sm", className)}>
+    <p data-view-meta="" className={cn("text-muted-foreground text-small", className)}>
       {text}
     </p>
   )

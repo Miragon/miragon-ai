@@ -29,15 +29,30 @@ export interface BpmnHeatmapLabels {
    * caller without a localized hint shows no English sentence in its view.
    */
   errorHint?: string
+  /**
+   * The values table under the diagram (summary, column heads) and the
+   * frequency/duration switch's group name. Default: the kit's en/de words
+   * (`kitLabels`), so they need no catalog entry.
+   */
+  valuesTable?: string
+  elementColumn?: string
+  valueColumn?: string
+  modeAriaLabel?: string
 }
 
-export const DEFAULT_HEATMAP_LABELS: Required<Omit<BpmnHeatmapLabels, "errorHint">> = {
+/** The labels with an English default here; the rest default to the kit's en/de words. */
+type DefaultedLabels = Omit<
+  BpmnHeatmapLabels,
+  "errorHint" | "valuesTable" | "elementColumn" | "valueColumn" | "modeAriaLabel"
+>
+
+export const DEFAULT_HEATMAP_LABELS: Required<DefaultedLabels> = {
   title: "BPMN heatmap",
   window: "window:",
   frequency: "Frequency",
   duration: "Duration",
   frequencyLegend: "Executions per element",
-  durationLegend: "Avg duration per element (s)",
+  durationLegend: "Avg duration per element",
   noData: "No heatmap data.",
   noHeat: "No metric data in this window.",
   bpmnUnavailable:
