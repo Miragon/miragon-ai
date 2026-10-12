@@ -1,5 +1,6 @@
 import {
   ListTable,
+  NamedId,
   Section,
   TableEmptyState,
   TableSkeleton,
@@ -13,7 +14,6 @@ import { useDashboardSelfFetch, type DashboardScopeProps, type DashboardView } f
 import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { processNameOf } from "../../bpmn-names.js"
-import { NamedId } from "../names.js"
 import { Figure, FigureLegend } from "../figure.js"
 
 /**

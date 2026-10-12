@@ -1,7 +1,7 @@
 import { useToolQuery, type ToneVariant } from "@miragon/mcp-toolkit-ui"
+import { severityTone } from "@miragon-ai/widget-shell/widgets"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { CAMUNDA7_COCKPIT_OVERVIEW_DATA } from "../../tool-names.js"
-import { severityTone } from "../cockpit-dashboard/lib.js"
 
 /**
  * Live health of one engine, straight from its REST API (no Prometheus): the

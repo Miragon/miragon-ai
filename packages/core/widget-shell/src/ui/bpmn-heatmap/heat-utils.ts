@@ -1,3 +1,4 @@
+import { parseBpmnNames, readBpmnNames } from "../../bpmn-names.js"
 import { BPMN_TOKENS, cdValue } from "../bpmn-tokens.js"
 
 /**
@@ -272,51 +273,23 @@ export function weightRange(weights: readonly number[]): { min: number; max: num
 
 /**
  * The names the diagram gives its elements (`name` attribute), keyed by id —
- * so a values table can say "Antrag prüfen" instead of `Activity_1x2y`. An
- * unparsable document gives no names (the table falls back to the ids).
+ * so a values table can say "Antrag prüfen" instead of `Activity_1x2y`. Read
+ * by the one rule every module names an element by (`readBpmnNames`): a
+ * Modeler line break (`&#10;`) is a space, `&#38;` an `&`. An unparsable
+ * document gives no names (the table falls back to the ids).
  */
 export function bpmnElementNames(xml: string): Record<string, string> {
-  const names: Record<string, string> = {}
-  const doc = parseBpmn(xml)
-  if (!doc) return names
-  for (const el of Array.from(doc.querySelectorAll("[id][name]"))) {
-    const name = el.getAttribute("name")?.trim()
-    const id = el.getAttribute("id")
-    if (id && name) names[id] = name
-  }
-  return names
+  return readBpmnNames(xml).elements
 }
 
 /**
  * The name of the process `processDefinitionKey` by the rule the server
- * names it in every analytics view (analytics' `parseBpmnNames`): the
+ * names it by in every module (`parseBpmnNames`, the same reader): the
  * process's own name, else the name of the pool that holds it
  * (`<participant processRef=key>`: a collaboration from the Camunda Modeler
  * names the pool and leaves the process unnamed), else null. Any namespace
  * prefix; line breaks and runs of space folded.
  */
 export function bpmnProcessName(xml: string, processDefinitionKey: string): string | null {
-  const doc = parseBpmn(xml)
-  if (!doc) return null
-  let processName: string | null = null
-  let poolName: string | null = null
-  for (const el of Array.from(doc.getElementsByTagName("*"))) {
-    const name = el.getAttribute("name")?.replace(/\s+/g, " ").trim()
-    if (!name) continue
-    if (el.localName === "process" && el.getAttribute("id") === processDefinitionKey) {
-      processName ??= name
-    } else if (
-      el.localName === "participant" &&
-      el.getAttribute("processRef") === processDefinitionKey
-    ) {
-      poolName ??= name
-    }
-  }
-  return processName ?? poolName
-}
-
-/** The diagram as an XML document, or null when it does not parse. */
-function parseBpmn(xml: string): Document | null {
-  const doc = new DOMParser().parseFromString(xml, "application/xml")
-  return doc.getElementsByTagName("parsererror").length > 0 ? null : doc
+  return parseBpmnNames(xml, processDefinitionKey).name
 }

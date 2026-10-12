@@ -1,7 +1,8 @@
-import { CountPill, TONE_DOT, cn } from "@miragon/mcp-toolkit-ui"
+import { TONE_DOT, cn } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
   ListTable,
+  NamedId,
   Section,
   TableEmptyState,
   TableSkeleton,
@@ -16,8 +17,7 @@ import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { processNameOf } from "../../bpmn-names.js"
-import { NamedId } from "../names.js"
-import { Figure, FigureLegend } from "../figure.js"
+import { Figure, FigureLegend, StateCount } from "../figure.js"
 
 /**
  * What drives ONE process's open incidents right now (live gauges: open
@@ -132,11 +132,15 @@ export function FailureRateTable({
                     <Td align="right" className="tabular-nums">
                       {formatNumber(proc.runningNow)}
                     </Td>
-                    <Td align="right">
-                      <CountPill tone="danger">{formatNumber(proc.openIncidents)}</CountPill>
+                    {/* The states of a process (decision f), on the kit's one
+                        ladder: open incidents and dead jobs (no retries left)
+                        edged in danger while there are any, as camunda7 and
+                        the landscape show them; none is a plain count. */}
+                    <Td align="right" className="tabular-nums">
+                      <StateCount value={proc.openIncidents} />
                     </Td>
                     <Td align="right" className="tabular-nums">
-                      {formatNumber(proc.deadJobs)}
+                      <StateCount value={proc.deadJobs} />
                     </Td>
                     <Td align="right">
                       <RateCell rate={proc.incidentRatePct} max={max} t={t} />

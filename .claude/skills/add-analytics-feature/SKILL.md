@@ -232,7 +232,8 @@ Rules while building:
 - Names before ids (U13): metrics carry ids only; a view that lists processes or
   activities passes its payload through `src/named-views.ts` in the show tool, its feed
   AND its step (one function each), which adds `names` from the injected BPMN lookup
-  (`createNameLookup` in `src/bpmn-name-lookup.ts`). Each model is read on the engines
+  (`createNameLookup` in `src/bpmn-name-lookup.ts`, reading each diagram through the kit's
+  `parseBpmnNames`, the rule camunda7 names the same model by). Each model is read on the engines
   the view's rows come from (`engines`, or `enginesByKey` per process), in order, until
   one has it, so a process that runs only on a later engine is named too. An engine's
   answer is kept five minutes PER CALLER (`callerCacheKey` from widget-shell: under
@@ -240,9 +241,10 @@ Rules while building:
   another); `null` from the injected `FetchBpmnXml` means "not deployed there" and is
   kept, a failed read REJECTS and is never kept. A view waits 2 s at most and reads up
   to 40 keys, named by priority (the dashboard: its scope, then the activities'
-  processes, then the breakdown's). The widget shows `NamedId`
-  (`src/widgets/names.tsx`: the name first, the id quiet in mono below, the id alone in
-  mono without a name) and an activity's type in words (`activityTypeLabel`).
+  processes, then the breakdown's). The widget shows the kit's `NamedId`
+  (`@miragon-ai/widget-shell/widgets`: the name first, the id quiet in mono below, the id
+  alone in mono without a name; one look with camunda7) and an activity's type in words
+  (`activityTypeLabel`, `src/widgets/names.ts`).
 - A count nobody measured is `null` and renders "—" through `Figure`
   (`src/widgets/figure.tsx`: the reason is read out in its place and is its tooltip),
   one meaning everywhere, and the table puts `FigureLegend` under it (the reasons that
@@ -262,8 +264,10 @@ Rules while building:
   (`TONE_SOFT`), `TONE_INK` only for words in a tone directly on the card (an inline error);
   volume (starts) and suppressed comparisons stay `neutral`, red is `danger` and only for
   incidents/failures. A count of what happened (new incidents included) carries no tone;
-  the open incident is the state: a danger dot on its KPI, `CountPill tone="danger"` in a
-  table. A rate is judged only against a reference, never on its own: the dashboard's
+  the open incident and the job without retries (dead jobs, an engine's failed jobs) are the
+  states: a danger dot on its KPI, `StateCount` in a table (`src/widgets/figure.tsx`: a danger
+  `CountPill` while there is any, by the kit's `countTone`, the ladder camunda7 edges the same
+  counts by; none is a plain number). A rate is judged only against a reference, never on its own: the dashboard's
   incident rate against the period before (`previous` in `dashboardData`, the trend of its
   `KpiCell`, `deltaVerdict` with the comparisons' threshold, "not reliable" under the
   saved `minBucketSize`), and only with the process held fixed: over several processes

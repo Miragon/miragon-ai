@@ -6,6 +6,7 @@ import {
   getJobsCount,
   getProcessInstancesCount,
 } from "@miragon-ai/camunda7-client/sdk"
+import { bpmnProcessNameOf, readBpmnNames } from "@miragon-ai/widget-shell/server"
 import type {
   ActivityIncidentsData,
   IncidentsByProcess,
@@ -15,8 +16,13 @@ import type {
 import type { ActivityIncidentsFilters, PagingArgs } from "../feed-contracts.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { buildProcessCockpitUrl } from "../lib/cockpit-url.js"
-import { bpmnActivityIds, extractActivityNames } from "../lib/bpmn-parse.js"
-import { fetchDefinitionXml, fetchLatestDefinition, fetchStatsByKey } from "./definition-info.js"
+import { bpmnActivityIds } from "../lib/bpmn-parse.js"
+import {
+  fetchDefinitionXml,
+  fetchLatestDefinition,
+  fetchStatsByKey,
+  nameUnnamedDefinitions,
+} from "./definition-info.js"
 import { countOf, DAY_MS, optional, rowsOf } from "./engine-reads.js"
 import {
   fetchBusinessKeys,
@@ -79,13 +85,15 @@ export async function buildProcessIncidentsData(
   ])
 
   const diagramIds = bpmnXml ? new Set(bpmnActivityIds(bpmnXml)) : null
+  const diagramNames = readBpmnNames(bpmnXml ?? "")
   const activities = toActivities(activityCounts, scan, {
-    names: bpmnXml ? extractActivityNames(bpmnXml) : {},
+    names: diagramNames.elements,
     cutoffMs,
   })
   return {
     processDefinitionKey: key,
-    processDefinitionName: definition.name,
+    // The engine's name, else the diagram's (a Modeler pool around an unnamed process).
+    processDefinitionName: definition.name ?? bpmnProcessNameOf(diagramNames, key),
     diagramVersion: definition.version,
     bpmnXml,
     cockpitUrl: buildProcessCockpitUrl(
@@ -178,14 +186,19 @@ async function fetchSiblingsWithIncidents(
   client: Client,
   excludeKey: string,
 ): Promise<IncidentsByProcess[]> {
-  return [...(await fetchStatsByKey(client, {})).entries()]
+  const siblings = [...(await fetchStatsByKey(client, {})).entries()]
     .filter(([key, stats]) => key !== excludeKey && stats.incidentCount > 0)
-    .map(([key, stats]) => ({
-      processDefinitionKey: key,
-      processDefinitionName: stats.latest.name,
-      incidentCount: stats.incidentCount,
-    }))
-    .sort((a, b) => b.incidentCount - a.incidentCount)
+    .sort((a, b) => b[1].incidentCount - a[1].incidentCount)
+  // A Modeler pool around an unnamed process names it, as analytics names it.
+  await nameUnnamedDefinitions(
+    client,
+    siblings.map(([, stats]) => stats.latest),
+  )
+  return siblings.map(([key, stats]) => ({
+    processDefinitionKey: key,
+    processDefinitionName: stats.latest.name,
+    incidentCount: stats.incidentCount,
+  }))
 }
 
 /** Filters from the shared feed contract + paging (page size defaults to 10). */

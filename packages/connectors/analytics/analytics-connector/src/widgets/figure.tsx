@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { CountPill } from "@miragon/mcp-toolkit-ui"
+import { countTone, formatNumber } from "@miragon-ai/widget-shell/widgets"
 
 /**
  * One figure in an analytics table (U17). "—" means one thing in every
@@ -29,6 +30,20 @@ export function Figure({
     )
   }
   return <>{format(value)}</>
+}
+
+/**
+ * A count that is a state (decision f): open incidents, jobs without retries
+ * (dead jobs). On the kit's one ladder (`countTone`, the one camunda7 reads
+ * the same counts by): a danger `CountPill` while there is any, the number
+ * itself in the foreground; none is a plain count, and a count nobody
+ * measured is "—" with its reason ({@link Figure}).
+ */
+export function StateCount({ value, why }: { value: number | null; why?: string }) {
+  if (countTone(value) === "danger") {
+    return <CountPill tone="danger">{formatNumber(value)}</CountPill>
+  }
+  return why === undefined ? <>{formatNumber(value)}</> : <Figure value={value} why={why} />
 }
 
 /** A quiet note under a table: what a sign in it means. */

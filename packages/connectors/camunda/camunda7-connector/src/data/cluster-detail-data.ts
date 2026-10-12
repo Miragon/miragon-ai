@@ -22,7 +22,12 @@ import {
   type IncidentLike,
   type ScanCoverage,
 } from "./cluster-scan.js"
-import { fetchNamesByDefinition, resolveDefinitionKeys } from "./definition-info.js"
+import {
+  elementNameIn,
+  fetchNamesByDefinition,
+  processNameIn,
+  resolveDefinitionKeys,
+} from "./definition-info.js"
 import { countOf, DAY_MS, optional, rowsOf } from "./engine-reads.js"
 import { fetchBusinessKeys, isOnOrAfter } from "./incident-scan.js"
 
@@ -126,8 +131,6 @@ export async function buildClusterDetailData(
       ...page.map((i) => i.processDefinitionId),
     ]),
   ])
-  const nameIn = (definitionId: string | null | undefined, id: string) =>
-    (definitionId ? names.get(definitionId)?.[id] : null) ?? null
   const defKey = (i: IncidentLike) =>
     (i.processDefinitionId ? keyOf(i.processDefinitionId) : null) ?? UNKNOWN
   const kpis = aggregateClusterKpis(matching, defKey)
@@ -137,13 +140,13 @@ export async function buildClusterDetailData(
     processInstanceId: i.processInstanceId ?? "",
     businessKey: i.processInstanceId ? (businessKeyById.get(i.processInstanceId) ?? null) : null,
     processDefinitionKey: defKey(i),
-    processDefinitionName: nameIn(i.processDefinitionId, defKey(i)),
+    processDefinitionName: processNameIn(names, i.processDefinitionId, defKey(i)),
     incidentTimestamp: i.incidentTimestamp ?? "",
   }))
 
   return {
     activityId: args.activityId,
-    activityName: nameIn(matching[0]?.processDefinitionId, args.activityId),
+    activityName: elementNameIn(names, matching[0]?.processDefinitionId, args.activityId),
     incidentType: args.incidentType,
     messageSignature: args.messageSignature ?? null,
     ...counts,

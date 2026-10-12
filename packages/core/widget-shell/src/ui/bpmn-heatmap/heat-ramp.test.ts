@@ -155,11 +155,14 @@ describe("bpmnElementNames", () => {
     <bpmn:userTask id="approve" name=" Approve invoice " />
     <bpmn:serviceTask id="archive" />
     <bpmn:endEvent id="done" name="" />
+    <bpmn:task id="check" name="Rechnung&#10;pr&#252;fen &#38; freigeben" />
   </bpmn:process>
 </bpmn:definitions>`
+    // The process is no element of the values table: bpmnProcessName names it.
+    // A Modeler line break is a space, `&#38;` an ampersand (the shared reader).
     expect(bpmnElementNames(xml)).toEqual({
-      invoice: "Invoice Receipt",
       approve: "Approve invoice",
+      check: "Rechnung prüfen & freigeben",
     })
   })
 
@@ -168,7 +171,7 @@ describe("bpmnElementNames", () => {
   })
 })
 
-/** The rule the server names a process by (analytics' `parseBpmnNames`), in the browser. */
+/** The rule every module names a process by (`parseBpmnNames`), in the browser. */
 describe("bpmnProcessName", () => {
   const collaboration = (processName: string) => `<?xml version="1.0"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d">

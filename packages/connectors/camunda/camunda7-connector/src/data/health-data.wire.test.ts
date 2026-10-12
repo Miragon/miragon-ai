@@ -417,3 +417,53 @@ describe("buildClusterDetailData — a cluster larger than the scan", () => {
     expect(data.last24hCount).toBeNull()
   })
 })
+
+// One rule with analytics (#322 U13, widget-shell `readBpmnNames`): what the
+// Modeler writes (a named pool around an unnamed process, `&#10;` for a line
+// break, `&#38;` for `&`) reads as analytics reads it, never literally.
+describe("names from a Modeler diagram (#322 U13)", () => {
+  const MODELER_XML = `<definitions>
+  <collaboration id="C"><participant id="Pool" name="Miravelo - Bike Leasing" processRef="order"/></collaboration>
+  <process id="order"><serviceTask id="charge" name="Rechnung&#10;prüfen &#38; buchen"/></process>
+</definitions>`
+
+  it("titles a health cluster by the decoded activity name and the pool", async () => {
+    const { client } = await engineWith({
+      "GET /incident": { body: [incident("a", ago(MINUTE))] },
+      "GET /incident/count": windowedCount({ total: 1, lastHour: 1, last24h: 1 }),
+      "GET /process-definition/statistics": {
+        body: [
+          {
+            id: "order:2:d2",
+            instances: 3,
+            incidents: [{ incidentCount: 1 }],
+            definition: { key: "order", version: 2 },
+          },
+        ],
+      },
+      "GET /history/process-instance/count": { body: { count: 0 } },
+      "GET /process-definition/order:2:d2/xml": { body: { bpmn20Xml: MODELER_XML } },
+    })
+
+    const data = await buildEngineHealthData(client, "fake")
+
+    expect(data.clusters.map((c) => [c.activityName, c.processDefinitionName])).toEqual([
+      ["Rechnung prüfen & buchen", "Miravelo - Bike Leasing"],
+    ])
+  })
+
+  it("names a cluster detail's activity and rows the same way", async () => {
+    const { client } = await engineWith({
+      "GET /incident": { body: [incident("a", ago(MINUTE))] },
+      "GET /process-definition/order:2:d2/xml": { body: { bpmn20Xml: MODELER_XML } },
+    })
+
+    const data = await buildClusterDetailData(client, "fake", {
+      activityId: "charge",
+      incidentType: "failedJob",
+    })
+
+    expect(data.activityName).toBe("Rechnung prüfen & buchen")
+    expect(data.incidents.map((i) => i.processDefinitionName)).toEqual(["Miravelo - Bike Leasing"])
+  })
+})

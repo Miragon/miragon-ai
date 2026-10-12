@@ -160,6 +160,27 @@ describe("the failure dashboard", () => {
     expect(open.className).not.toMatch(/text-danger/)
   })
 
+  // Decision f, one ladder in every module (`countTone`, widget-shell): a job
+  // without retries is a state like an open incident, danger while there is
+  // any, as camunda7 edges the same count; none is a plain number.
+  it("edges the dead jobs and open incidents in danger while there are any, a zero plain", () => {
+    renderIn("de", FailureRateTable, {
+      ...FAILURES,
+      processBreakdown: [
+        FAILURES.processBreakdown[0],
+        { ...FAILURES.processBreakdown[1], openIncidents: 0 },
+      ],
+    })
+    const table = screen.getByRole("table")
+    const order = within(table).getByText("Order fulfillment").closest("tr")!
+    expect(within(order).getByText("1.100").className).toContain("border-danger")
+    expect(within(order).getByText("1.200").className).toContain("border-danger")
+    const invoice = within(table).getByText("invoice").closest("tr")!
+    const zeros = within(invoice).getAllByText("0")
+    expect(zeros).toHaveLength(2)
+    for (const zero of zeros) expect(zero.className).not.toContain("border-danger")
+  })
+
   it("explains a rate over no running instance instead of showing a bare dash (en)", () => {
     renderIn("en", FailureRateTable, {
       ...FAILURES,
@@ -284,6 +305,19 @@ describe("the cross-engine landscape", () => {
     expect(busy.querySelectorAll("[class*='border-danger']")).toHaveLength(1)
     const calm = within(table).getByText("prod-b").closest("tr")!
     expect(calm.querySelector("[class*='border-danger']")).toBeNull()
+  })
+
+  // Decision f: jobs without retries are a state too, edged as camunda7's
+  // engine tiles above this table in the cross-engine overview edge them.
+  it("edges an engine's jobs without retries in danger, like its open incidents", () => {
+    renderIn("de", EngineLandscapeWidget, {
+      ...LANDSCAPE,
+      engines: [{ ...LANDSCAPE.engines[0], failedJobs: 5 }, ...LANDSCAPE.engines.slice(1)],
+    })
+    const table = screen.getByRole("table", { name: "Last und Job-Rückstand je Engine" })
+    const busy = within(table).getByText("prod-a").closest("tr")!
+    expect(within(busy).getByText("5").className).toContain("border-danger")
+    expect(busy.querySelectorAll("[class*='border-danger']")).toHaveLength(2)
   })
 
   // U17: a silent engine is unknown, never a row of plausible zeros.

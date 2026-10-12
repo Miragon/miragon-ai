@@ -1,10 +1,6 @@
-// @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest"
-import { cleanup, render } from "@testing-library/react"
+import { describe, expect, it } from "vitest"
 import { translator } from "../messages/index.js"
-import { NamedId, activityTypeKey, activityTypeLabel } from "./names.js"
-
-afterEach(cleanup)
+import { activityTypeKey, activityTypeLabel } from "./names.js"
 
 describe("activity types in words", () => {
   it.each([
@@ -32,22 +28,5 @@ describe("activity types in words", () => {
     expect(activityTypeLabel(t, "multiInstanceBody")).toBe("multiInstanceBody")
     expect(activityTypeLabel(t, "userTask")).toBe("User-Task")
     expect(activityTypeLabel((key) => translator("en", key), "noneEndEvent")).toBe("End event")
-  })
-})
-
-describe("NamedId", () => {
-  it("puts the name first and the id, in mono, quietly below with the details", () => {
-    const { container } = render(
-      <NamedId name="Pack" id="Task_A" detail={["User task", null, "", "Order"]} />,
-    )
-    expect(container.textContent).toBe("PackTask_A · User task · Order")
-    expect(container.querySelector(".font-mono")?.textContent).toBe("Task_A")
-  })
-
-  it("lets the id lead in mono when no name is known, and shows no empty line", () => {
-    const { container } = render(<NamedId name={null} id="order" />)
-    expect(container.textContent).toBe("order")
-    expect(container.querySelector(".font-mono")?.textContent).toBe("order")
-    expect(container.querySelectorAll(".text-small")).toHaveLength(0)
   })
 })

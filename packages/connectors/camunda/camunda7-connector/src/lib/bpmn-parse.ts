@@ -2,41 +2,11 @@
  * Light-weight BPMN 2.0 XML parsers for widget data layers. These are
  * "best-effort" — they avoid pulling in `bpmn-moddle` server-side and rely
  * on regex over machine-generated XML, which is reliable enough for the
- * data shapes we need (display names, activity counts).
+ * data shapes we need (activity counts). Display NAMES are not read here:
+ * every module reads them by the one rule, the kit's `readBpmnNames` /
+ * `parseBpmnNames` (`@miragon-ai/widget-shell/server`), so camunda7 and
+ * analytics never name the same process or activity differently.
  */
-
-const XML_ENTITY_MAP: Record<string, string> = {
-  "&lt;": "<",
-  "&gt;": ">",
-  "&quot;": '"',
-  "&apos;": "'",
-  "&#39;": "'",
-}
-
-function decodeXmlEntities(s: string): string {
-  return s.replace(/&(?:lt|gt|quot|apos|#39);/g, (m) => XML_ENTITY_MAP[m]).replace(/&amp;/g, "&")
-}
-
-/**
- * Walks all opening tags with both `id` and `name` attributes and returns
- * a `{ id → display name }` map. Skips entries with empty names. Robust
- * enough for machine-generated BPMN; falls back to ID display when a name
- * is missing.
- */
-export function extractActivityNames(bpmnXml: string): Record<string, string> {
-  const names: Record<string, string> = {}
-  const tagRe = /<[a-zA-Z][^>]*>/g
-  let m: RegExpExecArray | null
-  while ((m = tagRe.exec(bpmnXml)) !== null) {
-    const inner = m[0]
-    const idMatch = /\bid="([^"]+)"/.exec(inner)
-    const nameMatch = /\bname="([^"]*)"/.exec(inner)
-    if (idMatch && nameMatch && nameMatch[1].length > 0) {
-      names[idMatch[1]] = decodeXmlEntities(nameMatch[1])
-    }
-  }
-  return names
-}
 
 /**
  * The ids of the diagram's BPMN activity-like elements (tasks, gateways,

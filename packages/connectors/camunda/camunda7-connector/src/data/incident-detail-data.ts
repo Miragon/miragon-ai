@@ -23,7 +23,7 @@ import {
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
-import { extractActivityNames } from "../lib/bpmn-parse.js"
+import { bpmnProcessNameOf, readBpmnNames } from "@miragon-ai/widget-shell/server"
 import { definitionKeyInId, processDefinitionKeyFromId } from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 
@@ -323,10 +323,13 @@ export async function buildIncidentDetailData(
     await fetchIncidentContext(client, incident)
 
   const bpmnXml = xmlResponse?.bpmn20Xml ?? null
-  const activityNames = bpmnXml ? extractActivityNames(bpmnXml) : {}
+  const diagramNames = readBpmnNames(bpmnXml ?? "")
 
   const { processDefinitionKey, knownKey, processDefinitionVersion, processDefinitionName } =
     deriveDefinitionInfo(definitionMeta, processDefinitionId)
+  // The engine names a process by its `<process>` element alone; a Modeler
+  // collaboration names the pool instead, which the diagram already read has.
+  const processName = processDefinitionName ?? bpmnProcessNameOf(diagramNames, processDefinitionKey)
 
   const cockpitInstanceUrl = deriveCockpitInstanceUrl(
     options,
@@ -341,11 +344,13 @@ export async function buildIncidentDetailData(
     incidentMessage: incident.incidentMessage,
     incidentTimestamp: incident.incidentTimestamp,
     activityId,
-    activityName: activityNames[activityId] ?? null,
+    activityName: Object.hasOwn(diagramNames.elements, activityId)
+      ? diagramNames.elements[activityId]
+      : null,
 
     processDefinitionKey,
     processDefinitionId,
-    processDefinitionName,
+    processDefinitionName: processName,
     processDefinitionVersion,
     processInstanceId,
     businessKey: rawInstance?.businessKey ?? null,

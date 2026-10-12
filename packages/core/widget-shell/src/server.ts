@@ -3,8 +3,8 @@
  * the one import path for module tools and composition roots — the eager view
  * builders for `*_show_*` tools (the toolkit core's, re-typed below), the
  * shared error wrapper for raw `server.tool()` registrations, module
- * composition and the composed-server boot, caller identity, and the profile
- * and dashboard persistence.
+ * composition and the composed-server boot, caller identity, the profile
+ * and dashboard persistence, and the one rule a BPMN model's names are read by.
  */
 import {
   buildComposedView as buildComposedViewCore,
@@ -166,6 +166,13 @@ export {
 } from "./server-locale.js"
 export { parseModuleSlice, requireProfileKey, saveModuleSlice } from "./profile-slice.js"
 export { catalogueSyncIssues } from "./catalogue-sync.js"
+export {
+  bpmnProcessNameOf,
+  parseBpmnNames,
+  readBpmnNames,
+  type BpmnModelNames,
+  type BpmnNames,
+} from "./bpmn-names.js"
 
 /**
  * mcp-use's raw `server.tool()` callback expects a result with an implicit

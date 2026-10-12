@@ -24,10 +24,13 @@ import type {
 import {
   definitionKeyInId,
   definitionVersionFromId,
+  elementNameIn,
   fetchDefinitionsById,
   fetchLatestDefinition,
   fetchNamesByDefinition,
   fetchStatsByKey,
+  nameUnnamedDefinitions,
+  processNameIn,
   resolveDefinitionKeys,
   type DefinitionInfo,
 } from "./definition-info.js"
@@ -68,6 +71,8 @@ export async function buildCockpitDashboardData(
   const issuesOf = (d: DefinitionStat) =>
     d.failedJobs + d.incidents.reduce((s, i) => s + i.incidentCount, 0)
   definitions.sort((a, b) => issuesOf(b) - issuesOf(a) || b.instances - a.instances)
+  // A Modeler pool around an unnamed process names it, as analytics names it.
+  await nameUnnamedDefinitions(client, definitions)
 
   return {
     summary: {
@@ -117,7 +122,8 @@ export async function buildProcessListData(
     getProcessDefinitionsCount({ client, query: filters }).then(countOf),
   ])
   return {
-    definitions,
+    // A Modeler pool around an unnamed process names it, as analytics names it.
+    definitions: await nameUnnamedDefinitions(client, definitions),
     totalCount,
     filters: {
       processDefinitionKey: args.processDefinitionKey,
@@ -221,22 +227,29 @@ async function rowKeyResolver(
 
 /**
  * The process name each row runs on — a scoped list's rows all run on its
- * definition (named by the key lookup it already made); the engine-wide list
- * reads the names of the page's definition versions in ONE call. ENRICHMENT:
- * a failed read leaves the names null, the rows then show their keys.
+ * definition (named by the key lookup it already made, which this names in
+ * place when the engine knows no name, so the list's title reads it too);
+ * the engine-wide list reads the names of the page's definition versions in
+ * ONE call. Either way a Modeler pool around an unnamed process names it
+ * ({@link nameUnnamedDefinitions}). ENRICHMENT: a failed read leaves the
+ * names null, the rows then show their keys.
  */
 async function rowNameResolver(
   client: Client,
   page: RawInstance[],
   scoped: DefinitionInfo | null,
 ): Promise<(definitionId: string) => string | null> {
-  if (scoped) return () => scoped.name
+  if (scoped) {
+    await nameUnnamedDefinitions(client, [scoped])
+    return () => scoped.name
+  }
   const byId = await optional(
     fetchDefinitionsById(
       client,
       page.map((i) => i.definitionId),
     ),
   )
+  if (byId) await nameUnnamedDefinitions(client, [...byId.values()])
   return (definitionId) => byId?.get(definitionId)?.name ?? null
 }
 
@@ -367,8 +380,6 @@ export async function buildJobPanelData(
     client,
     raw.map((j) => j.processDefinitionId),
   )
-  const nameIn = (definitionId: string | null | undefined, id: string | null | undefined) =>
-    (definitionId && id ? names.get(definitionId)?.[id] : null) ?? null
 
   return {
     totalCount: args.failedOnly ? failedCount : allCount,
@@ -378,10 +389,10 @@ export async function buildJobPanelData(
       processInstanceId: j.processInstanceId,
       processDefinitionKey: j.processDefinitionKey ?? null,
       processDefinitionId: j.processDefinitionId ?? null,
-      processDefinitionName: nameIn(j.processDefinitionId, j.processDefinitionKey),
+      processDefinitionName: processNameIn(names, j.processDefinitionId, j.processDefinitionKey),
       // The engine's job carries the activity it failed at, not an `activityId`.
       activityId: j.failedActivityId ?? null,
-      activityName: nameIn(j.processDefinitionId, j.failedActivityId),
+      activityName: elementNameIn(names, j.processDefinitionId, j.failedActivityId),
       retries: j.retries,
       exceptionMessage: j.exceptionMessage ?? null,
       dueDate: j.dueDate ?? null,

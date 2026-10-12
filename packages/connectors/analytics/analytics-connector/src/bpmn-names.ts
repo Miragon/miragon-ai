@@ -7,7 +7,11 @@
  * bundle, so it holds types and pure helpers only.
  */
 
-/** The names one model gives: its process and the elements that have one. */
+/**
+ * The names one model gives: its process and the elements that have one.
+ * The shape of the kit's `BpmnNames` (`parseBpmnNames`, widget-shell
+ * `/server`), the one rule camunda7 names the same model by.
+ */
 export interface ProcessNames {
   /** The process's own name in its model (or its pool's); null when it has none. */
   name: string | null

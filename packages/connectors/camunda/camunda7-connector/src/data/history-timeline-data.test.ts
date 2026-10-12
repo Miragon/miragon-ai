@@ -41,3 +41,47 @@ describe("buildHistoryTimelineData — the failing steps", () => {
     expect(data.totalActivities).toBe(1)
   })
 })
+
+// One rule with analytics (#322 U13, widget-shell `readBpmnNames`): the engine
+// names a process by its `<process>` element alone; a Modeler pool names it
+// in the timeline's head as analytics names it.
+describe("buildHistoryTimelineData — the process name", () => {
+  const instance = (processDefinitionName: string | null) => ({
+    id: "pi-1",
+    processDefinitionId: "miraveloLeasing:3:d",
+    processDefinitionKey: "miraveloLeasing",
+    processDefinitionName,
+    startTime: "2026-10-01T10:00:00.000+0000",
+    endTime: null,
+    durationInMillis: null,
+    state: "ACTIVE",
+  })
+  const pooled = `<definitions><collaboration id="C"><participant id="Pool" name="Miravelo - Bike Leasing" processRef="miraveloLeasing"/></collaboration><process id="miraveloLeasing"/></definitions>`
+
+  async function timeline(processDefinitionName: string | null) {
+    const engine = await startFakeEngine(
+      {
+        "GET /history/process-instance": { body: [instance(processDefinitionName)] },
+        "GET /history/activity-instance/count": { body: { count: 0 } },
+        "GET /process-definition/miraveloLeasing:3:d/xml": { body: { bpmn20Xml: pooled } },
+      },
+      { body: [] },
+    )
+    engines.push(engine)
+    const data = await buildHistoryTimelineData(clientFor(engine), "fake", {
+      processInstanceId: "pi-1",
+    })
+    return { data, engine }
+  }
+
+  it("names an unnamed process by its Modeler pool", async () => {
+    const { data } = await timeline(null)
+    expect(data.processInstance?.processDefinitionName).toBe("Miravelo - Bike Leasing")
+  })
+
+  it("keeps the engine's name, and reads no diagram for it", async () => {
+    const { data, engine } = await timeline("Bike Leasing")
+    expect(data.processInstance?.processDefinitionName).toBe("Bike Leasing")
+    expect(engine.requests.some((r) => r.path.endsWith("/xml"))).toBe(false)
+  })
+})

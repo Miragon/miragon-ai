@@ -1,6 +1,7 @@
 import {
   HandOffButton,
   ListTable,
+  NamedId,
   Section,
   TableEmptyState,
   TableSkeleton,
@@ -16,7 +17,7 @@ import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { elementNameOf, processNameOf } from "../../bpmn-names.js"
-import { NamedId, activityTypeLabel } from "../names.js"
+import { activityTypeLabel } from "../names.js"
 import { Figure, FigureLegend } from "../figure.js"
 
 type ActivityRow = AnalyticsDashboardData["activityBreakdown"][number]

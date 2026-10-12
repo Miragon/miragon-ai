@@ -104,6 +104,20 @@ describe("buildInstanceDetailData", () => {
     expect(data.incidents.map((i) => i.businessKey)).toEqual(["LEA-2026-00424"])
   })
 
+  // One rule with analytics (widget-shell `parseBpmnNames`): the Modeler
+  // names the pool of a collaboration and writes a line break as `&#10;`.
+  it("names a Modeler collaboration's process by its pool, the line break a space", async () => {
+    mockedInstance.mockResolvedValueOnce({ id: "p1", definitionId: "K1:3:dep" })
+    mockedBpmn.mockResolvedValueOnce({
+      bpmn20Xml:
+        '<definitions><collaboration id="C"><participant id="Pool" name="Miravelo -&#10;Bike Leasing" processRef="K1"/></collaboration><process id="K1"/></definitions>',
+    })
+
+    const data = await buildInstanceDetailData(fakeClient, "engine-a", { processInstanceId: "p1" })
+
+    expect(data.processDefinitionName).toBe("Miravelo - Bike Leasing")
+  })
+
   it("builds per-incident cockpit links when engine urls are supplied", async () => {
     mockedIncidents.mockResolvedValueOnce([
       { id: "i1", processInstanceId: "p1", incidentType: "failedJob" },

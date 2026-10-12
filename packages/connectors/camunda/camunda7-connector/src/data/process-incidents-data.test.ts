@@ -347,3 +347,30 @@ describe("buildActivityIncidentsData — one page of an activity's incidents (N6
     expect(engine.requests.filter((r) => r.path.startsWith("/process-definition"))).toEqual([])
   })
 })
+
+// One rule with analytics (#322 U13, widget-shell `readBpmnNames`): a
+// definition the engine knows by no name takes its Modeler pool's name, in
+// the view's title and in the empty state's other processes alike.
+describe("buildProcessIncidentsData — names from a Modeler pool", () => {
+  const pooled = (key: string) =>
+    `<definitions><collaboration id="C"><participant id="Pool" name="Pool of ${key}" processRef="${key}"/></collaboration><process id="${key}"/></definitions>`
+
+  it("titles the view and names its siblings by their diagrams", async () => {
+    const { data } = await build({
+      ...definitionRoutes([], 0),
+      "GET /process-definition": { body: [{ id: V2, key: KEY, name: null, version: 2 }] },
+      [`GET /process-definition/${V2}/xml`]: { body: { id: V2, bpmn20Xml: pooled(KEY) } },
+      "GET /process-definition/statistics": {
+        body: [
+          { id: "b:1:x", incidents: [{ incidentCount: 2 }], definition: { id: "b:1:x", key: "b" } },
+        ],
+      },
+      "GET /process-definition/b:1:x/xml": { body: { bpmn20Xml: pooled("b") } },
+    })
+
+    expect(data.processDefinitionName).toBe(`Pool of ${KEY}`)
+    expect(data.siblingsWithIncidents).toEqual([
+      { processDefinitionKey: "b", processDefinitionName: "Pool of b", incidentCount: 2 },
+    ])
+  })
+})

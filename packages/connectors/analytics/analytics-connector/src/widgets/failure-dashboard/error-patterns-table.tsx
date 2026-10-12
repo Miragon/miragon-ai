@@ -1,13 +1,12 @@
-import { CountPill } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
   ListTable,
+  NamedId,
   Section,
   TableEmptyState,
   TableSkeleton,
   Td,
   WidgetShell,
-  formatNumber,
   type ListTableColumn,
 } from "@miragon-ai/widget-shell/widgets"
 import type { ErrorPatternItem, FailureDashboardData } from "@miragon-ai/analytics-client"
@@ -16,7 +15,7 @@ import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"
 import { engineIdsOf, useHandOff, type HandOff } from "../hand-off.js"
 import { processNameOf } from "../../bpmn-names.js"
-import { NamedId } from "../names.js"
+import { StateCount } from "../figure.js"
 
 /**
  * Root cause of ONE group of open incidents. The open-incident gauge carries
@@ -101,8 +100,8 @@ export function ErrorPatternsTable({
                         id={pattern.processDefinitionKey}
                       />
                     </Td>
-                    <Td align="right">
-                      <CountPill tone="danger">{formatNumber(pattern.incidentCount)}</CountPill>
+                    <Td align="right" className="tabular-nums">
+                      <StateCount value={pattern.incidentCount} />
                     </Td>
                     <Td align="right">
                       <HandOffButton

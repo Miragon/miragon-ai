@@ -142,4 +142,38 @@ describe("buildJobPanelData — exact totals from /job/count", () => {
     ])
     expect(calls(engine, "/process-definition/K1:1:a/xml")).toHaveLength(1)
   })
+
+  // One rule with analytics (widget-shell `readBpmnNames`): the Modeler names
+  // the pool of a collaboration and writes a line break as `&#10;`, `&` as
+  // `&#38;`; the job panel showed them literally ("Rechnung&#10;prüfen").
+  it("names a Modeler diagram's activity and process as analytics does", async () => {
+    const xml = `<definitions>
+  <collaboration id="C"><participant id="Pool" name="Miravelo - Bike Leasing" processRef="K1"/></collaboration>
+  <process id="K1"><serviceTask id="charge" name="Rechnung&#10;prüfen &#38; buchen"/></process>
+</definitions>`
+    const { client } = await engineWith({
+      ...jobRoutes,
+      "POST /job": {
+        body: [
+          {
+            id: "j1",
+            processInstanceId: "p1",
+            processDefinitionKey: "K1",
+            processDefinitionId: "K1:1:a",
+            retries: 0,
+            suspended: false,
+            priority: 0,
+            failedActivityId: "charge",
+          },
+        ],
+      },
+      "GET /process-definition/K1:1:a/xml": { body: { id: "K1:1:a", bpmn20Xml: xml } },
+    })
+
+    const data = await buildJobPanelData(client, "engine-a", {})
+
+    expect(data.jobs.map((j) => [j.activityName, j.processDefinitionName])).toEqual([
+      ["Rechnung prüfen & buchen", "Miravelo - Bike Leasing"],
+    ])
+  })
 })

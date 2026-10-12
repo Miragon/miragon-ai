@@ -1,16 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { getMcpRequestInfo, runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
-import {
-  NO_NAMES,
-  createNameLookup,
-  parseBpmnNames,
-  type FetchBpmnXml,
-} from "./bpmn-name-lookup.js"
+import { NO_NAMES, createNameLookup, type FetchBpmnXml } from "./bpmn-name-lookup.js"
 import { elementNameOf, processNameOf } from "./bpmn-names.js"
 
 /**
  * The names behind the ids (U13): read on the server from the diagram the
- * injected BPMN lookup returns, never a guess, never a failure.
+ * injected BPMN lookup returns, never a guess, never a failure. The reader
+ * itself is the kit's (`parseBpmnNames`, widget-shell's `bpmn-names.test.ts`):
+ * the one rule camunda7 names the same process and activities by.
  */
 
 const LEASING = `<?xml version="1.0" encoding="UTF-8"?>
@@ -27,52 +24,6 @@ const LEASING = `<?xml version="1.0" encoding="UTF-8"?>
     <bpmn:endEvent id="EndEvent_Done" name="Done &#x2713;"/>
   </bpmn:process>
 </bpmn:definitions>`
-
-describe("parseBpmnNames", () => {
-  it("reads the process name and every named element, entities decoded, space folded", () => {
-    expect(parseBpmnNames(LEASING, "miraveloLeasing")).toEqual({
-      name: "Bike Leasing",
-      elements: {
-        StartEvent_1: "Application received",
-        Activity_Decide: 'Decide on "Leasing & Co"',
-        Gateway_Amount: "Amount > 1000?",
-        EndEvent_Done: "Done ✓",
-      },
-    })
-  })
-
-  it("takes the pool's name when the process has none, and the default namespace", () => {
-    const xml = `<definitions>
-      <collaboration id="Collab">
-        <participant id="Pool" name="Invoice handling" processRef="invoice"/>
-        <participant id="Pool_Other" name="Another pool" processRef="other"/>
-      </collaboration>
-      <process id="invoice"><task id="Task_A" name="Approve"/></process>
-      <process id="other" name="Other process"/>
-    </definitions>`
-    // The pool is no element of the process: only the named task is. The
-    // pool of another process of the file never names this one.
-    expect(parseBpmnNames(xml, "invoice")).toEqual({
-      name: "Invoice handling",
-      elements: { Task_A: "Approve" },
-    })
-    // Another process of the same file keeps its own name.
-    expect(parseBpmnNames(xml, "other").name).toBe("Other process")
-  })
-
-  it("prefers the process's own name over its pool's", () => {
-    const xml = `<definitions><participant processRef="p" name="Pool"/><process id="p" name="Own"/></definitions>`
-    expect(parseBpmnNames(xml, "p").name).toBe("Own")
-  })
-
-  it("yields no names for a document that is not BPMN, never an error", () => {
-    expect(parseBpmnNames("not xml at all <<<", "x")).toEqual({ name: null, elements: {} })
-    expect(parseBpmnNames("", "x")).toEqual({ name: null, elements: {} })
-    // A character reference past Unicode stays as written instead of throwing.
-    const odd = `<process id="p"><task id="T" name="a &#99999999; b &#x110000; &bogus;"/></process>`
-    expect(parseBpmnNames(odd, "p").elements.T).toBe("a &#99999999; b &#x110000; &bogus;")
-  })
-})
 
 describe("createNameLookup", () => {
   afterEach(() => {

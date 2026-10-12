@@ -1,4 +1,4 @@
-import { callerCacheKey } from "@miragon-ai/widget-shell/server"
+import { callerCacheKey, parseBpmnNames } from "@miragon-ai/widget-shell/server"
 import type { NameIndex, ProcessNames } from "./bpmn-names.js"
 
 /**
@@ -194,68 +194,4 @@ function startDeadline(ms: number) {
     }, ms)
   })
   return { passed, expired: () => expired, clear: () => clearTimeout(timer) }
-}
-
-/** A start tag: prefix, local name, and its attributes (a quoted value may hold `>`). */
-const START_TAG =
-  /<(?:[A-Za-z_][\w.-]*:)?([A-Za-z_][\w.-]*)((?:\s+[A-Za-z_][\w:.-]*\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*\/?>/g
-const ATTRIBUTE = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
-
-const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" }
-
-/** A numeric character reference's character; one past Unicode stays as written. */
-const character = (code: number, written: string) =>
-  code <= 0x10ffff ? String.fromCodePoint(code) : written
-
-/** An attribute value as text: entities decoded, line breaks and runs of space folded. */
-function attributeText(raw: string): string {
-  return raw
-    .replace(
-      /&(?:#x([0-9a-f]+)|#(\d+)|(amp|lt|gt|quot|apos));/gi,
-      (match: string, hex?: string, dec?: string, named?: string) => {
-        if (hex) return character(Number.parseInt(hex, 16), match)
-        if (dec) return character(Number.parseInt(dec, 10), match)
-        return ENTITIES[(named ?? "").toLowerCase()] ?? match
-      },
-    )
-    .replace(/\s+/g, " ")
-    .trim()
-}
-
-function attributesOf(raw: string): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const m of raw.matchAll(ATTRIBUTE)) out[m[1]] = m[2] ?? m[3] ?? ""
-  return out
-}
-
-/**
- * The names in one BPMN 2.0 XML document, read without a DOM (the server has
- * none): the `<process id=key name=…>` (or, when the process has no name, the
- * name of the pool — `<participant processRef=key>` — that holds it) and every
- * element with an `id` and a non-empty `name`. Comments and CDATA are skipped,
- * any namespace prefix is accepted. A document that is not BPMN yields no
- * names, never an error. The heatmap's header names a process by the same
- * rule in the browser (`bpmnProcessName`, widget-shell).
- */
-export function parseBpmnNames(xml: string, processDefinitionKey: string): ProcessNames {
-  const text = xml.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, "")
-  let processName: string | null = null
-  let poolName: string | null = null
-  const elements: Record<string, string> = {}
-  for (const m of text.matchAll(START_TAG)) {
-    const local = m[1]
-    const attrs = attributesOf(m[2] ?? "")
-    const name = attrs.name === undefined ? "" : attributeText(attrs.name)
-    if (local === "participant") {
-      if (attrs.processRef === processDefinitionKey && name) poolName = name
-      continue
-    }
-    if (!attrs.id || !name) continue
-    if (local === "process") {
-      if (attrs.id === processDefinitionKey) processName = name
-      continue
-    }
-    elements[attrs.id] = name
-  }
-  return { name: processName ?? poolName, elements }
 }

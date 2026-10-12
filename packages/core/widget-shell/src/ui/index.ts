@@ -36,6 +36,8 @@ export {
   type ListTableGroup,
 } from "./list-table.js"
 export { IdText, IdCell, shortId, copyText, ID_FULL_LENGTH } from "./id-text.js"
+export { NamedId } from "./named-id.js"
+export { countTone, severityTone } from "./count-tone.js"
 export { ConfirmDialog, type ConfirmDialogProps, type ConfirmTarget } from "./confirm-dialog.js"
 export { useActionFeedback, type ActionFeedback } from "./action-feedback.js"
 export { KometMark, AppEmptyState, KOMET_MIN_SIZE } from "./brand-mark.js"

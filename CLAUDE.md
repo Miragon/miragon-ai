@@ -266,7 +266,15 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    several never hides, `listTableCss` throws on it); `IdCell` /
    `IdText` show an id in Geist Mono, shortened ("5f0ce78e…", whole for screen readers and
    in `title`), with a copy button and its toast (a failed copy leaves the whole id selected
-   in a read-only field, to copy by hand). `WidgetShell` pads 24 px (16 px below
+   in a read-only field, to copy by hand); `NamedId` shows a process or an element by its
+   name first (dense, 600) and its id as a quiet Geist Mono line under it (`detail` appends
+   its type or process, `lead` a state dot): ONE look in every module, never a connector's
+   own copy. Those names come from ONE reader: `readBpmnNames` / `parseBpmnNames`
+   (`@miragon-ai/widget-shell/server`, server and browser alike: a process's own name, else
+   its Modeler pool's; `&#10;` and every other character reference decoded, space folded), so
+   camunda7, analytics and the heatmap never name the same process or activity two ways; a
+   view that shows the engine's definition name names an unnamed one from its diagram
+   (camunda7's `nameUnnamedDefinitions`). `WidgetShell` pads 24 px (16 px below
    640 px) and lets its children shrink (`min-w-0`). **Type on the scale**: kit components
    sit on the toolkit's `TYPE_SCALE`: a widget's page title 28/700 (`WidgetHeader`, an h2
    inside a view), a section `text-section` (21/600), running text `text-body` (16), dense
@@ -336,6 +344,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    "Design-System"): `ToneVariant` is `danger | warning | success | info | neutral`. There is
    no `critical` (a retired name from the wire resolves through `resolveTone`): an open incident or a failed job without retries is `danger`, a failed job
    with retries left or a degraded engine is `warning`, a count without a state is `neutral`.
+   The ladder for incident and job counts is the kit's, ONE for every module (`countTone` /
+   `severityTone`, `@miragon-ai/widget-shell/widgets`): camunda7's engine tiles and the
+   analytics landscape they embed edge the same "jobs without retries" alike.
    Each tone has three roles, theme variables of the toolkit's Miragon theme
    (`@miragon/mcp-toolkit-ui/theme.css`, light + dark): `--<tone>` is the fill, dot, edge or icon
    (`TONE_DOT`, `TONE_BORDER`, `TONE_ICON`), `--<tone>-soft` the tint (`TONE_TINT`, or

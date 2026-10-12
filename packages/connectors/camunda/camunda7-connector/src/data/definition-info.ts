@@ -4,7 +4,11 @@ import {
   getProcessDefinitionStatistics,
   getProcessDefinitions,
 } from "@miragon-ai/camunda7-client/sdk"
-import { extractActivityNames } from "../lib/bpmn-parse.js"
+import {
+  bpmnProcessNameOf,
+  readBpmnNames,
+  type BpmnModelNames,
+} from "@miragon-ai/widget-shell/server"
 import { rowsOf } from "./engine-reads.js"
 
 /**
@@ -124,17 +128,23 @@ export async function fetchDefinitionXml(
  */
 export const NAMED_DEFINITIONS_LIMIT = 8
 
+/** The names in the diagrams of a view's definition versions, by definition id. */
+export type NamesByDefinition = ReadonlyMap<string, BpmnModelNames>
+
 /**
- * The display names in the diagrams of `definitionIds` (activities, and the
- * process itself: its `<process>` element is named too), by definition id —
- * one XML read per distinct id, at most {@link NAMED_DEFINITIONS_LIMIT}.
- * ENRICHMENT: each read that fails (or carries no XML) leaves its id out of
- * the map, so the names behind it are null, never the view's failure.
+ * The display names in the diagrams of `definitionIds`, by definition id:
+ * each process's (its own, else its pool's) and every named element, read by
+ * the one rule every module names a model by (`readBpmnNames`, widget-shell:
+ * a Modeler line break or `&#38;` decoded, so analytics shows the same
+ * words) — one XML read per distinct id, at most
+ * {@link NAMED_DEFINITIONS_LIMIT}. ENRICHMENT: each read that fails (or
+ * carries no XML) leaves its id out of the map, so the names behind it are
+ * null, never the view's failure.
  */
 export async function fetchNamesByDefinition(
   client: Client,
   definitionIds: Iterable<string | null | undefined>,
-): Promise<Map<string, Record<string, string>>> {
+): Promise<NamesByDefinition> {
   const ids = [...new Set([...definitionIds].filter((id): id is string => !!id))].slice(
     0,
     NAMED_DEFINITIONS_LIMIT,
@@ -142,10 +152,65 @@ export async function fetchNamesByDefinition(
   const read = await Promise.all(
     ids.map(async (id) => {
       const xml = await fetchDefinitionXml(client, id).catch(() => null)
-      return xml ? ([id, extractActivityNames(xml)] as const) : null
+      return xml ? ([id, readBpmnNames(xml)] as const) : null
     }),
   )
   return new Map(read.filter((entry) => entry !== null))
+}
+
+/** The name of process `key` in the diagram of `definitionId` (its own, else its pool's), or null. */
+export function processNameIn(
+  names: NamesByDefinition,
+  definitionId: string | null | undefined,
+  key: string | null | undefined,
+): string | null {
+  const model = definitionId ? names.get(definitionId) : undefined
+  return model && key ? bpmnProcessNameOf(model, key) : null
+}
+
+/** The name of element `elementId` in the diagram of `definitionId`, or null. */
+export function elementNameIn(
+  names: NamesByDefinition,
+  definitionId: string | null | undefined,
+  elementId: string | null | undefined,
+): string | null {
+  const elements = definitionId ? names.get(definitionId)?.elements : undefined
+  return elements && elementId && Object.hasOwn(elements, elementId) ? elements[elementId] : null
+}
+
+/** A definition a view names: its version id, its key, and the engine's name for it. */
+export interface NameableDefinition {
+  id?: string | null
+  key?: string | null
+  name?: string | null
+}
+
+/**
+ * Names the definitions the engine knows by no name from their diagrams, IN
+ * PLACE (each is this view's own fresh read), and returns them. The engine
+ * takes a process's name from its `<process>` element alone, while the
+ * Camunda Modeler names the POOL of a collaboration and leaves the process
+ * unnamed: without this read, camunda7 showed `miraveloLeasing` where
+ * analytics shows "Miravelo - Bike Leasing" (the one rule, `readBpmnNames`).
+ * One diagram read per unnamed definition, at most
+ * {@link NAMED_DEFINITIONS_LIMIT} in the order given (a view passes the rows
+ * it shows first, first); a named definition costs nothing. ENRICHMENT: a
+ * definition whose diagram is unreadable, or names nothing, keeps its null.
+ */
+export async function nameUnnamedDefinitions<T extends NameableDefinition>(
+  client: Client,
+  definitions: T[],
+): Promise<T[]> {
+  const unnamed = definitions.filter((d) => !d.name && d.id && d.key)
+  if (unnamed.length === 0) return definitions
+  const names = await fetchNamesByDefinition(
+    client,
+    unnamed.map((d) => d.id),
+  )
+  for (const definition of unnamed) {
+    definition.name = processNameIn(names, definition.id, definition.key) ?? definition.name ?? null
+  }
+  return definitions
 }
 
 /**

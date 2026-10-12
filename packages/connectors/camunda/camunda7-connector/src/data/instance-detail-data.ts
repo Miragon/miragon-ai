@@ -15,7 +15,7 @@ import {
 } from "@miragon-ai/camunda7-client/sdk"
 import { buildTaskFormSchema } from "../tools/task-form.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
-import { extractActivityNames } from "../lib/bpmn-parse.js"
+import { parseBpmnNames } from "@miragon-ai/widget-shell/server"
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
 import {
@@ -143,12 +143,11 @@ export async function buildInstanceDetailData(
         : null,
   }))
 
-  // The process element of the diagram carries its name (no extra read).
+  // The diagram names its process (no extra read): its own name, else its pool's.
   const processKey = definitionId ? definitionKeyInId(definitionId) : null
   return {
     instance: instance as unknown as InstanceDetailData["instance"],
-    processDefinitionName:
-      (bpmnXml && processKey ? extractActivityNames(bpmnXml)[processKey] : null) ?? null,
+    processDefinitionName: bpmnXml && processKey ? parseBpmnNames(bpmnXml, processKey).name : null,
     activityTree: activityTree as unknown as InstanceDetailData["activityTree"],
     variables: variables as unknown as InstanceDetailData["variables"],
     incidents: incidentRows,
