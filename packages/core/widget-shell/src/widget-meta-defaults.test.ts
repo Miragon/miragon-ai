@@ -50,6 +50,8 @@ describe("withWidgetMetaDefaults", () => {
     const [definition] = definitions
     expect(definition.view).toEqual({
       name: "x_show_thing",
+      description: "Thing",
+      prefersBorder: true,
       csp: { resourceDomains: [FONT_ORIGIN] },
     })
     expect(definition._meta?.["openai/widgetCSP"]).toEqual({ resource_domains: [FONT_ORIGIN] })

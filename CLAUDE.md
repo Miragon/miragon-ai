@@ -803,6 +803,14 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   the test pins it exactly and `pnpm lint` makes it shrink-only, so a tool change that
   makes the model read MORE text needs a `Ratchet-Exception:` trailer (see Verification).
   The name lists in `test/expected-tools.ts` stay the reviewable per-toolset summary.
+- **The widget bundle has a budget.** Every view resource inlines the whole bundle, so its
+  size is the cost of every render: `test/__golden__/bundle-budget.json` holds gzip ceilings
+  for `mcp-app.js`/`.css`, `test-host/bundle-budget.spec.ts` checks the BUILT dist against
+  them (over a ceiling fails, and so does a bundle more than 10 % under it, so the
+  headroom never piles up), and `pnpm lint:ratchets` keeps the ceilings shrink-only — growth
+  needs a `Ratchet-Exception:` trailer that says why. Every view also names itself (the
+  tool title as the resource `description`) and asks the host for a border
+  (`prefersBorder`, `showToolBinding`).
 - **Federation/aggregation happens in an external MCP gateway (agentgateway) IN FRONT of
   this server; this repo builds one self-contained MCP server including its UI.** No
   upstream/proxy mechanics in the code — don't reintroduce a proxies/upstream option

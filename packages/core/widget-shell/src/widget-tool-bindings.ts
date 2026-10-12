@@ -21,10 +21,15 @@ import { appsSdkMeta, viewResourceUri } from "@miragon/mcp-toolkit-core"
  * `outputSchema` is required by mcp-use for any view-bound tool; `passthrough`
  * matches the free-form `structuredContent` the view builders return without
  * stripping keys on SDK-side validation.
+ *
+ * The view resource carries its title as `description` (hosts that list
+ * resources show it) and asks the host for a border (`prefersBorder`, owner
+ * decision 2026-10-12, #344 N159): the cards draw none of their own, so a
+ * frame sets them off from the chat around them.
  */
 export function showToolBinding(name: string, title: string) {
   return {
-    view: { name },
+    view: { name, description: title, prefersBorder: true },
     outputSchema: z.object({}).passthrough(),
     _meta: appsSdkMeta({ resourceUri: viewResourceUri(name), title }),
   }

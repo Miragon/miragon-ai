@@ -51,6 +51,10 @@ describe("ratchetKind", () => {
       ratchetKind("apps/mcp-server-camunda7/test/__golden__/char-budgets.json"),
       "char-budgets",
     )
+    assert.equal(
+      ratchetKind("apps/mcp-server-camunda7/test/__golden__/bundle-budget.json"),
+      "bundle-budget",
+    )
     assert.equal(ratchetKind("package.json"), "root-scripts")
     assert.equal(ratchetKind("packages/core/widget-shell/package.json"), "package-scripts")
     assert.equal(ratchetKind("apps/mcp-server-camunda7/package.json"), "package-scripts")
@@ -709,6 +713,30 @@ describe("char budgets (shrink-only)", () => {
     )
     assert.match(checkRatchetFile(rel, base, JSON.stringify({}))[0], /was removed/)
     assert.deepEqual(checkRatchetFile(rel, base, JSON.stringify({ "tools-admin": 900 })), [])
+  })
+})
+
+describe("bundle budget (shrink-only)", () => {
+  const rel = "apps/mcp-server-camunda7/test/__golden__/bundle-budget.json"
+  const base = JSON.stringify({ $comment: "x", "mcp-app.js": 405000, "mcp-app.css": 13300 })
+
+  it("flags a raised or removed ceiling, accepts a lowered one", () => {
+    assert.match(
+      checkRatchetFile(
+        rel,
+        base,
+        JSON.stringify({ "mcp-app.js": 410000, "mcp-app.css": 13300 }),
+      )[0],
+      /405000 -> 410000 bytes gzip/,
+    )
+    assert.match(
+      checkRatchetFile(rel, base, JSON.stringify({ "mcp-app.js": 405000 }))[0],
+      /"mcp-app.css" was removed/,
+    )
+    assert.deepEqual(
+      checkRatchetFile(rel, base, JSON.stringify({ "mcp-app.js": 400000, "mcp-app.css": 13000 })),
+      [],
+    )
   })
 })
 
