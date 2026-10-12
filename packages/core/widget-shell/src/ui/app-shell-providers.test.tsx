@@ -4,6 +4,7 @@ import { bootstrapView, disposeView } from "mcp-use/react"
 import { queryClient, useLocale } from "@miragon/mcp-toolkit-ui"
 import { useHostBridge, type WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { AppShellProviders } from "./app-shell-providers.js"
+import { SHELL_SETTINGS_DATA } from "../shell-settings-contract.js"
 import { useHostWidgets } from "./host-widgets.js"
 import { LocalizedAppView } from "./localized-app-view.js"
 import { useHostDisplayMode } from "./widget-shell.js"
@@ -22,12 +23,12 @@ interface Message {
   params?: Record<string, unknown>
 }
 
-const PROFILE_FEED = "camunda7_user_profile_data"
+const PROFILE_FEED = SHELL_SETTINGS_DATA
 
-function profileResult(profile: { language?: string }) {
+function profileResult(view: { language?: string }) {
   return {
-    content: [{ type: "text", text: JSON.stringify({ profile }) }],
-    structuredContent: { profile },
+    content: [{ type: "text", text: JSON.stringify(view) }],
+    structuredContent: view,
   }
 }
 
@@ -106,7 +107,7 @@ function mount(host: ReturnType<typeof createFakeHost>) {
   bootstrapView(
     {
       default: () => (
-        <AppShellProviders widgets={{ "demo:widget": DemoWidget }} profileTool={PROFILE_FEED}>
+        <AppShellProviders widgets={{ "demo:widget": DemoWidget }}>
           <Probe />
         </AppShellProviders>
       ),
@@ -242,7 +243,7 @@ describe("AppShellProviders (real mcp-use view runtime)", () => {
     // be what released it …
     await vi.waitFor(() => expect(probe()).toBe("en|inline|demo:widget"), { timeout: 1_000 })
     // … while the retries still run: the query is pending after one failure.
-    expect(queryClient.getQueryState(["camunda7:profile-gate", {}])).toMatchObject({
+    expect(queryClient.getQueryState(["shell:settings", {}])).toMatchObject({
       status: "pending",
       fetchFailureCount: 1,
     })
@@ -283,7 +284,7 @@ async function viewHeadings(toolName: string | undefined): Promise<(string | nul
   bootstrapView(
     {
       default: () => (
-        <AppShellProviders widgets={VIEW_WIDGETS} profileTool={PROFILE_FEED}>
+        <AppShellProviders widgets={VIEW_WIDGETS}>
           <LocalizedAppView widgets={VIEW_WIDGETS} />
         </AppShellProviders>
       ),

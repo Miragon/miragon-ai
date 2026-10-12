@@ -72,8 +72,9 @@ export const enBuilder: MessageCatalog = {
   "builder.widget.job-panel.title": "Jobs",
   "builder.widget.job-panel.summary":
     "The engine's jobs with the exact totals of all jobs and of jobs without retries.",
-  "builder.widget.user-profile.title": "Settings",
-  "builder.widget.user-profile.summary": "Your language, default engine and saved dashboards.",
+  "builder.widget.settings.title": "Engine and dashboard settings",
+  "builder.widget.settings.summary":
+    "Which engines you pick from, your default engine and dashboards.",
   "builder.widget.cockpit-app.title": "Operations Cockpit",
   "builder.widget.cockpit-app.summary":
     "The whole cockpit with its navigation. It opens as a view of its own.",

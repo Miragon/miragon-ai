@@ -7,9 +7,9 @@ import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widge
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { CAMUNDA7_TOOLSETS, resolveCamunda7Toolset, type Camunda7Toolset } from "../lib/toolsets.js"
 import {
-  CAMUNDA7_SAVE_USER_PROFILE,
-  CAMUNDA7_SHOW_USER_PROFILE,
-  CAMUNDA7_USER_PROFILE_DATA,
+  CAMUNDA7_SAVE_SETTINGS,
+  CAMUNDA7_SHOW_SETTINGS,
+  CAMUNDA7_SETTINGS_DATA,
 } from "../tool-names.js"
 
 afterEach(() => {
@@ -60,32 +60,32 @@ const registeredToolNames = (toolset: Camunda7Toolset): string[] => register(too
 describe("registerUserProfileTools toolset filtering", () => {
   it("registers all three tools under operations", () => {
     expect(registeredToolNames("operations")).toEqual([
-      CAMUNDA7_SHOW_USER_PROFILE,
-      CAMUNDA7_USER_PROFILE_DATA,
-      CAMUNDA7_SAVE_USER_PROFILE,
+      CAMUNDA7_SHOW_SETTINGS,
+      CAMUNDA7_SETTINGS_DATA,
+      CAMUNDA7_SAVE_SETTINGS,
     ])
   })
 
   it("keeps the durable save tool out of a read-only deployment", () => {
     const names = registeredToolNames("read-only")
-    expect(names).toContain(CAMUNDA7_SHOW_USER_PROFILE)
-    expect(names).toContain(CAMUNDA7_USER_PROFILE_DATA)
-    expect(names).not.toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(names).toContain(CAMUNDA7_SHOW_SETTINGS)
+    expect(names).toContain(CAMUNDA7_SETTINGS_DATA)
+    expect(names).not.toContain(CAMUNDA7_SAVE_SETTINGS)
   })
 
   it("keeps save in operations and admin", () => {
-    expect(registeredToolNames("operations")).toContain(CAMUNDA7_SAVE_USER_PROFILE)
-    expect(registeredToolNames("admin")).toContain(CAMUNDA7_SAVE_USER_PROFILE)
+    expect(registeredToolNames("operations")).toContain(CAMUNDA7_SAVE_SETTINGS)
+    expect(registeredToolNames("admin")).toContain(CAMUNDA7_SAVE_SETTINGS)
   })
 
   it("fails closed for unknown and missing names, resolved like the plugin does", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     expect(registeredToolNames(resolveCamunda7Toolset("nonsense"))).not.toContain(
-      CAMUNDA7_SAVE_USER_PROFILE,
+      CAMUNDA7_SAVE_SETTINGS,
     )
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown toolset "nonsense"'))
     expect(registeredToolNames(resolveCamunda7Toolset(undefined))).not.toContain(
-      CAMUNDA7_SAVE_USER_PROFILE,
+      CAMUNDA7_SAVE_SETTINGS,
     )
   })
 })
@@ -99,10 +99,10 @@ describe("registerUserProfileTools toolset filtering", () => {
 describe("canSave mirrors the registered tool surface", () => {
   const feedCanSave = async (toolset: Camunda7Toolset) => {
     const { names, handlerFor } = register(toolset)
-    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
+    const result = await handlerFor(CAMUNDA7_SETTINGS_DATA)({}, CTX)
     return {
       canSave: feedPayload(result).canSave,
-      hasSaveTool: names.includes(CAMUNDA7_SAVE_USER_PROFILE),
+      hasSaveTool: names.includes(CAMUNDA7_SAVE_SETTINGS),
     }
   }
 
@@ -121,18 +121,18 @@ describe("canSave mirrors the registered tool surface", () => {
 
 describe("render-path contract (mcp-use 2 native fields)", () => {
   it("binds the show tool to a view named after the tool + the Apps-SDK _meta half", () => {
-    const def = register().definitionFor(CAMUNDA7_SHOW_USER_PROFILE)
-    expect(def.view).toMatchObject({ name: CAMUNDA7_SHOW_USER_PROFILE })
+    const def = register().definitionFor(CAMUNDA7_SHOW_SETTINGS)
+    expect(def.view).toMatchObject({ name: CAMUNDA7_SHOW_SETTINGS })
     // mcp-use refuses a view binding without an outputSchema.
     expect(def.outputSchema).toBeDefined()
     expect(def._meta).toMatchObject({
-      "openai/outputTemplate": `ui://views/${CAMUNDA7_SHOW_USER_PROFILE}.html`,
+      "openai/outputTemplate": `ui://views/${CAMUNDA7_SHOW_SETTINGS}.html`,
       "openai/widgetAccessible": true,
     })
   })
 
   it("marks the data feed app-only (visibility) + widget-accessible, without a view", () => {
-    const def = register().definitionFor(CAMUNDA7_USER_PROFILE_DATA)
+    const def = register().definitionFor(CAMUNDA7_SETTINGS_DATA)
     expect(def.visibility).toBe("app")
     expect(def.view).toBeUndefined()
     expect(def._meta).toMatchObject({ "openai/widgetAccessible": true })
@@ -141,7 +141,7 @@ describe("render-path contract (mcp-use 2 native fields)", () => {
   })
 
   it("keeps the save tool a plain model-visible tool (no view, no visibility)", () => {
-    const def = register().definitionFor(CAMUNDA7_SAVE_USER_PROFILE)
+    const def = register().definitionFor(CAMUNDA7_SAVE_SETTINGS)
     expect(def.view).toBeUndefined()
     expect(def.visibility).toBeUndefined()
     expect(def._meta).toBeUndefined()
@@ -156,7 +156,7 @@ describe("engine disclosure (#324)", () => {
         { id: "prod-b", baseUrl: "http://engine-b.internal:8410/engine-rest", environment: "eu" },
       ],
     } as unknown as EngineRegistry
-    const result = await register("operations", registry).handlerFor(CAMUNDA7_USER_PROFILE_DATA)({})
+    const result = await register("operations", registry).handlerFor(CAMUNDA7_SETTINGS_DATA)({})
     expect(feedPayload(result).availableEngines).toEqual([
       { id: "prod-a", environment: "default" },
       { id: "prod-b", environment: "eu" },
@@ -170,38 +170,46 @@ describe("caller round-trip", () => {
     const { handlerFor } = register()
 
     // The save and the read resolve the SAME record from the handler ctx.
-    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }, CTX)
-    const result = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
-    const profile = feedPayload(result).profile as { language: string } | undefined
-    expect(profile?.language).toBe("de")
+    await handlerFor(CAMUNDA7_SAVE_SETTINGS)({ defaultEngineId: "prod-b" }, CTX)
+    const result = await handlerFor(CAMUNDA7_SETTINGS_DATA)({}, CTX)
+    const profile = feedPayload(result).profile as { defaultEngineId?: string } | undefined
+    expect(profile?.defaultEngineId).toBe("prod-b")
 
-    const other = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)(
-      {},
-      { auth: { user: { id: "u-2" } } },
-    )
-    // Another caller sees the default: follow the host's language.
-    expect((feedPayload(other).profile as { language: string }).language).toBe("system")
+    const other = await handlerFor(CAMUNDA7_SETTINGS_DATA)({}, { auth: { user: { id: "u-2" } } })
+    // Another caller sees the default: no default engine.
+    expect(
+      (feedPayload(other).profile as { defaultEngineId?: string }).defaultEngineId,
+    ).toBeUndefined()
   })
 
   it("an explicitly declared local caller round-trips through the anonymous record", async () => {
     const store = createInMemoryProfileStore()
     const { handlerFor } = register("operations", undefined, store)
     const local = <T>(fn: () => T): T => runWithMcpRequestInfo({ anonymousCaller: true }, fn)
-    await local(() => handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }))
-    const result = await local(() => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
+    await local(() => handlerFor(CAMUNDA7_SAVE_SETTINGS)({ defaultEngineId: "prod-b" }))
+    const result = await local(() => handlerFor(CAMUNDA7_SETTINGS_DATA)({}))
     expect(feedPayload(result).canSave).toBe(true)
-    expect((await store.get("anonymous"))?.language).toBe("de")
+    expect((await store.get("anonymous"))?.modules?.camunda7).toMatchObject({
+      defaultEngineId: "prod-b",
+    })
   })
 
-  it("stores following the host's language, and summarizes it in English (#339)", async () => {
-    const { handlerFor } = register()
-    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }, CTX)
-    await handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "system" }, CTX)
+  // #346: the language is the shell's — this module reads it to word its
+  // summary and title, and never saves it.
+  it("summarizes in the language the record names, which the shell saves", async () => {
+    const store = createInMemoryProfileStore()
+    const { handlerFor, definitionFor } = register("operations", undefined, store)
+    const saveInput = definitionFor(CAMUNDA7_SAVE_SETTINGS).inputSchema as { shape: object }
+    expect(Object.keys(saveInput.shape)).not.toContain("language")
 
-    const result = await handlerFor(CAMUNDA7_SHOW_USER_PROFILE)({}, CTX)
-    expect(JSON.stringify(feedPayload(result))).toContain('"language":"system"')
-    // The host locale `system` follows never reaches the server: English summary.
-    expect(result.content?.[0]?.text).toContain("User profile: language system")
+    // Following the host's locale, which never reaches the server: English.
+    const system = await handlerFor(CAMUNDA7_SHOW_SETTINGS)({}, CTX)
+    expect(system.content?.[0]?.text).toBe("camunda7 settings: all engines.")
+    expect(JSON.stringify(system.structuredContent)).not.toContain('"language"')
+
+    await store.save("user-1", { language: "de" })
+    const german = await handlerFor(CAMUNDA7_SHOW_SETTINGS)({}, CTX)
+    expect(german.content?.[0]?.text).toBe("camunda7-Einstellungen: alle Engines.")
   })
 })
 
@@ -214,7 +222,7 @@ describe("clearing an optional id from the settings page", () => {
   it('"" clears the saved default engine and default dashboard, other fields stay', async () => {
     const store = createInMemoryProfileStore()
     const { handlerFor } = register("operations", undefined, store)
-    const save = (params: unknown) => handlerFor(CAMUNDA7_SAVE_USER_PROFILE)(params, CTX)
+    const save = (params: unknown) => handlerFor(CAMUNDA7_SAVE_SETTINGS)(params, CTX)
     await save({ defaultEngineId: "prod-a", defaultDashboardId: "d1", pinnedDashboardIds: ["d1"] })
 
     const cleared = await save({ defaultEngineId: "", defaultDashboardId: "" })
@@ -222,7 +230,7 @@ describe("clearing an optional id from the settings page", () => {
     expect(feedPayload(cleared).defaultDashboardId).toBeUndefined()
     expect(feedPayload(cleared).pinnedDashboardIds).toEqual(["d1"])
 
-    const view = await handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, CTX)
+    const view = await handlerFor(CAMUNDA7_SETTINGS_DATA)({}, CTX)
     const profile = feedPayload(view).profile as Record<string, unknown>
     expect(profile.defaultEngineId).toBeUndefined()
     expect(profile.defaultDashboardId).toBeUndefined()
@@ -241,14 +249,14 @@ describe("clearing an optional id from the settings page", () => {
 describe("identity gating (OAuth is the only identity)", () => {
   it("reports canSave false to the view when the request carries no identity", async () => {
     const { handlerFor } = register()
-    const result = await runWithMcpRequestInfo({}, () => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
+    const result = await runWithMcpRequestInfo({}, () => handlerFor(CAMUNDA7_SETTINGS_DATA)({}))
     expect(feedPayload(result).canSave).toBe(false)
   })
 
   it("save refuses without identity, pointing at MCP_OAUTH", async () => {
     const { handlerFor } = register()
     const result = await runWithMcpRequestInfo({}, () =>
-      handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }),
+      handlerFor(CAMUNDA7_SAVE_SETTINGS)({ defaultEngineId: "prod-b" }),
     )
     expect(result.isError).toBe(true)
     expect(result.content?.[0]?.text).toContain("MCP_OAUTH")
@@ -273,7 +281,7 @@ describe("identity gating (OAuth is the only identity)", () => {
     ["admin", "no sign-in", false, "noSignIn"],
   ] as const)("%s, %s: canSave %s, reason %s", async (toolset, caller, canSave, reason) => {
     const { handlerFor } = register(toolset)
-    const result = await callers[caller]((ctx) => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}, ctx))
+    const result = await callers[caller]((ctx) => handlerFor(CAMUNDA7_SETTINGS_DATA)({}, ctx))
     expect(feedPayload(result).canSave).toBe(canSave)
     expect(feedPayload(result).readOnlyReason).toBe(reason)
   })
@@ -281,10 +289,10 @@ describe("identity gating (OAuth is the only identity)", () => {
   it("an authenticated user gets canSave true and a working round-trip", async () => {
     const { handlerFor } = register()
     const under = <T>(fn: () => T): T => runWithMcpRequestInfo({ authUserId: "user-7" }, fn)
-    await under(() => handlerFor(CAMUNDA7_SAVE_USER_PROFILE)({ language: "de" }))
-    const result = await under(() => handlerFor(CAMUNDA7_USER_PROFILE_DATA)({}))
+    await under(() => handlerFor(CAMUNDA7_SAVE_SETTINGS)({ defaultEngineId: "prod-b" }))
+    const result = await under(() => handlerFor(CAMUNDA7_SETTINGS_DATA)({}))
     expect(feedPayload(result).canSave).toBe(true)
-    const profile = feedPayload(result).profile as { language: string } | undefined
-    expect(profile?.language).toBe("de")
+    const profile = feedPayload(result).profile as { defaultEngineId?: string } | undefined
+    expect(profile?.defaultEngineId).toBe("prod-b")
   })
 })

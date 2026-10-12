@@ -4,6 +4,7 @@ import {
   useHostActions,
   type HostActions,
 } from "@miragon/mcp-toolkit-ui/app"
+import { SHELL_SHOW_SETTINGS } from "@miragon-ai/widget-shell/widgets"
 import {
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
   CAMUNDA7_SHOW_ENGINE_HEALTH,
@@ -14,7 +15,6 @@ import {
   CAMUNDA7_SHOW_PROCESS_INCIDENTS,
   CAMUNDA7_SHOW_PROCESS_INSTANCES,
   CAMUNDA7_SHOW_PROCESS_LIST,
-  CAMUNDA7_SHOW_USER_PROFILE,
 } from "../tool-names.js"
 
 /**
@@ -84,7 +84,8 @@ export function navigateViaHost(host: HostActions, intent: NavIntent): void {
       return
     case "settings":
       host.showWidget(
-        buildShowWidgetIntent(CAMUNDA7_SHOW_USER_PROFILE, "Open my profile & settings"),
+        // The whole page (language + every module's section), the shell's.
+        buildShowWidgetIntent(SHELL_SHOW_SETTINGS, "Open my settings"),
       )
       return
     case "cluster-detail":

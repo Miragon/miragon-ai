@@ -208,8 +208,9 @@ a deployment runs read-only until it names its toolsets.
 The widgets follow the toolset: an action button whose tool the toolset drops (retry, resolve
 incident, complete task, edit variable, suspend, cancel) is hidden, not disabled — the default
 anonymous deployment shows no write buttons. The dashboard builder (`get-builder-catalogue`,
-`save/list/load/delete-dashboard`) exists only under `MCP_OAUTH` and while no active module runs
-read-only; `render-view`, `refresh-view` and `get-framework-manifest` are always there.
+`save/list/load/delete-dashboard`) and the language save (`shell_save_settings`) exist only under
+`MCP_OAUTH` and while no active module runs read-only; `render-view`, `refresh-view`,
+`get-framework-manifest` and the settings page (`shell_show_settings`) are always there.
 
 ## Configuration
 

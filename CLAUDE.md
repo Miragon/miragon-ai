@@ -155,7 +155,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    BPMN/DMN is code execution inside the engine JVM (JUEL, scripts) — never relax that
    gate or fold it into a toolset. Tools registered outside the registrar (the
    widget-tools path) that perform durable writes must honor the toolset themselves —
-   pattern: `camunda7_save_user_profile` in `src/tools/user-profile.ts`. An ESLint gate
+   pattern: `camunda7_save_settings` in `src/tools/user-profile.ts`. An ESLint gate
    (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()` — also via a
    computed key, `.call`/`.bind`/`.apply`, destructuring (declaration or assignment, incl.
    string keys) and `Reflect.get` (string or template key), `.ts` and `.tsx`; an inline
@@ -562,9 +562,11 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `authenticated` only when it actually INSTALLED OAuth — never inferred from an env var;
    every root builds that provider with the shared `oauthFromEnv` (`MCP_OAUTH`).
    Framework durable writes no module toolset filters (the toolkit builder's
-   `get-builder-catalogue` + `save/list/load/delete-dashboard`) are registered only when
-   `frameworkWritesAllowed(boot)` holds — OAuth installed AND no active module on its
-   read-only floor; `render-view`/`refresh-view`/`get-framework-manifest` stay always. The
+   `get-builder-catalogue` + `save/list/load/delete-dashboard`, the shell's
+   `shell_save_settings`) are registered only when `frameworkWritesAllowed(boot)` holds —
+   OAuth installed AND no active module on its read-only floor;
+   `render-view`/`refresh-view`/`get-framework-manifest` and the shell's
+   `shell_show_settings`/`shell_settings_data` stay always. The
    app's `module-contract.ts` instantiates it with ITS `SharedResources` and its `setup.ts`
    only declares the module list and wires `SharedResources` (profile store +
    `fetchBpmnXml`, the camunda7 BPMN-XML lookup injected into the analytics heatmap and
@@ -576,7 +578,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    components live in packages — and no boot plumbing either. The bundle root's provider
    stack (`AppShellProviders`: host context + display mode → host document → host
    bridge → `ProfileGate` → host widget registry; order is load-bearing; the language
-   resolves explicit profile > host context > English, the theme host context > OS (no
+   resolves explicit profile (the shell's own `shell_settings_data`, no host names a
+   feed) > host context > English, the theme host context > OS (no
    in-app switch), applied to `.dark`, `data-theme` and `color-scheme` alike; `HostDocument`
    applies the host's style variables, then the toolkit's `adoptHostFontVariables`) plus
    `LocalizedAppView` (the toolkit's `McpAppView` with its own en/de chrome catalog and
@@ -630,9 +633,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    feeds (reference: `useAnalyticsActive` → `analytics_settings_data`, gating camunda7's
    cross-engine view) and appears once confirmed. Graceful degradation hides a stale raw
    name at runtime, so `apps/mcp-server-camunda7/test/tool-name-refs.test.ts` checks every
-   `<module>_…` string literal in app and package sources (incl. the composition root's
-   hardcoded profile feed) against the full booted tool surface.
-   The settings page follows the same tiers: each module
+   `<module>_…` string literal in app and package sources (the shell's `shell_…` tools
+   included) against the full booted tool surface.
+   The settings page is the SHELL's (#346): `createShellPlugin({ profileStore, allowSave })`
+   registers `shell_show_settings` (the page, `shell:settings-page`, also the cockpit's
+   settings tab), `shell_settings_data` (its language section, `shell:settings`, and what
+   `ProfileGate` reads) and `shell_save_settings` (the record-level `language`, gated by
+   `frameworkWritesAllowed(boot)`); no connector owns the language or the page, and every
+   host bundle spreads widget-shell's `shellWidgets`. It follows the same tiers: each module
    owns its settings section (widget + `*_data` feed + save tool; reference:
    `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
    `analytics:read-only`), its slice persists under `profile.modules.<module>`
@@ -640,16 +648,18 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    excludes `modules`), and composed views reference foreign section widgets by raw
    id — resolved through `HostWidgetsProvider` (host root) and dropped by
    `filterLayoutToWidgets` when unresolvable, so a missing module's section disappears
-   instead of erroring. The settings LAYOUT is not hand-maintained: `settingsLayout`
-   (`camunda7-connector/src/widgets/cockpit-app/views.ts`) assembles the page from the
-   HOST's widget registry — camunda7's own `camunda7:user-profile` panel first, then one
-   row per `<module>:settings` id in registration order — so a custom module in a
-   composed server contributes its section without an edit in the camunda7 package.
+   instead of erroring (a bundled section whose module is inactive hides itself once its
+   feed's tool answers "not found", `classifyError(…).kind === "notOnServer"`). The
+   settings LAYOUT is not hand-maintained: `settingsLayout` (`@miragon-ai/widget-shell/widgets`)
+   assembles the page from the HOST's widget registry — the shell's `shell:settings`
+   section first, then one row per `<module>:settings` id in registration order (camunda7's
+   is `camunda7:settings`: engines and dashboards) — so a custom module in a composed
+   server contributes its section without an edit in any package.
    The convention (`<module>:settings`) is therefore load-bearing, and the failure mode
    stays silent (a section whose widget never reaches the host registry is simply
    absent), so `apps/mcp-server-camunda7/test/widget-registry.test.ts` asserts the
-   assembled layout against both module catalogues (the template test does the same for
-   its modules). Save-input schemas at tool
+   assembled layout against both module catalogues and the shell's (the template test
+   does the same for its modules). Save-input schemas at tool
    boundaries must be default-FREE (zod 4 re-applies `.default()`s through `.partial()`,
    materializing omitted fields into silent resets — derive them with `withoutDefaults`
    from `@miragon-ai/widget-shell/server`; see

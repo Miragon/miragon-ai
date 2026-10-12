@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
 import {
-  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_SAVE_SETTINGS,
   CAMUNDA7_WIDGET_ACTIONS,
   CAMUNDA7_WIDGET_ACTIONS_DATA,
 } from "../tool-names.js"
@@ -34,7 +34,7 @@ async function feedSettled() {
 }
 
 /** Every widget write offered — the profile save is the view's own `canSave`. */
-const EVERY_WRITE = [...CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_SAVE_USER_PROFILE]
+const EVERY_WRITE = [...CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_SAVE_SETTINGS]
 
 describe("every in-widget write renders its control only where it is allowed", () => {
   it.each(GATING_SITES)(

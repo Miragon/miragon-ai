@@ -23,7 +23,7 @@ import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
  */
 
 const RENDER_TOOL = "camunda7_show_process_list"
-const PROFILE_FEED = "camunda7_user_profile_data"
+const PROFILE_FEED = "shell_settings_data"
 /** The toolkit's `DEFAULT_ASSUME_STRIPPED_AFTER_MS` — the recovery grace timer. */
 const RECOVERY_GRACE_MS = 2_500
 /**

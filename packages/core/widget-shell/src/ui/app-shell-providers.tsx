@@ -8,8 +8,6 @@ import { ViewHostBridge } from "./shell-host.js"
 export interface AppShellProvidersProps {
   /** The host bundle map — also provided to composed views via HostWidgetsProvider. */
   widgets: Record<string, WidgetComponent>
-  /** Name of the user-profile data feed for the ProfileGate (the profile language). */
-  profileTool: string
   children: ReactNode
 }
 
@@ -22,12 +20,12 @@ export interface AppShellProvidersProps {
  * read the host context it provides, the gate needs the host bridge) — hosts
  * compose their app-specific layers (e.g. a standalone drill-in shell) inside.
  */
-export function AppShellProviders({ widgets, profileTool, children }: AppShellProvidersProps) {
+export function AppShellProviders({ widgets, children }: AppShellProvidersProps) {
   return (
     <ViewHostBridge>
       <HostDocument>
         <McpUseHostBridgeProvider>
-          <ProfileGate profileTool={profileTool}>
+          <ProfileGate>
             <HostWidgetsProvider widgets={widgets}>{children}</HostWidgetsProvider>
           </ProfileGate>
         </McpUseHostBridgeProvider>

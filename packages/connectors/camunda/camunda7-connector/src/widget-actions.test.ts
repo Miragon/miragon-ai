@@ -3,11 +3,7 @@ import { join } from "node:path"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
 import { createPlugin } from "./plugin.js"
-import {
-  CAMUNDA7_SAVE_USER_PROFILE,
-  CAMUNDA7_USER_PROFILE_DATA,
-  CAMUNDA7_WIDGET_ACTIONS,
-} from "./tool-names.js"
+import { CAMUNDA7_SAVE_SETTINGS, CAMUNDA7_WIDGET_ACTIONS } from "./tool-names.js"
 import { GATING_SITES } from "./widgets/action-gating.sites.js"
 import { WRITE_POLICY } from "./widgets/lib/write-policy.js"
 import {
@@ -100,7 +96,7 @@ describe("every in-widget write goes through useEngineAction", () => {
   })
 
   it("runs only registered writes, each one listed in CAMUNDA7_WIDGET_ACTIONS (or self-gated)", () => {
-    const listed = new Set<string>([...CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_SAVE_USER_PROFILE])
+    const listed = new Set<string>([...CAMUNDA7_WIDGET_ACTIONS, CAMUNDA7_SAVE_SETTINGS])
     for (const ref of actionRefs()) {
       expect(isWrite(ref.name), `${at(ref)}: ${ref.name} is not a registered write`).toBe(true)
       expect(
@@ -123,11 +119,7 @@ describe("every in-widget write goes through useEngineAction", () => {
   })
 
   it("invalidates only query namespaces some view actually uses", () => {
-    // The app root's profile gate derives its key from the feed name (widget-shell ProfileGate).
-    const roots = new Set([
-      ...scan.keyRoots,
-      `${CAMUNDA7_USER_PROFILE_DATA.split("_")[0]}:profile-gate`,
-    ])
+    const roots = new Set(scan.keyRoots)
     for (const [write, policy] of Object.entries(WRITE_POLICY)) {
       for (const namespace of policy.invalidates) {
         expect(roots.has(namespace), `${write} invalidates ${namespace}, which no query uses`).toBe(

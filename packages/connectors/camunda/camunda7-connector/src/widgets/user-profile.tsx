@@ -1,28 +1,24 @@
 import { useState } from "react"
-import { WidgetHeader, useToolQuery } from "@miragon/mcp-toolkit-ui"
+import { useToolQuery } from "@miragon/mcp-toolkit-ui"
 import {
-  LANGUAGES,
-  NativeSelect,
   SettingsCard,
-  SettingsField,
   WidgetShell,
+  classifyError,
   useDetailView,
   useResetOnChange,
 } from "@miragon-ai/widget-shell/widgets"
 
-import { CAMUNDA7_SAVE_USER_PROFILE, CAMUNDA7_USER_PROFILE_DATA } from "../tool-names.js"
+import { CAMUNDA7_SAVE_SETTINGS, CAMUNDA7_SETTINGS_DATA } from "../tool-names.js"
 import type { UserProfileView } from "../lib/profile-schema.js"
 import { useT } from "../messages/use-t.js"
 import { useEngineAction } from "./lib/engine-action.js"
 import { writeFeedback } from "./lib/write-feedback.js"
 import { ProfileModelContext } from "./user-profile-context.js"
 import {
-  LANGUAGE_LABELS,
   allowedIn,
   changedPreferences,
   fromProfile,
   isDirty,
-  parseEnum,
   pickableDashboards,
   type DashboardSummary,
   type FormState,
@@ -35,19 +31,23 @@ import {
 } from "./user-profile-sections.js"
 
 /**
- * Profile & settings panel. Self-fetches the signed-in caller's profile +
- * configured engine list (or receives it via `initialData` from the
- * `camunda7_show_user_profile` tool) and provides the profile language to its
- * own subtree so the panel is localized in both the cockpit settings tab and a
- * standalone render. There is no theme field: the widgets follow the host's
- * theme.
+ * camunda7's settings section (`camunda7:settings`) — one section of the
+ * shell's settings page, next to the shell's language and every other
+ * module's section. Self-fetches the signed-in caller's camunda7 settings +
+ * the configured engine list (or receives them via `initialData` from
+ * `camunda7_show_settings`). Where camunda7 is bundled but not active its
+ * feed's tool is missing, and the section hides itself like any module's.
  */
 export function UserProfileWidget({ data: initialData = null }: { data?: UserProfileView | null }) {
   const t = useT()
-  const { data: view, guard } = useDetailView<UserProfileView>({
+  const {
+    data: view,
+    guard,
+    loadError,
+  } = useDetailView<UserProfileView>({
     initialData,
-    key: ["camunda7:user-profile"],
-    tool: CAMUNDA7_USER_PROFILE_DATA,
+    key: ["camunda7:settings"],
+    tool: CAMUNDA7_SETTINGS_DATA,
     args: {},
     ready: true,
     loadingText: t("profile.loading"),
@@ -55,7 +55,7 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
     retryText: t("viewState.retry"),
   })
 
-  if (!view) return guard
+  if (!view) return loadError && classifyError(loadError).kind === "notOnServer" ? null : guard
 
   return (
     <WidgetShell>
@@ -67,8 +67,8 @@ export function UserProfileWidget({ data: initialData = null }: { data?: UserPro
 /**
  * The shell-less form body — localized via `useT` (locale from the global
  * ProfileGate). Wrapped in `WidgetShell` by `UserProfileWidget` above. The
- * settings page has ONE title (#322 U27): this panel's, "Einstellungen";
- * each card under it is a section.
+ * settings page has ONE title (#322 U27), the shell page's; this section
+ * heads itself with an h2 and its cards with h3.
  */
 function ProfilePanel({ view }: { view: UserProfileView }) {
   const t = useT()
@@ -82,13 +82,13 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
     view.profile.pinnedDashboardIds ?? [],
   )
 
-  // A read-only deployment never registered camunda7_save_user_profile — the
+  // A read-only deployment never registered camunda7_save_settings — the
   // fields stay visible but disabled, and the model must not be told about a
   // write tool it cannot call. The view decides (it also knows the caller),
   // so the save is gated by `canSave`, not by the engine-write feed.
   const canSave = view.canSave
   const save = useEngineAction<Record<string, unknown>>({
-    tool: CAMUNDA7_SAVE_USER_PROFILE,
+    tool: CAMUNDA7_SAVE_SETTINGS,
     allowed: canSave,
   })
   const engineIds = view.availableEngines.map((e) => e.id)
@@ -160,32 +160,14 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
         dashboardsAnswered={dashboardsQuery.isSuccess}
       />
 
-      <WidgetHeader title={t("profile.heading")} sub={<span>{t("profile.subtitle")}</span>} />
+      <div>
+        <h2 className="text-section">{t("profile.heading")}</h2>
+        <p className="text-muted-foreground text-small mt-1">{t("profile.subtitle")}</p>
+      </div>
 
       {!canSave && view.readOnlyReason && <ReadOnlyNotice reason={view.readOnlyReason} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SettingsCard title={t("profile.section.general")} titleAs="h2">
-          <SettingsField
-            label={t("profile.field.language")}
-            help={t("profile.field.language.help")}
-          >
-            <NativeSelect
-              value={form.language}
-              disabled={!canSave}
-              onChange={(e) =>
-                set("language", parseEnum(e.target.value, LANGUAGES) ?? form.language)
-              }
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l} value={l}>
-                  {l === "system" ? t("language.system") : LANGUAGE_LABELS[l]}
-                </option>
-              ))}
-            </NativeSelect>
-          </SettingsField>
-        </SettingsCard>
-
         <EnginesCard
           view={view}
           form={form}
@@ -195,7 +177,7 @@ function ProfilePanel({ view }: { view: UserProfileView }) {
           onDefaultEngine={(id) => set("defaultEngineId", id)}
         />
 
-        <SettingsCard title={t("profile.section.dashboards")} titleAs="h2">
+        <SettingsCard title={t("profile.section.dashboards")}>
           <DashboardsCardBody
             unavailable={dashboardsQuery.isError}
             dashboards={dashboards}

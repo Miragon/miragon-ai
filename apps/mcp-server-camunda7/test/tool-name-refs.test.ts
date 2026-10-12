@@ -20,11 +20,9 @@ import { scanSources } from "./source-scan.js"
  * the heatmap overlay silently absent — and the module's own tests stub the
  * same stale literal. Only the app sees every module at once, so this is
  * where the names are checked: every `<module>_…` string literal in any
- * package's or app's non-test source must name a tool of the full surface.
- * The apps count too: the composition root hardcodes the profile feed
- * (`src/ui/main.tsx`) so the host bundle needs no build-time dependency on a
- * module's constants — and a stale name there silently falls back to the
- * host's language (or English) for every widget.
+ * package's or app's non-test source must name a tool of the full surface —
+ * the shell's own tools (`shell_…`, widget-shell's settings contract, which
+ * `ProfileGate` reads the language from in every view) included.
  */
 
 interface ToolNameRef {
@@ -79,9 +77,9 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     toolParams = new Map(
       listed.map((tool) => [tool.name, Object.keys(tool.inputSchema.properties ?? {})]),
     )
-    // Module prefixes come from the surface itself: `camunda7_…`, `analytics_…`.
+    // Prefixes come from the surface itself: `camunda7_…`, `analytics_…`, `shell_…`.
     const prefixes = [...new Set(names.flatMap((n) => /^([a-z0-9]+)_/.exec(n)?.[1] ?? []))]
-    expect(prefixes.sort()).toEqual(["analytics", "camunda7"])
+    expect(prefixes.sort()).toEqual(["analytics", "camunda7", "shell"])
     refs = scanSources((file, text) => findToolNameLiterals(file, text, prefixes))
     // One-line text helpers (`engineArg`) resolve by name across the sources;
     // a name declared twice is ambiguous and stays a placeholder.
@@ -115,11 +113,11 @@ describe("raw tool-name literals name real tools (full surface)", () => {
     )
   })
 
-  it("sees the composition root's hardcoded profile feed (apps are scanned too)", () => {
-    const appRefs = refs
-      .filter((r) => r.at.startsWith("apps/mcp-server-camunda7/src/ui/main.tsx:"))
+  it("sees the shell's settings contract (the core package is scanned too)", () => {
+    const shellRefs = refs
+      .filter((r) => r.at.startsWith("packages/core/widget-shell/src/shell-settings-contract.ts:"))
       .map((r) => r.name)
-    expect(appRefs).toContain("camunda7_user_profile_data")
+    expect(shellRefs).toEqual(["shell_show_settings", "shell_settings_data", "shell_save_settings"])
   })
 
   // #329: a prompt that tells the model to pass a filter the tool does not

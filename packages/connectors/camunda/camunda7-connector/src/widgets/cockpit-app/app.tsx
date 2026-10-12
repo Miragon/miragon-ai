@@ -10,13 +10,14 @@ import {
 } from "@miragon/mcp-toolkit-ui"
 import { HostModelContext, WidgetRenderer } from "@miragon/mcp-toolkit-ui/app"
 import {
+  filterLayoutToWidgets,
   Icon,
+  type LucideIcon,
   NativeSelect,
-  ViewDataState,
-  WidgetShell,
   useHostWidgets,
   useResetOnChange,
-  type LucideIcon,
+  ViewDataState,
+  WidgetShell,
 } from "@miragon-ai/widget-shell/widgets"
 import { ChevronRight, Layers, LayoutDashboard, Settings, TriangleAlert } from "lucide-react"
 import type { CockpitAppData } from "../../view-models.js"
@@ -30,7 +31,7 @@ import { cockpitContext, fleetContext, landingContext } from "./model-context.js
 import { translator } from "../../messages/index.js"
 import { CAMUNDA7_LIST_ENGINES } from "../../tool-names.js"
 import { NavBreadcrumb } from "./breadcrumb.js"
-import { cockpitViews, filterLayoutToWidgets } from "./views.js"
+import { cockpitViews } from "./views.js"
 import { useAnalyticsActive } from "./analytics-probe.js"
 import { FleetView } from "./fleet-view.js"
 import { LandingChooser, LandingHeader } from "./landing.js"
@@ -528,12 +529,7 @@ export function CockpitApp({ data }: { data: CockpitAppData | null }) {
           <EngineChromeProvider>
             <WidgetRenderer
               layout={filterLayoutToWidgets(
-                cockpitViews[current.section](buildViewParams(current, engineId), {
-                  // Composed views (the settings tab) assemble their rows from
-                  // what this host actually registered — including modules this
-                  // package has never heard of.
-                  widgetIds: Object.keys(cockpitWidgets),
-                }),
+                cockpitViews[current.section](buildViewParams(current, engineId)),
                 cockpitWidgets,
               )}
               keys={{}}

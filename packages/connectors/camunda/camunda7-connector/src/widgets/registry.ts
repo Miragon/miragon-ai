@@ -77,7 +77,8 @@ export const camunda7BaseWidgets: Record<string, WidgetComponent> = {
     ProcessInstancesWidget,
     "camunda7:processInstances",
   ),
-  // Self-fetching: loads camunda7_user_profile_data for the signed-in caller (no
-  // pipeline step), eager-rendered by camunda7_show_user_profile.
-  "camunda7:user-profile": adaptDataWidget(UserProfileWidget, "camunda7:userProfile"),
+  // Self-fetching: loads camunda7_settings_data for the signed-in caller (no
+  // pipeline step), eager-rendered by camunda7_show_settings; a section of the
+  // shell's settings page (`<module>:settings`).
+  "camunda7:settings": adaptDataWidget(UserProfileWidget, "camunda7:settings"),
 }

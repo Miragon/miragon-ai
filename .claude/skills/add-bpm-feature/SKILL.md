@@ -413,7 +413,7 @@ wires them; these files are the documented exception that uses `server.tool()` d
   `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` enforces the widget `_meta` on
   every `*_show_*` tool and app-only visibility on every `*_data` feed **by name**.
 - A widget-path tool that performs a durable write must honor the toolset itself —
-  follow `camunda7_save_user_profile` in `src/tools/user-profile.ts`
+  follow `camunda7_save_settings` in `src/tools/user-profile.ts`
   (`resolveCamunda7Toolset` + `isToolInToolset`): a missing toolset resolves to
   `read-only` exactly like an unknown name — never treat `undefined` as "everything".
 - Every in-widget write runs through `useEngineAction({ tool, target, resetOn, available })`

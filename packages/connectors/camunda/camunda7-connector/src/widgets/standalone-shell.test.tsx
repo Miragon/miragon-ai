@@ -4,7 +4,11 @@ import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost, type HostActionLog } from "@miragon/mcp-toolkit-ui/app"
-import { HostWidgetsProvider } from "@miragon-ai/widget-shell/widgets"
+import {
+  HostWidgetsProvider,
+  SettingsPageWidget,
+  SHELL_SETTINGS_PAGE_WIDGET,
+} from "@miragon-ai/widget-shell/widgets"
 import { useNav } from "./navigation.js"
 import { Camunda7StandaloneShell, findStepEngineId } from "./standalone-shell.js"
 
@@ -46,10 +50,17 @@ const ForeignSection = () => <div>analytics-section</div>
 /** A CUSTOM module's section — an id this package has never heard of. */
 const CustomSection = () => <div>acme-section</div>
 
-/** The shell as the host root mounts it: inside the full-registry provider. */
+/**
+ * The shell as the host root mounts it: inside the full-registry provider,
+ * which bundles the shell's settings page next to the modules' sections.
+ */
 const HarnessWithHostWidgets: ComponentType<Record<string, unknown>> = () => (
   <HostWidgetsProvider
-    widgets={{ "analytics:settings": ForeignSection, "acme:settings": CustomSection }}
+    widgets={{
+      [SHELL_SETTINGS_PAGE_WIDGET]: SettingsPageWidget,
+      "analytics:settings": ForeignSection,
+      "acme:settings": CustomSection,
+    }}
   >
     <Camunda7StandaloneShell>
       <DrillProbe />
@@ -116,7 +127,7 @@ describe("Camunda7StandaloneShell", () => {
 
   it("drills client-side without a chat follow-up and keeps the origin mounted", async () => {
     const actions: HostActionLog[] = []
-    renderShell({ camunda7_user_profile_data: PROFILE_FEED }, actions)
+    renderShell({ camunda7_settings_data: PROFILE_FEED }, actions)
 
     fireEvent.click(screen.getByText("drill-settings"))
 
@@ -131,21 +142,21 @@ describe("Camunda7StandaloneShell", () => {
 
   it("resolves a composed view's FOREIGN section widget from the host registry", async () => {
     const actions: HostActionLog[] = []
-    renderShell({ camunda7_user_profile_data: PROFILE_FEED }, actions, HarnessWithHostWidgets)
+    renderShell({ camunda7_settings_data: PROFILE_FEED }, actions, HarnessWithHostWidgets)
 
     fireEvent.click(screen.getByText("drill-settings"))
 
     await screen.findByRole("navigation", { name: "Breadcrumb" })
-    // The settings view composes camunda7's own panel + one row per
-    // `<module>:settings` widget the host registered — including a CUSTOM
-    // module's section, which this package knows nothing about.
+    // The settings view is the shell's page: one row per `<module>:settings`
+    // widget the host registered — including a CUSTOM module's section,
+    // which this package knows nothing about.
     expect(await screen.findByText("analytics-section")).toBeTruthy()
     expect(await screen.findByText("acme-section")).toBeTruthy()
   })
 
   it("degrades to own widgets when the host provides no registry", async () => {
     const actions: HostActionLog[] = []
-    renderShell({ camunda7_user_profile_data: PROFILE_FEED }, actions)
+    renderShell({ camunda7_settings_data: PROFILE_FEED }, actions)
 
     fireEvent.click(screen.getByText("drill-settings"))
 
@@ -155,7 +166,7 @@ describe("Camunda7StandaloneShell", () => {
 
   it("pops back to the origin via the root crumb", async () => {
     const actions: HostActionLog[] = []
-    renderShell({ camunda7_user_profile_data: PROFILE_FEED }, actions)
+    renderShell({ camunda7_settings_data: PROFILE_FEED }, actions)
 
     fireEvent.click(screen.getByText("drill-settings"))
     await screen.findByRole("navigation", { name: "Breadcrumb" })

@@ -55,15 +55,16 @@ export const de: MessageCatalog = {
     `Engine ${String(engineId)} ist nicht mehr in deiner Engine-Liste.`,
 
   // ── Profil-/Einstellungs-Panel ──────────────────────────────────────────────
-  "profile.heading": "Einstellungen",
-  "profile.subtitle": "Deine Sprache, Engines und Dashboards, in jedem Chat.",
+  "profile.heading": "Engines und Dashboards",
+  "profile.subtitle":
+    "Aus welchen Engines du wählst und welche Dashboards zuerst kommen, in jedem Chat.",
   "profile.save": "Speichern",
   "profile.saving": "Wird gespeichert…",
   "profile.discard": "Änderungen verwerfen",
   "profile.saveBar.label": "Einstellungen speichern",
   "profile.saveBar.unsaved":
-    "Deine Änderungen an Sprache, Engines oder Dashboards sind noch nicht gespeichert.",
-  "profile.saveBar.clean": "Sprache, Engines und Dashboards sind gespeichert.",
+    "Deine Änderungen an Engines oder Dashboards sind noch nicht gespeichert.",
+  "profile.saveBar.clean": "Engines und Dashboards sind gespeichert.",
   "profile.saveError":
     "Die Einstellungen konnten nicht gespeichert werden. Deine Eingaben sind noch da, versuch es noch mal.",
   "profile.readOnly.title": "Die Einstellungen sind hier nur lesbar",
@@ -72,15 +73,10 @@ export const de: MessageCatalog = {
   "profile.readOnly.noSignIn":
     "Diese Verbindung hat keine Anmeldung und weiß deshalb nicht, für wen sie speichern soll. Speichern geht nur über eine Verbindung mit Anmeldung: Bitte deine Administration, sie einzurichten.",
   "profile.loading": "Wird geladen…",
-  "profile.none": "Kein Profil verfügbar",
+  "profile.none": "Keine Einstellungen verfügbar",
 
-  "profile.section.general": "Sprache",
   "profile.section.engines": "Engines",
   "profile.section.dashboards": "Dashboards",
-
-  "profile.field.language": "Sprache",
-  "profile.field.language.help":
-    "„Automatisch“ übernimmt die Sprache deiner Chat-App. Eine feste Sprache gilt auch für das, was die Tools der AI zurückmelden.",
 
   "profile.field.allEngines": "Alle Engines erlauben",
   "profile.field.allEngines.help":
@@ -105,16 +101,13 @@ export const de: MessageCatalog = {
   "profile.field.pinnedDashboards": "Angepinnte Dashboards",
   "profile.field.pinnedDashboards.help": "Stehen in Dashboard-Auswahlen oben.",
 
-  "profile.summary": ({ language, engines, defaultDashboard }) =>
-    `Benutzerprofil: Sprache ${String(language)}, ${String(engines)}${String(defaultDashboard)}.`,
+  "profile.summary": ({ engines, defaultDashboard }) =>
+    `camunda7-Einstellungen: ${String(engines)}${String(defaultDashboard)}.`,
   "profile.summary.allEngines": "alle Engines",
   "profile.summary.someEngines": ({ count }) =>
     countOf(count, "erlaubte Engine", "erlaubte Engines"),
   "profile.summary.defaultDashboard": ({ id }) =>
     `, Standard-Dashboard „${String(id)}" (öffnen mit load-dashboard)`,
-
-  // ── Aufzählungs-Optionen ────────────────────────────────────────────────────
-  "language.system": "Automatisch (wie die Chat-App)",
 
   // ── Ansichtstitel der Show-Tools (Werkzeugleiste des Hosts) ─────────────────
   "viewTitle.cockpit": "Cockpit",
@@ -125,7 +118,7 @@ export const de: MessageCatalog = {
   "viewTitle.bpmnViewer": "BPMN-Diagramm",
   "viewTitle.jobPanel": "Jobs",
   "viewTitle.engineHealth": "Engine-Übersicht",
-  "viewTitle.userProfile": "Einstellungen",
+  "viewTitle.settings": "Engines und Dashboards",
   "viewTitle.clusterDetail": ({ activity }) => `Cluster: ${String(activity)}`,
 
   // ── Modellseitige Widget-Tool-Zusammenfassungen (c7sum.*) ────────────────────

@@ -5,6 +5,7 @@ import {
   buildSingleWidgetView,
   explicitLocale,
   requireProfileKey,
+  type LanguagePref,
   showToolBinding,
   withToolErrors,
   type ProfileStore,
@@ -12,9 +13,9 @@ import {
 } from "@miragon-ai/widget-shell/server"
 import { allowsProfileSave, type Camunda7Toolset } from "../lib/toolsets.js"
 import {
-  CAMUNDA7_SAVE_USER_PROFILE,
-  CAMUNDA7_SHOW_USER_PROFILE,
-  CAMUNDA7_USER_PROFILE_DATA,
+  CAMUNDA7_SAVE_SETTINGS,
+  CAMUNDA7_SHOW_SETTINGS,
+  CAMUNDA7_SETTINGS_DATA,
 } from "../tool-names.js"
 import {
   CAMUNDA7_MODULE_KEY,
@@ -32,13 +33,13 @@ import { translator } from "../messages/index.js"
 import { viewLocaleOf } from "../lib/server-locale.js"
 
 /**
- * One-line, model-facing summary of a profile — localized to the profile's own
- * language (steers the model toward responding in that language; the MCP server
- * cannot force the model's output language). `system` follows the host's
- * locale, a widget-side signal the server never sees — English here.
+ * One-line, model-facing summary of the settings — localized to the record's
+ * language (steers the model toward responding in that language; the MCP
+ * server cannot force the model's output language). `system` follows the
+ * host's locale, a widget-side signal the server never sees — English here.
  */
-function summarize(p: UserProfile): string {
-  const locale = explicitLocale(p.language) ?? "en"
+function summarize(p: UserProfile, language: LanguagePref): string {
+  const locale = explicitLocale(language) ?? "en"
   const engines =
     p.allowedEngineIds && p.allowedEngineIds.length > 0
       ? translator(locale, "profile.summary.someEngines", { count: p.allowedEngineIds.length })
@@ -46,19 +47,15 @@ function summarize(p: UserProfile): string {
   const defaultDashboard = p.defaultDashboardId
     ? translator(locale, "profile.summary.defaultDashboard", { id: p.defaultDashboardId })
     : ""
-  return translator(locale, "profile.summary", {
-    language: p.language,
-    engines,
-    defaultDashboard,
-  })
+  return translator(locale, "profile.summary", { engines, defaultDashboard })
 }
 
 /**
- * Which of the two gates keeps the panel read-only, so it can name the way
+ * Which of the two gates keeps the section read-only, so it can name the way
  * out — the missing sign-in FIRST: a request without a profile key (HTTP
  * without OAuth, the default deployment) cannot save on any toolset, so
  * "switch to operations" would send the operator to a second read-only
- * panel. The toolset is the reason only for a caller who could save.
+ * section. The toolset is the reason only for a caller who could save.
  */
 function readOnlyReason(
   toolsetAllowsSave: boolean,
@@ -69,11 +66,13 @@ function readOnlyReason(
 }
 
 /**
- * Registers the user-profile tool surface (the three render paths, per the
+ * Registers camunda7's settings section, a `<module>:settings` section of the
+ * shell's settings page like analytics' (the three render paths, per the
  * CLAUDE.md invariant):
- *   - `camunda7_show_user_profile`  — widget tool (renders the settings panel),
- *   - `camunda7_user_profile_data`  — app-only feed (backs the widget self-fetch),
- *   - `camunda7_save_user_profile`  — model-visible write (partial update).
+ *   - `camunda7_show_settings`  — widget tool (renders the section),
+ *   - `camunda7_settings_data`  — app-only feed (backs the widget self-fetch),
+ *   - `camunda7_save_settings`  — model-visible write (partial update).
+ * The UI language is the shell's (`shell_save_settings`), not this module's.
  *
  * All three resolve the profile key from the request (the OAuth caller — see
  * `resolveProfileKey`) and never talk to an engine; the engine *registry* is read only for the full
@@ -95,17 +94,20 @@ export function registerUserProfileTools(
   // gates itself against the (already concrete) toolset — the same registrar
   // rule, via the one profile-write decision `camunda7_select_engine`
   // shares. Decided up front because the two view tools report the outcome as
-  // `canSave`, which is what hides the panel's Save button; a view that
+  // `canSave`, which is what hides the section's Save button; a view that
   // claimed otherwise would offer a write that resolves to an unknown tool.
   const canSave = allowsProfileSave(toolset)
 
-  const loadView = async (ctx: unknown): Promise<UserProfileView> => {
+  const loadView = async (
+    ctx: unknown,
+  ): Promise<{ view: UserProfileView; language: LanguagePref }> => {
     // Same key resolution as the save path, so a save is always read back. A
     // request without OAuth resolves no key and renders the defaults — the
-    // NORM on an unauthenticated deployment.
+    // NORM on an unauthenticated deployment. The record's language words the
+    // summary and the title; it is not part of the view.
     const key = resolveProfileKey(ctx)
     const record = key ? await store.get(key) : undefined
-    return {
+    const view: UserProfileView = {
       profile: record ? toUserProfile(record) : defaultUserProfile(),
       // By id + environment only — the engine REST baseUrl is internal
       // topology the settings panel has no use for.
@@ -119,40 +121,41 @@ export function registerUserProfileTools(
       canSave: canSave && key !== undefined,
       readOnlyReason: readOnlyReason(canSave, key),
     }
+    return { view, language: record?.language ?? "system" }
   }
 
   server.tool(
     {
-      name: CAMUNDA7_SHOW_USER_PROFILE,
-      title: "Profile & Settings",
+      name: CAMUNDA7_SHOW_SETTINGS,
+      title: "Engine & dashboard settings",
       description:
-        "Open the user profile & settings panel: language, which engines are available + the default engine, and dashboard preferences. Analytics defaults live in the analytics module's own settings section (analytics_show_settings).",
+        "Open camunda7's settings: available engines, the default engine, dashboard preferences.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({}),
-      ...showToolBinding(CAMUNDA7_SHOW_USER_PROFILE, "Profile & Settings"),
+      ...showToolBinding(CAMUNDA7_SHOW_SETTINGS, "Engine & dashboard settings"),
     },
     withToolErrors(async (_params, ctx) => {
-      const view = await loadView(ctx)
+      const { view, language } = await loadView(ctx)
       // Titled only in a language the profile names; "system" sets none, so
-      // no English toolbar title sits over a German panel (#322 U3).
-      const { title } = viewLocaleOf(view.profile.language)
+      // no English toolbar title sits over a German section (#322 U3).
+      const { title } = viewLocaleOf(language)
       return buildSingleWidgetView({
-        widget: "camunda7:user-profile",
+        widget: "camunda7:settings",
         app: "camunda7",
-        dataType: "camunda7:userProfile",
+        dataType: "camunda7:settings",
         data: view,
-        title: title("viewTitle.userProfile"),
-        summary: summarize(view.profile),
+        title: title("viewTitle.settings"),
+        summary: summarize(view.profile, language),
       })
     }),
   )
 
   server.tool(
     {
-      name: CAMUNDA7_USER_PROFILE_DATA,
-      title: "User profile data (internal)",
+      name: CAMUNDA7_SETTINGS_DATA,
+      title: "Settings data (internal)",
       description:
-        "Internal JSON feed (no UI) for the caller's user profile + the configured engine list. Prefer camunda7_show_user_profile.",
+        "Internal JSON feed (no UI) for the caller's camunda7 settings + the configured engine list. Prefer camunda7_show_settings.",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       inputSchema: strictToolInput({}),
       // visibility "app" + widgetAccessible: same dual app-only contract as
@@ -161,17 +164,17 @@ export function registerUserProfileTools(
     },
     // Spread: the feed contract takes `Record<string, unknown>`, which the
     // named `UserProfileView` interface doesn't structurally satisfy.
-    withToolErrors(async (_params, ctx) => rawData({ ...(await loadView(ctx)) })),
+    withToolErrors(async (_params, ctx) => rawData({ ...(await loadView(ctx)).view })),
   )
 
   if (!canSave) return
 
   server.tool(
     {
-      name: CAMUNDA7_SAVE_USER_PROFILE,
-      title: "Save user profile",
+      name: CAMUNDA7_SAVE_SETTINGS,
+      title: "Save engine & dashboard settings",
       description:
-        'Update the caller\'s user profile. Only the provided fields change; omitted fields keep their value. Use this to honor requests like "switch the UI to German" (language: "de") or "only let me pick the prod engines" (allowedEngineIds). Engine availability is curation, not access control.',
+        'Update the caller\'s camunda7 settings. Only the provided fields change; omitted fields keep their value. Use it for requests like "only let me pick the prod engines" (allowedEngineIds) or a default dashboard. Engine availability is curation, not access control.',
       // A local profile write: explicitly non-destructive (MCP presumes a
       // write destructive unless told otherwise) and closed-world.
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -185,14 +188,13 @@ export function registerUserProfileTools(
     withToolErrors(async (params, ctx) => {
       // Keyless refusal + a patch-only slice save are the shared slice-write
       // contract (`requireProfileKey` + `saveModuleSlice` in
-      // `@miragon-ai/widget-shell/server`). This tool also carries the
-      // record-level language, so it hands the store the same patch
-      // itself: ONLY the given fields, merged by the store over the RAW
-      // stored slice under its per-key lock, so a concurrent
+      // `@miragon-ai/widget-shell/server`). The store is called directly for
+      // the record it returns (its `updatedAt` re-syncs the section's form),
+      // with the same patch: ONLY the given fields, merged by the store over
+      // the RAW stored slice under its per-key lock, so a concurrent
       // `camunda7_select_engine` is never reverted by a stale pre-read.
       const key = requireProfileKey(ctx)
-      const { language, ...sliceInput } = params
-      const slicePatch: Record<string, unknown> = { ...sliceInput }
+      const slicePatch: Record<string, unknown> = { ...params }
       // The settings UI sends an empty string for the "(auto)"/"(none)" option
       // of an optional id field. That CLEARS the stored value: an explicit
       // `undefined` overrides the stored field in the store's merge (a
@@ -203,12 +205,12 @@ export function registerUserProfileTools(
       // The OAuth caller is stamped as the record's owner.
       const saved = await store.save(
         key,
-        { language, modules: { [CAMUNDA7_MODULE_KEY]: slicePatch } },
+        { modules: { [CAMUNDA7_MODULE_KEY]: slicePatch } },
         { userId: resolveAuthUserId(ctx) },
       )
       const profile = toUserProfile(saved)
       return {
-        content: [{ type: "text" as const, text: summarize(profile) }],
+        content: [{ type: "text" as const, text: summarize(profile, saved.language) }],
         structuredContent: profile as unknown as Record<string, unknown>,
       }
     }),

@@ -4,7 +4,7 @@ import type { ComponentType } from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { CAMUNDA7_SAVE_USER_PROFILE } from "../tool-names.js"
+import { CAMUNDA7_SAVE_SETTINGS, CAMUNDA7_SETTINGS_DATA } from "../tool-names.js"
 import type { UserProfileView } from "../lib/profile-schema.js"
 import { UserProfileWidget } from "./user-profile.js"
 
@@ -18,7 +18,6 @@ afterEach(() => {
 /** What the panel was rendered from — possibly a cached, stale view. */
 const VIEW: UserProfileView = {
   profile: {
-    language: "en",
     updatedAt: "2026-10-01T00:00:00.000Z",
     defaultEngineId: "prod-a",
     allowedEngineIds: [],
@@ -50,7 +49,7 @@ function renderPanel(view: UserProfileView = VIEW, dashboards: unknown[] = []) {
       widget={Panel}
       data={{}}
       tools={{
-        [CAMUNDA7_SAVE_USER_PROFILE]: (args: Record<string, unknown>) => {
+        [CAMUNDA7_SAVE_SETTINGS]: (args: Record<string, unknown>) => {
           saves.push(args)
           return { ...view.profile, ...args }
         },
@@ -69,10 +68,10 @@ function renderPanel(view: UserProfileView = VIEW, dashboards: unknown[] = []) {
 }
 
 describe("UserProfileWidget save — only what the user changed", () => {
-  it("a language change sends the language alone, never the (possibly stale) default engine", async () => {
-    const { save } = renderPanel()
-    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
-    expect(await save()).toEqual({ language: "de" })
+  // #346: the UI language is the shell's (its own section on the page).
+  it("offers no language setting: the shell's section owns it", () => {
+    renderPanel()
+    expect(screen.queryByLabelText("Language")).toBeNull()
   })
 
   it("offers no theme setting: the widgets follow the host's theme", () => {
@@ -118,16 +117,14 @@ describe("UserProfileWidget save — only what the user changed", () => {
   it("the one save bar: Save stays off until a change, Discard takes it back", () => {
     renderPanel()
     const bar = screen.getByRole("region", { name: "Save settings" })
-    expect(bar.textContent).toContain("Language, engines and dashboards are saved.")
+    expect(bar.textContent).toContain("Engines and dashboards are saved.")
     expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true)
     expect(screen.queryByRole("button", { name: "Discard changes" })).toBeNull()
-    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
-    expect(bar.textContent).toContain(
-      "Your changes to language, engines or dashboards aren't saved yet.",
-    )
+    fireEvent.change(screen.getByLabelText("Default engine"), { target: { value: "prod-b" } })
+    expect(bar.textContent).toContain("Your changes to engines or dashboards aren't saved yet.")
     expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", false)
     fireEvent.click(screen.getByRole("button", { name: "Discard changes" }))
-    expect(screen.getByLabelText("Language")).toHaveProperty("value", "en")
+    expect(screen.getByLabelText("Default engine")).toHaveProperty("value", "prod-a")
     expect(screen.getByRole("button", { name: "Save" })).toHaveProperty("disabled", true)
   })
 
@@ -136,8 +133,8 @@ describe("UserProfileWidget save — only what the user changed", () => {
     curate()
     fireEvent.click(screen.getByRole("checkbox", { name: "prod-b" }))
     fireEvent.click(screen.getByRole("checkbox", { name: "prod-b" }))
-    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
-    expect(await save()).toEqual({ language: "de" })
+    fireEvent.change(screen.getByLabelText("Default engine"), { target: { value: "prod-b" } })
+    expect(await save()).toEqual({ defaultEngineId: "prod-b" })
   })
 
   it("widening a curated subset to every engine persists 'all' as []", async () => {
@@ -152,7 +149,7 @@ describe("UserProfileWidget save — only what the user changed", () => {
     expect(await save()).toEqual({ pinnedDashboardIds: ["d1"] })
   })
 
-  // Standalone (camunda7_show_user_profile) the panel's view is the seed of
+  // Standalone (camunda7_show_settings) the panel's view is the seed of
   // the profile feed and stays the ORIGINAL profile until the save's refetch
   // lands (here never — the fixture serves no feed), so the baseline must
   // advance with each save: otherwise reverting a saved change compares equal
@@ -166,19 +163,11 @@ describe("UserProfileWidget save — only what the user changed", () => {
   })
 
   it("a second save sends only what changed since the first", async () => {
-    const { save } = renderPanel()
+    const { save } = renderPanel(VIEW, [{ id: "d1", name: "Ops" }])
     fireEvent.change(screen.getByLabelText("Default engine"), { target: { value: "prod-b" } })
     expect(await save()).toEqual({ defaultEngineId: "prod-b" })
-    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } })
-    expect(await save()).toEqual({ language: "de" })
-  })
-
-  // #339: the widgets follow the host; its language is a choice of its own.
-  it("offers following the chat app's language as a choice of its own", async () => {
-    const { save } = renderPanel()
-    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "system" } })
-    expect(screen.getByRole("option", { name: "Automatic (follows the chat app)" })).toBeTruthy()
-    expect(await save()).toEqual({ language: "system" })
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Ops" }))
+    expect(await save()).toEqual({ pinnedDashboardIds: ["d1"] })
   })
 
   // #322 U25: the role was a hint nothing read — the field is gone.
@@ -187,13 +176,14 @@ describe("UserProfileWidget save — only what the user changed", () => {
     expect(screen.queryByLabelText("Preferred role")).toBeNull()
   })
 
-  // The page's outline skips no level: the panel's title, then its cards.
-  it("heads its cards one step under the page title", () => {
+  // The page's outline skips no level: the shell page's title (h1 in the
+  // view), this section's h2, then its cards.
+  it("heads itself as a section and its cards one step under it", () => {
     renderPanel()
     const outline = screen
       .getAllByRole("heading")
       .map((h) => `${h.tagName.toLowerCase()} ${h.textContent}`)
-    expect(outline).toEqual(["h1 Settings", "h2 Language", "h2 Engines", "h2 Dashboards"])
+    expect(outline).toEqual(["h2 Engines and dashboards", "h3 Engines", "h3 Dashboards"])
   })
 })
 
@@ -209,11 +199,38 @@ describe("a read-only panel says why, on top, with the way out", () => {
     expect(notice.textContent).toMatch(wayOut)
     // Above the fields, not under them.
     expect(
-      notice.compareDocumentPosition(screen.getByLabelText("Language")) &
+      notice.compareDocumentPosition(screen.getByLabelText("Default engine")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
-    expect(screen.getByLabelText("Language")).toHaveProperty("disabled", true)
+    expect(screen.getByLabelText("Default engine")).toHaveProperty("disabled", true)
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull()
+  })
+})
+
+// #346: a section of the shell's page — where camunda7 is bundled but not
+// active, its feed's tool is missing and the section is simply not there.
+describe("the section where camunda7 is not active", () => {
+  it("hides itself when its feed's tool is missing", async () => {
+    queryClient.setQueryDefaults(["camunda7:settings"], { retry: false })
+    const Section: ComponentType<Record<string, unknown>> = () => <UserProfileWidget />
+    const { container } = render(
+      <WidgetFixtureHost
+        widget={Section}
+        data={{}}
+        tools={{
+          [CAMUNDA7_SETTINGS_DATA]: () => {
+            throw new Error(`Tool ${CAMUNDA7_SETTINGS_DATA} not found`)
+          },
+        }}
+      />,
+    )
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryCache().find({ queryKey: ["camunda7:settings"], exact: false })?.state
+          .status,
+      ).toBe("error"),
+    )
+    expect(container.textContent).toBe("")
   })
 })
 

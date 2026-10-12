@@ -5,7 +5,7 @@ import type { MCPServer } from "mcp-use"
 import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
 import { createEngineRegistry } from "../lib/resolve-engine.js"
 import { providerForEntry } from "../providers/index.js"
-import { CAMUNDA7_SHOW_USER_PROFILE } from "../tool-names.js"
+import { CAMUNDA7_SHOW_SETTINGS } from "../tool-names.js"
 import { registerUserProfileTools } from "../tools/user-profile.js"
 import { registerWidgetTools } from "../widget-tools.js"
 
@@ -86,7 +86,7 @@ describe("show tools title their view only in a language the profile names", () 
       // Not vacuous: the fake engine is enough for most views to render, the
       // settings view among them.
       expect(titles.size).toBeGreaterThanOrEqual(9)
-      expect(titles.has(CAMUNDA7_SHOW_USER_PROFILE)).toBe(true)
+      expect(titles.has(CAMUNDA7_SHOW_SETTINGS)).toBe(true)
       expect(Object.fromEntries([...titles].filter(([, title]) => title !== undefined))).toEqual({})
     }
   })
@@ -104,7 +104,7 @@ describe("show tools title their view only in a language the profile names", () 
         .sort()
     expect(titled(de)).toEqual(titled(en))
     expect(titled(de).length).toBeGreaterThanOrEqual(8)
-    expect(de.get(CAMUNDA7_SHOW_USER_PROFILE)).toBe("Einstellungen")
-    expect(en.get(CAMUNDA7_SHOW_USER_PROFILE)).toBe("Settings")
+    expect(de.get(CAMUNDA7_SHOW_SETTINGS)).toBe("Engines und Dashboards")
+    expect(en.get(CAMUNDA7_SHOW_SETTINGS)).toBe("Engines and dashboards")
   })
 })

@@ -174,7 +174,7 @@ export function EnginesCard({
   const allowed = allowedIn(form, engineIds)
   const noneChosen = !form.allEngines && form.allowedEngineIds.length === 0
   return (
-    <SettingsCard title={t("profile.section.engines")} titleAs="h2">
+    <SettingsCard title={t("profile.section.engines")}>
       {engines.length === 0 ? (
         <span className={helpCls}>{t("profile.engines.none")}</span>
       ) : (

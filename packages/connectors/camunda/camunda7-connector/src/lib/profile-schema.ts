@@ -1,9 +1,7 @@
 import { z } from "zod"
 import {
-  LANGUAGES,
   parseModuleSlice,
   withoutDefaults,
-  type LanguagePref,
   type ProfileRecord,
 } from "@miragon-ai/widget-shell/server"
 
@@ -13,10 +11,10 @@ export const CAMUNDA7_MODULE_KEY = "camunda7"
 /**
  * The camunda7-owned slice of the shared profile record
  * (`profile.modules.camunda7`) — everything this connector persists per user.
- * The cross-module preference (`language`) lives on the record itself
- * (`profileRecordSchema` in `@miragon-ai/widget-shell/server`); this module
- * validates its slice fail-soft on read and writes it through its own save
- * tool, mirroring analytics' settings slice.
+ * The cross-module preference (`language`) lives on the record itself and
+ * belongs to the shell (`shell_save_settings`, `@miragon-ai/widget-shell`);
+ * this module validates its slice fail-soft on read and writes it through
+ * its own save tool, mirroring analytics' settings slice.
  */
 export const camunda7SettingsSchema = z.object({
   defaultEngineId: z
@@ -61,38 +59,28 @@ export function parseCamunda7Settings(
 }
 
 /**
- * The flat profile VIEW this module's settings panel and summaries work with:
- * the record's cross-module preferences merged with the parsed camunda7 slice.
- * A read-side projection only — the STORED shape is the widget-shell
- * `ProfileRecord` with the engine/dashboard fields inside `modules.camunda7`.
+ * The VIEW this module's settings section and summaries work with: the parsed
+ * camunda7 slice plus the record's stamp. A read-side projection only — the
+ * STORED shape is the widget-shell `ProfileRecord` with these fields inside
+ * `modules.camunda7`.
  */
 export interface UserProfile extends Camunda7Settings {
-  language: LanguagePref
   /** Record stamp — the widget's baseline-resync key after a save. */
   updatedAt: string
 }
 
 export function toUserProfile(record: ProfileRecord): UserProfile {
-  return {
-    language: record.language,
-    updatedAt: record.updatedAt,
-    ...parseCamunda7Settings(record),
-  }
+  return { updatedAt: record.updatedAt, ...parseCamunda7Settings(record) }
 }
 
-/** A fully-defaulted profile view for a key that has never been saved. */
+/** A fully-defaulted view for a key that has never been saved. */
 export function defaultUserProfile(): UserProfile {
-  return {
-    language: "system",
-    updatedAt: new Date().toISOString(),
-    ...camunda7SettingsSchema.parse({}),
-  }
+  return { updatedAt: new Date().toISOString(), ...camunda7SettingsSchema.parse({}) }
 }
 
 /**
- * The `camunda7_save_user_profile` tool's input: any subset of the flat
- * preferences (the cross-module `language` + this module's slice fields).
- * There is no theme: the widgets follow the host's theme.
+ * The `camunda7_save_settings` tool's input: any subset of this module's
+ * slice fields (the UI language is the shell's, `shell_save_settings`).
  * Default-FREE on purpose — zod 4 re-applies `.default()`s through
  * `.partial()`, materializing omitted fields into silent resets (see
  * `withoutDefaults` in `@miragon-ai/widget-shell/server`). Deliberately
@@ -100,18 +88,13 @@ export function defaultUserProfile(): UserProfile {
  * their owning module's save tool.
  */
 export const userProfileToolSaveInput = z
-  .object({
-    language: z
-      .enum(LANGUAGES)
-      .describe('UI + summary language; "system" follows the chat host (summaries in English).'),
-    ...withoutDefaults(camunda7SettingsSchema.shape),
-  })
+  .object(withoutDefaults(camunda7SettingsSchema.shape))
   .partial()
 
 /**
- * Composite payload the `show_user_profile` widget tool + `user_profile_data`
- * feed return: the profile itself plus the *full* configured engine list (so
- * the settings UI can offer every engine as an availability checkbox — it can't
+ * Composite payload `camunda7_show_settings` + `camunda7_settings_data`
+ * return: the settings plus the *full* configured engine list (so the
+ * section can offer every engine as an availability checkbox — it can't
  * re-source that from `camunda7_list_engines`, which is already filtered by
  * `allowedEngineIds`).
  */
@@ -119,14 +102,14 @@ export interface UserProfileView {
   profile: UserProfile
   availableEngines: Array<{ id: string; environment: string }>
   /**
-   * False when the deployment's toolset drops `camunda7_save_user_profile`
-   * (`camunda7:read-only`) — the panel then renders disabled fields without a
+   * False when the deployment's toolset drops `camunda7_save_settings`
+   * (`camunda7:read-only`) — the section then renders disabled fields without a
    * Save button, so the UI matches the tool surface instead of offering a
    * write that resolves to an unknown tool.
    */
   canSave: boolean
   /**
-   * Why the panel is read-only, so it can name the way out (#322 U25), the
+   * Why the section is read-only, so it can name the way out (#322 U25), the
    * missing sign-in first: `noSignIn` — the request names no user to save for
    * (a connection without OAuth, the default deployment): only a deployment
    * with sign-in can save, whatever its toolset; `toolset` — a signed-in
@@ -136,5 +119,5 @@ export interface UserProfileView {
   readOnlyReason: ProfileReadOnlyReason | null
 }
 
-/** Why a settings panel cannot save — see {@link UserProfileView.readOnlyReason}. */
+/** Why the settings section cannot save — see {@link UserProfileView.readOnlyReason}. */
 export type ProfileReadOnlyReason = "noSignIn" | "toolset"

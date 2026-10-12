@@ -1,8 +1,7 @@
-import type { LanguagePref, Locale } from "@miragon-ai/widget-shell/widgets"
 import type { UserProfile } from "../lib/profile-schema.js"
 
 /**
- * The settings panel's form model (#322 U25): what the controls edit, how it
+ * The settings section's form model (#322 U25): what the controls edit, how it
  * maps from the stored profile and back to a save that sends only what the
  * user changed. Pure — `user-profile.tsx` holds the state, the sections in
  * `user-profile-sections.tsx` render it.
@@ -36,12 +35,8 @@ export function pickableDashboards(
     .sort((a, b) => Number(pinnedIds.includes(b.id)) - Number(pinnedIds.includes(a.id)))
 }
 
-/** Language names are endonyms — shown in their own language, not the UI locale. */
-export const LANGUAGE_LABELS: Record<Locale, string> = { en: "English", de: "Deutsch" }
-
 /** The editable preference state mirrored by the form controls. */
 export interface FormState {
-  language: LanguagePref
   /** "Alle Engines erlauben" (#322 U25): every configured engine, today's and tomorrow's. */
   allEngines: boolean
   /** The curated engines while `allEngines` is off. */
@@ -51,17 +46,11 @@ export interface FormState {
   pinnedDashboardIds: string[]
 }
 
-/** Narrow a `<select>` value back to its constant array without a cast. */
-export function parseEnum<T extends string>(value: string, allowed: readonly T[]): T | undefined {
-  return (allowed as readonly string[]).includes(value) ? (value as T) : undefined
-}
-
 export function fromProfile(p: UserProfile, engineIds: string[]): FormState {
   // An empty/absent allow-list means "all"; switched off, the list starts
   // with every engine checked.
   const curated = !!p.allowedEngineIds && p.allowedEngineIds.length > 0
   return {
-    language: p.language,
     allEngines: !curated,
     allowedEngineIds: curated ? (p.allowedEngineIds ?? []) : engineIds,
     defaultEngineId: p.defaultEngineId ?? "",
@@ -84,7 +73,7 @@ const sameSet = (a: string[], b: string[]) =>
   a.length === b.length && a.every((id) => b.includes(id))
 
 /** The single-valued preferences, compared by value. */
-const SCALAR_FIELDS = ["language", "defaultEngineId", "defaultDashboardId"] as const
+const SCALAR_FIELDS = ["defaultEngineId", "defaultDashboardId"] as const
 
 /**
  * The save payload: ONLY the preferences the user changed against the form's

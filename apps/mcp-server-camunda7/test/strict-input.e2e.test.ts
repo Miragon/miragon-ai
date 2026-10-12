@@ -69,7 +69,8 @@ describe("strict tool inputs on the wire (full surface)", () => {
   })
 
   it("covers every module tool, model-facing and app-only (the guard is not vacuous)", () => {
-    expect(moduleTools.every((tool) => /^(camunda7|analytics)_/.test(tool.name))).toBe(true)
+    // The modules' tools and the shell's settings triple.
+    expect(moduleTools.every((tool) => /^(camunda7|analytics|shell)_/.test(tool.name))).toBe(true)
     expect(moduleTools.filter(isModelVisible).length).toBeGreaterThanOrEqual(70)
     expect(moduleTools.filter((tool) => !isModelVisible(tool)).length).toBeGreaterThanOrEqual(15)
     // The split engine pair and the history/stacktrace reads (#340) are probed like the rest.

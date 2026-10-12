@@ -3,7 +3,7 @@ import type { z } from "zod"
 import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
 import type { EngineRegistry } from "./resolve-engine.js"
 import {
-  CAMUNDA7_SAVE_USER_PROFILE,
+  CAMUNDA7_SAVE_SETTINGS,
   CAMUNDA7_WIDGET_ACTIONS,
   type Camunda7WidgetAction,
 } from "../tool-names.js"
@@ -120,7 +120,7 @@ export function isToolInToolset(
 }
 
 /**
- * The ONE durable-profile-write decision: whether `camunda7_save_user_profile`
+ * The ONE durable-profile-write decision: whether `camunda7_save_settings`
  * exists in `toolset` — the registrar rule applied to the save tool (a write,
  * not admin-only → every toolset above the read-only floor).
  * `camunda7_select_engine` writes the same profile field and is a registrar
@@ -128,7 +128,7 @@ export function isToolInToolset(
  * reports it as `canSave`.
  */
 export function allowsProfileSave(toolset: Camunda7Toolset): boolean {
-  return isToolInToolset({ name: CAMUNDA7_SAVE_USER_PROFILE }, toolset)
+  return isToolInToolset({ name: CAMUNDA7_SAVE_SETTINGS }, toolset)
 }
 
 /**
