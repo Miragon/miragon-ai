@@ -27,10 +27,10 @@ export function idBreakSegments(id: string): string[] {
 }
 
 /**
- * An id that wraps only where {@link idBreakSegments} allows (`<wbr>`): its
- * text, what a copy takes and what a screen reader says stay the id. A
- * segment longer than its column still wraps as a last resort (the caller's
- * `break-words`).
+ * An id that prefers to wrap where {@link idBreakSegments} allows (`<wbr>`):
+ * its text and what a copy takes stay the id (some screen readers pause at
+ * the breaks, "Activity_ Check Blacklist"). A segment wider than its column
+ * still wraps inside itself (the caller's `wrap-anywhere`).
  */
 export function BreakableId({ id }: { id: string }) {
   return (

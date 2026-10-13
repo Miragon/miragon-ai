@@ -131,6 +131,8 @@ describe("the engine-wide list's columns", () => {
     expect(headers()).toContain("Process")
     const process = screen.getAllByText("Invoice receipt")[0].closest("button")!
     expect(process.textContent).toBe("Invoice receiptinvoice · v7")
+    // The button's name replaces its content for a screen reader: it says the version.
+    expect(process.getAttribute("aria-label")).toBe("Open process Invoice receipt, version 7")
   })
 
   it("hides the State column in a narrow region, and a suspended row says so in its first cell", () => {

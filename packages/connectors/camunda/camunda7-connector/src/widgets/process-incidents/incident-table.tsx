@@ -1,7 +1,7 @@
-import { Fragment, useState } from "react"
+import { Fragment } from "react"
 import { Button, DrillButton, StatusBadge, PagedListFooter } from "@miragon/mcp-toolkit-ui"
 import {
-  formatNumber,
+  FIT_CONTINUES_ROW,
   formatTimestamp,
   HandOffButton,
   Icon,
@@ -72,7 +72,6 @@ export function IncidentTable({
   recovery,
   onAnalyze,
   hideInstanceColumn = false,
-  previewCount,
   engine,
   vendor,
 }: {
@@ -85,12 +84,6 @@ export function IncidentTable({
    * every row already belongs to one known instance — the instance-detail view.
    */
   hideInstanceColumn?: boolean
-  /**
-   * Client-side preview cap with a one-shot "show more" expander — for
-   * embeddings whose rows are already fully present (instance detail).
-   * Omitted → every handed-in row renders (the paged wrapper owns the cap).
-   */
-  previewCount?: number
   /** The engine the rows came from, pinned into the AI handoffs. */
   engine?: string
   /** The engine product (`engineVendor`) — names the per-row link into its web app. */
@@ -98,10 +91,6 @@ export function IncidentTable({
 }) {
   const t = useT()
   const { ask } = useHandOff()
-  const [showAll, setShowAll] = useState(false)
-  const visible =
-    previewCount === undefined || showAll ? incidents : incidents.slice(0, previewCount)
-  const hidden = incidents.length - visible.length
   // pl-12 keeps the cells aligned under the activity summary's icon column in
   // the grouped (per-activity) rendering; standalone the indent would float.
   const leadPad = hideInstanceColumn ? undefined : "pl-12"
@@ -121,7 +110,9 @@ export function IncidentTable({
   return (
     <div className="bg-muted [--list-table-surface:var(--muted)]">
       <ListTable ariaLabel={t("procIncTable.tableLabel")} columns={columns}>
-        {visible.map((incident) => {
+        {/* Inline, the table shows the incidents that fit (its own fit, or the
+            paged wrapper's) and says how many there are. */}
+        {incidents.map((incident) => {
           const done = recovery.isDone(incident)
           const error = recovery.errorOf(incident)
           const retried = recoveryOf(incident).action !== "resolve"
@@ -179,8 +170,9 @@ export function IncidentTable({
                   )}
                 </Td>
               </tr>
+              {/* The error line belongs to its incident: one item in the fit. */}
               {error && (
-                <tr>
+                <tr {...FIT_CONTINUES_ROW}>
                   <td
                     colSpan={columnCount}
                     className={`border-border border-b px-4 py-1.5 ${leadPad ?? ""}`}
@@ -197,16 +189,6 @@ export function IncidentTable({
           )
         })}
       </ListTable>
-      {hidden > 0 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowAll(true)}
-          className={`text-link w-full justify-start ${leadPad ?? "pl-4"}`}
-        >
-          {t("procIncTable.showMore", { count: formatNumber(hidden) })}
-        </Button>
-      )}
     </div>
   )
 }

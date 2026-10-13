@@ -23,6 +23,8 @@ describe("NamedId", () => {
     expect(id?.textContent).toBe("miraveloLeasing")
     // A long id wraps between its parts, never in the middle of a word.
     expect(id?.className).not.toContain("break-all")
+    // A part wider than the column still wraps inside itself, never widening it.
+    expect(id?.className).toContain("wrap-anywhere")
     expect(id?.innerHTML).toBe("miravelo<wbr>Leasing")
   })
 

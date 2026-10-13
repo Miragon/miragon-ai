@@ -58,9 +58,17 @@ describe("a job's subject", () => {
     expect(cell.textContent).toBe("Charge cardActivity_ChargeCard · in Invoice receipt")
   })
 
-  it("in a panel scoped to one process: the activity and its id, no process", () => {
+  it("in a panel scoped to one process: the activity and its id; the head names the process", () => {
     const cell = renderPanel({ processDefinitionKey: "invoice" })
     expect(cell.textContent).toBe("Charge cardActivity_ChargeCard")
+    // Named once, in the head's meta line.
+    expect(screen.getAllByText("in Invoice receipt")).toHaveLength(1)
+    expect(cell.textContent).not.toContain("Invoice receipt")
+  })
+
+  it("over several processes, the head names none", () => {
+    renderPanel({})
+    expect(screen.getAllByText(/Invoice receipt/)).toHaveLength(1)
   })
 
   it("without an activity: the process alone under the dash", () => {

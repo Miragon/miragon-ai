@@ -290,7 +290,8 @@ function useInlineHead<TItem>(opts: {
   const { items, hasMore, fetchNext, pageSize, resetKey } = opts
   const { expand } = useInlineBudget()
   const labels = kitLabels(useLocale())
-  const fit = useInlineRows(items.length, { resetKey })
+  // A page that lands (the answer to a search, a refetch) refits on its own rows.
+  const fit = useInlineRows(items.length, { resetKey, contentKey: items })
   const { cap, step, reveal } = fit
   const capped = cap !== null && items.length > cap
   const shown = useMemo(() => (capped ? items.slice(0, cap) : items), [capped, items, cap])

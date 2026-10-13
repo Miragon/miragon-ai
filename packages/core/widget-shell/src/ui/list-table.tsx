@@ -282,7 +282,9 @@ export function ListTable({
             </tr>
           </thead>
           <tbody ref={paged ? paged.attachRows : own.attachRows}>
-            {capped ? rows.slice(0, cap) : children}
+            {/* The same keyed rows either way: a cap that comes or goes (a new
+                budget, a wider column) never remounts the rows. */}
+            {capped ? rows.slice(0, cap) : rows}
           </tbody>
           {capped && (
             <MoreRows

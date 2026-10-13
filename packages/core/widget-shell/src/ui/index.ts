@@ -136,6 +136,7 @@ export {
   type InlineBudget,
 } from "./inline-budget.js"
 export {
+  FIT_CONTINUES_ROW,
   InlineFitBox,
   UNSTATED_BUDGET,
   useInlineRows,

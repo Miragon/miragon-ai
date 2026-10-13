@@ -259,27 +259,28 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    and hangs on the theme slot `--brand-mark-display` a customer brand sets to `none`.
    **Inline is a card, not a page** (#396): under a host, every list shows the rows that
    FIT the host's height budget (`containerDimensions.maxHeight`, else 600 px with the
-   document uncapped; none in fullscreen or outside a host), MEASURED on the rendered
-   view, never estimated with px constants: `HostDocument`'s `InlineFitBox` measures the
-   content and each list's row bottoms before the first paint, the pure
-   `solveInlineFit` cuts rows (the longest list first, 3 before any list goes lower, 1 at
-   the least, never 0; a view that cannot fit keeps 3 and scrolls inside the budget, the
-   safety net), a cap only shrinks within an epoch (budget, width, display mode), late
-   growth refits only until the user's first pointer or key, and rows revealed in place
-   stay until the search changes. A paged list (`usePagedViewData`: `items` are the head,
-   `loadMore` opens fullscreen where the host offers it, else shows the next rows in
-   place) registers ONE list: its table sits in `PagedRows` (or `RowsBudgeted`), hands its
-   body to `paged.fit`, and never caps twice; a list of its own rows passes
-   `paged.fit.attachRows`, and its `PagedListFooter` passes `labels={paged.footerLabels}`
-   ("Show all" where the click opens fullscreen; `inline-fit-wiring.test.ts` checks
-   both). An unpaged `ListTable` is a list of its own (a `<tfoot>` line "3 of 6 shown" +
-   Show all/Show more). Rows stay short in a chat's column: an id wraps only between its
-   parts (`BreakableId`, `NamedId`), never mid-word; a quiet fact joins the id line
-   (`detail`) instead of a column or line of its own. The host simulation pins it on
-   real-sized data (`test-host/realistic-engine.ts`, `inline-fit.spec.ts`). The inline
-   BPMN canvas stays ≤ 320 px and unbounded text (a log, a stack trace) scrolls in
-   `TEXT_BLOCK_FRAME`. The roots declare
-   inline + fullscreen only (`SHELL_VIEW_CONFIG`, no pip); a client-side router renders its
+   document uncapped; none in fullscreen or outside a host), MEASURED on the rendered view,
+   never estimated with px constants: `HostDocument`'s `InlineFitBox` measures the content
+   and each list's row bottoms before the first paint, the pure `solveInlineFit` cuts rows
+   (the longest list first, 3 before any list goes lower, 1 at the least, never 0; a view
+   that cannot fit keeps 3 and scrolls inside the budget, the safety net), a cap only
+   shrinks within an epoch (budget, width, display mode), late growth refits only until the
+   user's first pointer or key, and rows revealed in place stay until the search changes. A
+   paged list (`usePagedViewData`: `items` are the head, `loadMore` opens fullscreen where
+   the host offers it, else shows the next rows in place) registers ONE list: its table
+   sits in `PagedRows` (or `RowsBudgeted`), hands its body to `paged.fit`, and never caps
+   twice; a list of its own rows passes `paged.fit.attachRows`, and its `PagedListFooter`
+   passes `labels={paged.footerLabels}` ("Show all" where the click opens fullscreen;
+   `inline-fit-wiring.test.ts` checks both). An unpaged `ListTable` is a list of its own (a
+   `<tfoot>` line "3 of 6 shown" + Show all/Show more). Rows stay short in a chat's column:
+   an id wraps between its parts first (`BreakableId`, `NamedId`), inside a part only where
+   that part alone is wider than the column; a quiet fact joins the id line (`detail`)
+   instead of a column or line of its own; a row that belongs to the row before it (an
+   incident's error line) carries `FIT_CONTINUES_ROW`, so the fit counts items as the cap
+   does. The host simulation pins it on real-sized data (`test-host/realistic-engine.ts`,
+   `inline-fit.spec.ts`). The inline BPMN canvas stays ≤ 320 px and unbounded text (a log,
+   a stack trace) scrolls in `TEXT_BLOCK_FRAME`. The roots declare inline + fullscreen
+   only (`SHELL_VIEW_CONFIG`, no pip); a client-side router renders its
    views in ONE `NavigationFocus` frame (focus moves to the new view, its name announced
    politely); a surface that hides the view's toolbar (the standalone drill) brings
    `DisplayModeToggle`.

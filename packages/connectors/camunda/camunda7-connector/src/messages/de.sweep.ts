@@ -325,6 +325,7 @@ export const deSweep: MessageCatalog = {
   "processInstances.openButton": "Öffnen",
   "processInstances.openInstanceAria": "Instanzdetails für {name} öffnen",
   "processInstances.openProcessAria": "Prozess {key} öffnen",
+  "processInstances.openProcessVersionAria": "Prozess {key} öffnen, Version {version}",
   "processInstances.runningCount": "{count} laufend",
   "processInstances.searchLabel": "Nach Geschäftsschlüssel oder ID suchen",
   "processInstances.searchPlaceholder": "Nach Geschäftsschlüssel oder ID suchen…",
@@ -417,10 +418,6 @@ export const deSweep: MessageCatalog = {
     "Der Job konnte nicht neu eingeplant werden ({message}). Prüf die Fehlermeldung und versuch es noch mal.",
   "procIncTable.retryHint":
     "Setzt die Versuche auf 1. Incidents dieses Typs verschwinden mit einem neuen Versuch, nicht durch „Als gelöst markieren“.",
-  "procIncTable.showMore": ({ count }) =>
-    isOne(count)
-      ? "1 weiteren Incident in dieser Aktivität anzeigen"
-      : `${String(count)} weitere Incidents in dieser Aktivität anzeigen`,
   "procIncTable.tableLabel": "Incidents in dieser Aktivität",
   "taskForm.addVariable": "Variable hinzufügen",
   "taskForm.cancel": "Abbrechen",

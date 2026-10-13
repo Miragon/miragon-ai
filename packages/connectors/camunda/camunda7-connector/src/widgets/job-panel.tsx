@@ -360,6 +360,10 @@ export function JobPanelWidget({
   // to the engine the data was fetched against (the builder always sets it) so the
   // AI prompts never inline "undefined" into their tool-call arguments.
   const engineId = engine ?? data.engineId
+  const scopedKey = data.filters.processDefinitionKey
+  const scopedProcess = scopedKey
+    ? (jobs.find((j) => j.processDefinitionName)?.processDefinitionName ?? scopedKey)
+    : null
 
   return (
     <WidgetShell>
@@ -374,6 +378,8 @@ export function JobPanelWidget({
           <>
             <EngineMeta engineId={engineId} />
             <span>{t("jobPanel.badgeTotal", { count: formatNumber(totalCount) })}</span>
+            {/* A panel scoped to one process names it here, once, not in every row. */}
+            {scopedProcess && <span>{t("jobPanel.inProcess", { process: scopedProcess })}</span>}
           </>
         }
         actions={

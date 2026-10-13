@@ -12,7 +12,15 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react"
-import { solveInlineFit, type FitSlot } from "./inline-fit-solve.js"
+import { FIT_LIMITS, solveInlineFit } from "./inline-fit-solve.js"
+import { DOM_MEASURE, LIST_SELECTOR, SlotRegistry, type FitMeasure } from "./inline-fit-registry.js"
+
+export {
+  CONTINUES_ATTRIBUTE,
+  DOM_MEASURE,
+  FIT_CONTINUES_ROW,
+  type FitMeasure,
+} from "./inline-fit-registry.js"
 
 /**
  * The measured inline fit (#396): an inline view is a card in a chat, and a
@@ -49,42 +57,6 @@ export const UNSTATED_BUDGET = 600
 const WIDTH_EPSILON = 8
 const RESIZE_DEBOUNCE_MS = 150
 
-/** What the fit measures on the rendered view; injected in tests (happy-dom has no layout). */
-export interface FitMeasure {
-  /** The content height of the view's document box (px). */
-  content: (box: HTMLElement) => number
-  /** The bottom edge of each row of a list's rows element, top to bottom. */
-  rows: (rowsElement: HTMLElement) => number[]
-}
-
-const ROWS_ATTRIBUTE = "data-inline-fit-rows"
-/** A paged list's wrapper: its rows when no table inside names its body. */
-const FALLBACK_ATTRIBUTE = "data-inline-fit-fallback"
-const LIST_SELECTOR = `[${ROWS_ATTRIBUTE}], [${FALLBACK_ATTRIBUTE}]`
-
-export const DOM_MEASURE: FitMeasure = {
-  content(box) {
-    // Inline without a budget the box is `display: contents` (no box of its
-    // own): the content's extent is the union of its children's boxes.
-    if (getComputedStyle(box).display === "contents") {
-      const range = document.createRange()
-      range.selectNodeContents(box)
-      return range.getBoundingClientRect().height
-    }
-    return box.scrollHeight
-  },
-  rows(rowsElement) {
-    const bottoms: number[] = []
-    for (const child of Array.from(rowsElement.children)) {
-      // The stale bar of `PagedRows` and anything else laid over the rows.
-      if (getComputedStyle(child).position === "absolute") continue
-      const rect = child.getBoundingClientRect()
-      if (rect.height > 0) bottoms.push(rect.bottom)
-    }
-    return bottoms
-  },
-}
-
 interface SlotCaps {
   /** Rows the fit leaves the list. */
   fitted: number
@@ -95,79 +67,6 @@ interface SlotCaps {
 interface FitState {
   epoch: string
   caps: Readonly<Record<string, SlotCaps>>
-}
-
-interface SlotRecord {
-  rows: HTMLElement | null
-  /** The paged list's own wrapper: the rows when no table inside names its body. */
-  fallback: HTMLElement | null
-  /** Fitted once while its rows were visible. */
-  placed: boolean
-  /** The user revealed rows in place: the fit keeps them until the search or filter changes. */
-  frozen: boolean
-}
-
-/**
- * The lists of a view and how their rows are found. Plain mutable bookkeeping
- * outside React's state: it changes in ref callbacks and effects, and the fit
- * reads it while measuring.
- */
-class SlotRegistry {
-  private readonly records = new Map<string, SlotRecord>()
-
-  /** A row element can arrive before its list registers (refs attach before effects). */
-  private recordOf(id: string): SlotRecord {
-    let record = this.records.get(id)
-    if (!record) {
-      record = { rows: null, fallback: null, placed: false, frozen: false }
-      this.records.set(id, record)
-    }
-    return record
-  }
-
-  register(id: string): () => void {
-    this.recordOf(id)
-    return () => {
-      this.records.delete(id)
-    }
-  }
-
-  setRows(id: string, element: HTMLElement | null, kind: "rows" | "fallback"): void {
-    element?.setAttribute(kind === "rows" ? ROWS_ATTRIBUTE : FALLBACK_ATTRIBUTE, "")
-    this.recordOf(id)[kind] = element
-  }
-
-  setFrozen(id: string, frozen: boolean): void {
-    this.recordOf(id).frozen = frozen
-  }
-
-  unfreezeAll(): void {
-    for (const record of this.records.values()) record.frozen = false
-  }
-
-  /** The lists showing rows now, in document order; marks them placed. */
-  measure(box: HTMLElement, measure: FitMeasure): FitSlot[] {
-    const ordered = Array.from(box.querySelectorAll<HTMLElement>(LIST_SELECTOR))
-    const slots: FitSlot[] = []
-    for (const [id, record] of this.records) {
-      const rows = record.rows ?? record.fallback
-      if (!rows) continue
-      const bottoms = measure.rows(rows)
-      if (bottoms.length === 0) continue
-      record.placed = true
-      slots.push({ id, order: ordered.indexOf(rows), bottoms, frozen: record.frozen })
-    }
-    return slots
-  }
-
-  /** A list that has not been fitted while visible, and is visible now (a tab shown). */
-  hasUnplacedVisible(): boolean {
-    for (const record of this.records.values()) {
-      const rows = record.rows ?? record.fallback
-      if (!record.placed && rows && rows.getBoundingClientRect().height > 0) return true
-    }
-    return false
-  }
 }
 
 interface FitApi {
@@ -256,7 +155,10 @@ export function InlineFitBox({
       element.removeAttribute("data-inline-fit")
       return
     }
-    const slots = registry.measure(element, m)
+    const { slots, fresh } = registry.measure(element, m)
+    // A list placed for the first time (a drill, a tab, a new search) is a
+    // new view: what loads late in it refits until the user touches it.
+    if (fresh) latched.current = false
     const { cuts, fits } = solveInlineFit({ budget: limit, content: m.content(element), slots })
     element.setAttribute("data-inline-fit", fits ? "fits" : "overflow")
     setState((previous) => applyCuts(previous, cuts))
@@ -273,6 +175,7 @@ export function InlineFitBox({
       },
       reset(id) {
         registry.setFrozen(id, false)
+        registry.unplace(id)
         setState((previous) => withRevealed(previous, id, () => 0))
       },
     }),
@@ -284,10 +187,12 @@ export function InlineFitBox({
     if (pending.current) fit()
   })
 
-  // A new epoch is a fresh start for the latch and for rows revealed in place.
-  useLayoutEffect(() => {
+  // A new epoch is a fresh start for the latch, for rows revealed in place and
+  // for the lists' placement: before the lists' own fits of the epoch run (an
+  // insertion effect precedes every layout effect).
+  useInsertionEffect(() => {
     latched.current = false
-    registry.unfreezeAll()
+    registry.restart()
   }, [epoch, registry])
 
   // The first pointer or key the user gives the view.
@@ -311,7 +216,7 @@ export function InlineFitBox({
     const element = box.current
     if (!active || !element || typeof ResizeObserver === "undefined") return
     const observer = new ResizeObserver(() => {
-      if (!latched.current || registry.hasUnplacedVisible()) fit()
+      if (!latched.current || registry.hasUnplacedVisible(current.current.measure)) fit()
     })
     const observeAll = () => {
       for (const child of Array.from(element.children)) observer.observe(child)
@@ -391,7 +296,16 @@ export const NO_FIT_ROWS: InlineRows = {
  */
 export function useInlineRows(
   available: number,
-  { resetKey = "", enabled = true }: { resetKey?: string; enabled?: boolean } = {},
+  {
+    resetKey = "",
+    contentKey,
+    enabled = true,
+  }: {
+    resetKey?: string
+    /** Changes when the rows' content changes (a page landed): the list refits. */
+    contentKey?: unknown
+    enabled?: boolean
+  } = {},
 ): InlineRows {
   const api = useContext(FitApiContext)
   const state = useContext(FitCapsContext)
@@ -417,7 +331,7 @@ export function useInlineRows(
   const epoch = state?.epoch
   useLayoutEffect(() => {
     if (on) api?.fit()
-  }, [on, api, shown, available, resetKey, epoch])
+  }, [on, api, shown, available, resetKey, contentKey, epoch])
 
   const attachRows = useCallback(
     (element: HTMLElement | null) => api?.setRows(id, element, "rows"),
@@ -428,5 +342,7 @@ export function useInlineRows(
     [api, id],
   )
   const reveal = useCallback((rows: number) => api?.reveal(id, rows), [api, id])
-  return on ? { cap, step: caps.fitted, attachRows, attachFallback, reveal } : NO_FIT_ROWS
+  // Revealing in place shows at least a soft floor of rows per click.
+  const step = Math.max(caps.fitted, FIT_LIMITS.softMin)
+  return on ? { cap, step, attachRows, attachFallback, reveal } : NO_FIT_ROWS
 }

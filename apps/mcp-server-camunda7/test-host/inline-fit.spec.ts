@@ -71,12 +71,25 @@ async function documentBox(app: FrameLocator) {
   }))
 }
 
-/** Rows shown, rows in all, as the footer's count line says them, once it has settled. */
+/** Rows shown, rows in all, as the footer's count line says them. */
 async function shownOf(app: FrameLocator, view: View): Promise<{ shown: number; total: number }> {
   const line = app.getByText(view.count)
   await expect(line).toBeVisible({ timeout: 20_000 })
   const [, shown, total] = view.count.exec((await line.textContent()) ?? "")!
   return { shown: Number(shown), total: Number(total) }
+}
+
+/**
+ * The "Show all" button sits on the card, inside the budget: the document
+ * does not scroll (`documentBox`), so its layout position is where it shows.
+ * (The host sim's frame is a fixed 720 px; an 800 px card would be cut by
+ * the frame, not by the host.)
+ */
+async function expectShowAllOnCard(app: FrameLocator, name: string, budget: number) {
+  const button = app.getByRole("button", { name })
+  await expect(button).toBeVisible()
+  const bottom = await button.evaluate((el) => el.getBoundingClientRect().bottom + window.scrollY)
+  expect(bottom, `${name} at ${bottom}px, budget ${budget}px`).toBeLessThanOrEqual(budget)
 }
 
 /** The rows the list's table shows (its body rows). */
@@ -108,15 +121,23 @@ async function settledRows(app: FrameLocator): Promise<number> {
   return last
 }
 
-async function expectFits(page: Page, app: FrameLocator, view: View, budget: number) {
-  const { shown, total } = await shownOf(app, view)
+async function expectFits(
+  page: Page,
+  app: FrameLocator,
+  view: View,
+  budget: number,
+  showAll = "Show all",
+) {
+  await shownOf(app, view)
+  // The rows settle first; the count line then says exactly them.
   const rows = await settledRows(app)
-  expect(rows, `${view.name}: rows on screen`).toBe(shown)
+  await expect.poll(async () => (await shownOf(app, view)).shown).toBe(rows)
+  const { total } = await shownOf(app, view)
   expect(rows).toBeGreaterThanOrEqual(1)
   expect(rows).toBeLessThan(total)
   expect(await documentBox(app)).toEqual({ fit: "fits", scrolls: false })
   // The way to the rest is on the card, not under a fold.
-  await expect(app.getByRole("button", { name: "Show all" })).toBeInViewport()
+  await expectShowAllOnCard(app, showAll, budget)
   expect(await reportedHeight(page)).toBeLessThanOrEqual(budget)
   return rows
 }
@@ -145,11 +166,9 @@ test.describe("inline fit on real-sized data (760 px column)", () => {
   }) => {
     const view = VIEWS[0]
     const app = await openView(page, view)
-    const { shown } = await shownOf(app, view)
-    expect(await settledRows(app)).toBe(shown)
-    // No cap on the document: its box has no height of its own to scroll in.
-    expect(await documentBox(app)).toEqual({ fit: "fits", scrolls: false })
-    expect(await reportedHeight(page)).toBeLessThanOrEqual(600)
+    // No cap on the document (its box has no height of its own to scroll in),
+    // and the list fitted to 600 px all the same.
+    await expectFits(page, app, view, 600)
   })
 
   test("a new budget at runtime refits: more rows for a larger one, fewer for a smaller one", async ({
@@ -180,17 +199,30 @@ test.describe("inline fit on real-sized data (760 px column)", () => {
     await expectFits(page, app, view, 600)
   })
 
-  test("a wider column refits the list and still fits", async ({ page }) => {
+  test("another column width refits the list, also after the user touched the view", async ({
+    page,
+  }) => {
     const view = VIEWS[0]
     const app = await openView(page, view, { maxHeight: 600 })
+    const at760 = await expectFits(page, app, view, 600)
+    // The user touches the view: from now on only a new epoch refits.
+    await app.locator("body").dispatchEvent("pointerdown")
+
+    const setWidth = (px: number) =>
+      page.evaluate(
+        (width) =>
+          (
+            window as unknown as { __hostSim: { setWidth: (w: number) => void } }
+          ).__hostSim.setWidth(width),
+        px,
+      )
+    // Narrower: the rows wrap taller, fewer fit.
+    await setWidth(560)
+    await expect.poll(() => tableRows(app).count()).toBeLessThan(at760)
     await expectFits(page, app, view, 600)
 
-    await page.evaluate(() =>
-      (window as unknown as { __hostSim: { setWidth: (px: number) => void } }).__hostSim.setWidth(
-        1100,
-      ),
-    )
     // Wide enough for the State column again (hidden below 48rem).
+    await setWidth(960)
     await expect(app.getByRole("columnheader", { name: "State" })).toBeVisible()
     await expectFits(page, app, view, 600)
   })
@@ -198,9 +230,6 @@ test.describe("inline fit on real-sized data (760 px column)", () => {
   test("German: the same card, in German", async ({ page }) => {
     const view: View = { ...VIEWS[2], count: /^Zeigt (\d+) von (\d+) Jobs$/ }
     const app = await openView(page, view, { maxHeight: 600, locale: "de-DE" })
-    const { shown } = await shownOf(app, view)
-    expect(await settledRows(app)).toBe(shown)
-    expect(await documentBox(app)).toEqual({ fit: "fits", scrolls: false })
-    await expect(app.getByRole("button", { name: "Alle anzeigen" })).toBeInViewport()
+    await expectFits(page, app, view, 600, "Alle anzeigen")
   })
 })
