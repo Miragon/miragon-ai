@@ -1,9 +1,10 @@
+import { ArrowRight } from "lucide-react"
 import {
-  DrillButton,
   FilterBar,
   PagedListFooter,
   StatusBadge,
   WidgetHeader,
+  Button,
 } from "@miragon/mcp-toolkit-ui"
 import {
   HandOffButton,
@@ -13,6 +14,7 @@ import {
   WidgetShell,
   formatNumber,
   usePagedListView,
+  Icon,
 } from "@miragon-ai/widget-shell/widgets"
 import { useNav } from "./navigation.js"
 import { useHandOff, type HandOff } from "./lib/hand-off.js"
@@ -202,24 +204,32 @@ export function ProcessListWidget({
           }}
           renderActions={(row) => (
             <>
-              <DrillButton
-                onDrill={() => go({ type: "process-instances", processDefinitionKey: row.key })}
-                ariaLabel={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => go({ type: "process-instances", processDefinitionKey: row.key })}
+                aria-label={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
               >
                 {t("cockpitDefs.instancesAction")}
-              </DrillButton>
-              <DrillButton
-                onDrill={() =>
+                <Icon icon={ArrowRight} />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
                   go({
                     type: "process-detail",
                     processDefinitionKey: row.key,
                     label: row.name ?? undefined,
                   })
                 }
-                ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
+                aria-label={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
               >
                 {t("cockpitDefs.openAction")}
-              </DrillButton>
+                <Icon icon={ArrowRight} />
+              </Button>
               <HandOffButton
                 action="checkHealth"
                 variant="icon"

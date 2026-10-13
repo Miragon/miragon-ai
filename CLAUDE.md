@@ -443,8 +443,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    deterministic steps, the engine's own web app, then the chat. The meta line under the
    title holds facts only, never a link or an action; a section with actions of its own
    (the incident's failure) keeps them in one row the same way (`action-group.test.tsx`).
-   Rows keep the toolkit's `DrillButton` until it matches the `Button` scale
-   (Miragon/mcp-toolkit#194).
+   Rows use the same size: every row action is the toolkit's `Button` `size="sm"` (a drill
+   with a trailing `ArrowRight`), level with the icon buttons beside it. The toolkit's
+   `DrillButton` (30 px, 13 px, 500) stays out of the widgets until it matches the `Button`
+   scale (Miragon/mcp-toolkit#194; `row-actions.test.ts`).
    **Every widget package runs the brand gates** from `@miragon-ai/widget-shell/testing` in
    its own tests (brand-lint cannot read strings in `.ts`/`.tsx`):
    `catalogTextFindings(catalog, { language })` over each en/de message catalog (no dash as a

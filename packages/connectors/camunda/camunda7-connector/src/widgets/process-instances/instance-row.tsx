@@ -6,14 +6,8 @@ import {
   Td,
   VersionChip,
 } from "@miragon-ai/widget-shell/widgets"
-import { TriangleAlert } from "lucide-react"
-import {
-  CountPill,
-  DrillButton,
-  StatusBadge,
-  TONE_DOT,
-  type ToneVariant,
-} from "@miragon/mcp-toolkit-ui"
+import { TriangleAlert, ArrowRight } from "lucide-react"
+import { CountPill, StatusBadge, TONE_DOT, type ToneVariant, Button } from "@miragon/mcp-toolkit-ui"
 import type { ProcessInstanceRow } from "../../view-models.js"
 import { useHandOff } from "../lib/hand-off.js"
 import { InstanceLabel } from "../lib/identity.js"
@@ -128,14 +122,18 @@ export function InstanceRow({
       </Td>
       <Td align="right">
         <div className="inline-flex items-center justify-end gap-1">
-          <DrillButton
-            onDrill={() => onOpen(row)}
-            ariaLabel={t("processInstances.openInstanceAria", {
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onOpen(row)}
+            aria-label={t("processInstances.openInstanceAria", {
               name: instanceName(row.id, row.businessKey),
             })}
           >
             {t("processInstances.openButton")}
-          </DrillButton>
+            <Icon icon={ArrowRight} />
+          </Button>
           {row.hasIncident && (
             <HandOffButton
               action="findCause"
