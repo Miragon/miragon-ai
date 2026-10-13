@@ -182,22 +182,28 @@ function retriesTone(job: Job): ToneVariant {
  * name (its id the quiet mono line), the process it runs in under it — so an
  * inline frame keeps its width for the error and the retry.
  */
-function JobSubject({ job }: { job: Job }) {
+/**
+ * What a job is about: its activity by name, the id and (in a panel over
+ * several processes) its process on the quiet line under it. A panel scoped
+ * to one process names it in the head, not in every row.
+ */
+function JobSubject({ job, showProcess }: { job: Job; showProcess: boolean }) {
   const t = useT()
-  const process = job.processDefinitionName ?? job.processDefinitionKey
-  // The cell's floor: an id breaks anywhere, so without one the table would
-  // squeeze the names into a column a word wide.
+  const process = showProcess ? (job.processDefinitionName ?? job.processDefinitionKey) : null
+  const inProcess = process ? t("jobPanel.inProcess", { process }) : null
+  // The cell's floor: names wrap between words, so without one the table
+  // would squeeze them into a column a word wide.
   return (
     <div className="flex min-w-48 flex-col gap-0.5">
       {job.activityId ? (
-        <NamedId name={job.activityName} id={job.activityId} />
+        <NamedId name={job.activityName} id={job.activityId} detail={[inProcess]} />
       ) : (
-        <span className="text-muted-foreground">{"—"}</span>
-      )}
-      {process && (
-        <span className="text-muted-foreground text-small break-words">
-          {t("jobPanel.inProcess", { process })}
-        </span>
+        <>
+          <span className="text-muted-foreground">{"—"}</span>
+          {inProcess && (
+            <span className="text-muted-foreground text-small break-words">{inProcess}</span>
+          )}
+        </>
       )}
     </div>
   )
@@ -214,10 +220,13 @@ function JobRow({
   job,
   retry,
   engineId,
+  showProcess,
 }: {
   job: Job
   retry: EngineAction<RetryArgs, unknown>
   engineId: string | undefined
+  /** The panel spans several processes: each row names its own. */
+  showProcess: boolean
 }) {
   const t = useT()
   const { ask } = useHandOff()
@@ -227,7 +236,7 @@ function JobRow({
   return (
     <tr className="hover:bg-muted transition-colors">
       <Td>
-        <JobSubject job={job} />
+        <JobSubject job={job} showProcess={showProcess} />
       </Td>
       <Td className="whitespace-nowrap">
         <IdText value={job.processInstanceId} />
@@ -351,6 +360,10 @@ export function JobPanelWidget({
   // to the engine the data was fetched against (the builder always sets it) so the
   // AI prompts never inline "undefined" into their tool-call arguments.
   const engineId = engine ?? data.engineId
+  const scopedKey = data.filters.processDefinitionKey
+  const scopedProcess = scopedKey
+    ? (jobs.find((j) => j.processDefinitionName)?.processDefinitionName ?? scopedKey)
+    : null
 
   return (
     <WidgetShell>
@@ -365,6 +378,8 @@ export function JobPanelWidget({
           <>
             <EngineMeta engineId={engineId} />
             <span>{t("jobPanel.badgeTotal", { count: formatNumber(totalCount) })}</span>
+            {/* A panel scoped to one process names it here, once, not in every row. */}
+            {scopedProcess && <span>{t("jobPanel.inProcess", { process: scopedProcess })}</span>}
           </>
         }
         actions={
@@ -408,11 +423,21 @@ export function JobPanelWidget({
               ]}
             >
               {jobs.map((job) => (
-                <JobRow key={job.id} job={job} retry={retry} engineId={engineId} />
+                <JobRow
+                  key={job.id}
+                  job={job}
+                  retry={retry}
+                  engineId={engineId}
+                  showProcess={!data.filters.processDefinitionKey}
+                />
               ))}
             </ListTable>
           </PagedRows>
-          <PagedListFooter paged={paged} noun={t("jobPanel.footerNoun")} />
+          <PagedListFooter
+            paged={paged}
+            noun={t("jobPanel.footerNoun")}
+            labels={paged.footerLabels}
+          />
         </>
       )}
     </WidgetShell>

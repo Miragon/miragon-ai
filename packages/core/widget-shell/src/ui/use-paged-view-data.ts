@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from "react"
-import { parseToolResult, useCallTool } from "@miragon/mcp-toolkit-ui"
+import { parseToolResult, useCallTool, useLocale } from "@miragon/mcp-toolkit-ui"
 import { useViewData, type UseViewDataOptions } from "@miragon/mcp-toolkit-ui/hooks"
 import { useInlineBudget } from "./inline-budget.js"
+import { useInlineRows, type InlineRows } from "./inline-fit.js"
+import { kitLabels } from "./kit-labels.js"
 
 /**
  * The pages appended after page 0, tagged with the reset generation they belong
@@ -24,11 +26,11 @@ interface PagedState<TItem> {
 
 export interface PagedViewData<TItem, TData = unknown> {
   /**
-   * The rows to show: every loaded page — inline under a host, at most the
-   * view's row budget of them (`useInlineBudget`, #396); `hasMore` then says
-   * there are more and `loadMore` shows them (fullscreen where the host
-   * offers it, else the next rows in place). The footer's "Showing X of Y"
-   * counts what is shown.
+   * The rows to show: every loaded page — inline under a host, at most as
+   * many as fit the view's height budget (the measured fit, #396); `hasMore`
+   * then says there are more and `loadMore` shows them (fullscreen where the
+   * host offers it, else the next rows in place). The footer's "Showing X of
+   * Y" counts what is shown.
    */
   items: TItem[]
   /**
@@ -82,6 +84,17 @@ export interface PagedViewData<TItem, TData = unknown> {
   retry: () => void
   /** The last load-more failure — `loadMore` retries it; the rows above are current. */
   loadMoreError: Error | null
+  /**
+   * The list's place in the inline fit: `PagedRows` hands it to the table
+   * inside, or a list of its own rows (an `<ol>`) passes `fit.attachRows` to
+   * the element whose children are the rows.
+   */
+  fit: InlineRows
+  /**
+   * Words for the toolkit's `PagedListFooter` (`labels`): while `loadMore`
+   * opens fullscreen, its button says "Show all", not "Load more".
+   */
+  footerLabels: { loadMore: string } | undefined
 }
 
 type PlaceholderOf<TData> = UseViewDataOptions<TData>["placeholderData"]
@@ -235,6 +248,8 @@ export function usePagedViewData<TItem, TData>(opts: {
   const head = useInlineHead({ items, hasMore, fetchNext, pageSize, resetKey: argsKey })
 
   return {
+    fit: head.fit,
+    footerLabels: head.footerLabels,
     items: head.items,
     firstPage: first,
     total,
@@ -253,11 +268,11 @@ export function usePagedViewData<TItem, TData>(opts: {
 }
 
 /**
- * Inline in a chat, the head of a list's rows (#396): at most the view's row
- * budget (`useInlineBudget`). More is fullscreen where the host offers it;
- * elsewhere the next rows in place, a fetched page with the click that loaded
- * it. A new search or filter (`resetKey`) starts at the head again; a refetch
- * keeps what was revealed. Without a budget (fullscreen, no host) every row.
+ * Inline in a chat, the head of a list's rows (#396): as many as fit the
+ * view's height budget (`useInlineRows`, measured). More is fullscreen where
+ * the host offers it; elsewhere the next rows in place, a fetched page with
+ * the click that loaded it. A new search or filter (`resetKey`) starts at the
+ * head again. Without a fit (fullscreen, no host) every row.
  */
 function useInlineHead<TItem>(opts: {
   items: TItem[]
@@ -265,23 +280,34 @@ function useInlineHead<TItem>(opts: {
   fetchNext: () => void
   pageSize: number
   resetKey: string
-}): { items: TItem[]; hasMore: boolean; loadMore: () => void } {
+}): {
+  items: TItem[]
+  hasMore: boolean
+  loadMore: () => void
+  fit: InlineRows
+  footerLabels: { loadMore: string } | undefined
+} {
   const { items, hasMore, fetchNext, pageSize, resetKey } = opts
-  const { rows, expand } = useInlineBudget()
-  const [revealed, setRevealed] = useState(0)
-  const [prevKey, setPrevKey] = useState(resetKey)
-  if (resetKey !== prevKey) {
-    setPrevKey(resetKey)
-    setRevealed(0)
-  }
-  const cap = rows === null ? null : rows + revealed
+  const { expand } = useInlineBudget()
+  const labels = kitLabels(useLocale())
+  // A page that lands (the answer to a search, a refetch) refits on its own rows.
+  const fit = useInlineRows(items.length, { resetKey, contentKey: items })
+  const { cap, step, reveal } = fit
   const capped = cap !== null && items.length > cap
   const shown = useMemo(() => (capped ? items.slice(0, cap) : items), [capped, items, cap])
+  const opensFullscreen = cap !== null && expand !== null
   const loadMore = useCallback(() => {
-    if (rows !== null && expand) return expand()
-    if (capped) return setRevealed((r) => r + (rows ?? 0))
-    if (rows !== null) setRevealed(items.length + pageSize - rows)
+    if (opensFullscreen) return expand?.()
+    if (capped) return reveal(step)
+    // Every loaded row shows: fetch the next page and show it with this click.
+    if (cap !== null) reveal(items.length + pageSize - cap)
     fetchNext()
-  }, [rows, expand, capped, items.length, pageSize, fetchNext])
-  return { items: shown, hasMore: capped || hasMore, loadMore }
+  }, [opensFullscreen, expand, capped, reveal, step, cap, items.length, pageSize, fetchNext])
+  return {
+    items: shown,
+    hasMore: capped || hasMore,
+    loadMore,
+    fit,
+    footerLabels: opensFullscreen ? { loadMore: labels.showAll } : undefined,
+  }
 }

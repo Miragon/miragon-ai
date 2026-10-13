@@ -30,7 +30,6 @@ export function IncidentsTab({
       recovery={recovery}
       onAnalyze={(incidentId) => go({ type: "incident-detail", incidentId })}
       hideInstanceColumn
-      previewCount={5}
       engine={engine}
     />
   )

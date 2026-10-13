@@ -21,8 +21,11 @@ describe("NamedId", () => {
     expect(idLine.className).toContain("text-muted-foreground")
     const id = container.querySelector(".font-mono")
     expect(id?.textContent).toBe("miraveloLeasing")
-    // A long id breaks anywhere instead of widening its column.
-    expect(id?.className).toContain("break-all")
+    // A long id wraps between its parts, never in the middle of a word.
+    expect(id?.className).not.toContain("break-all")
+    // A part wider than the column still wraps inside itself, never widening it.
+    expect(id?.className).toContain("wrap-anywhere")
+    expect(id?.innerHTML).toBe("miravelo<wbr>Leasing")
   })
 
   it("appends the details to the id line, skipping empty ones", () => {

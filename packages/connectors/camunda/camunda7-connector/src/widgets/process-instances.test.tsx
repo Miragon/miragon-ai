@@ -100,3 +100,60 @@ describe("process-instances widget keeps page 0's run-state filter", () => {
     expect(runState(calls[0])).toEqual({ suspended: true })
   })
 })
+
+/**
+ * #396 (inline fit): in a chat's column the engine-wide list gives the
+ * process name its width. The version goes onto the process's quiet line,
+ * the State column hides below 48rem (container query), and a suspended row
+ * then says so in its first cell, never by the dot's colour alone. A scoped
+ * list has room for both columns.
+ */
+describe("the engine-wide list's columns", () => {
+  function engineWide(): ProcessInstancesData {
+    const page = firstPage({})
+    return {
+      ...page,
+      processDefinitionKey: null,
+      processDefinitionName: null,
+      instances: [
+        { ...page.instances[0], processDefinitionName: "Invoice receipt", version: 7 },
+        { ...page.instances[1], processDefinitionName: "Invoice receipt", suspended: true },
+      ],
+    }
+  }
+  const headers = () => screen.getAllByRole("columnheader").map((th) => th.textContent)
+
+  it("names the version on the process line instead of a column of its own", () => {
+    render(
+      <WidgetFixtureHost widget={() => <ProcessInstancesView data={engineWide()} />} data={{}} />,
+    )
+    expect(headers()).not.toContain("Version")
+    expect(headers()).toContain("Process")
+    const process = screen.getAllByText("Invoice receipt")[0].closest("button")!
+    expect(process.textContent).toBe("Invoice receiptinvoice · v7")
+    // The button's name replaces its content for a screen reader: it says the version.
+    expect(process.getAttribute("aria-label")).toBe("Open process Invoice receipt, version 7")
+  })
+
+  it("hides the State column in a narrow region, and a suspended row says so in its first cell", () => {
+    const { container } = render(
+      <WidgetFixtureHost widget={() => <ProcessInstancesView data={engineWide()} />} data={{}} />,
+    )
+    // The rule that hides the third column (State) below 48rem.
+    const rules = container.querySelector("[data-list-table] style")?.textContent ?? ""
+    expect(rules).toMatch(/nth-child\(3\) \{ display: none; \}/)
+    const [running, suspended] = screen.getAllByRole("row").slice(1)
+    const firstCell = (row: HTMLElement) => row.querySelector("td")!
+    expect(firstCell(suspended).textContent).toContain("Suspended")
+    expect(firstCell(suspended).querySelector("[class*='@min-[48rem]:hidden']")).not.toBeNull()
+    expect(firstCell(running).textContent).not.toContain("Suspended")
+  })
+
+  it("keeps the Version and State columns in a list scoped to one process", () => {
+    render(
+      <WidgetFixtureHost widget={() => <ProcessInstancesView data={firstPage({})} />} data={{}} />,
+    )
+    expect(headers()).toEqual(expect.arrayContaining(["Version", "State"]))
+    expect(headers()).not.toContain("Process")
+  })
+})

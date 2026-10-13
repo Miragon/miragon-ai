@@ -1,38 +1,23 @@
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
-  HandOffButton,
-  Icon,
   ListTable,
-  NamedId,
   PagedRows,
   QueryFallback,
   TableEmptyState,
   TableSkeleton,
-  Td,
-  VersionChip,
   WidgetShell,
   usePagedListView,
 } from "@miragon-ai/widget-shell/widgets"
 import { useState } from "react"
-import { TriangleAlert } from "lucide-react"
-import {
-  CountPill,
-  DrillButton,
-  FilterBar,
-  StatusBadge,
-  TONE_DOT,
-  PagedListFooter,
-  type FilterChip,
-  type ToneVariant,
-} from "@miragon/mcp-toolkit-ui"
+import { FilterBar, PagedListFooter, type FilterChip } from "@miragon/mcp-toolkit-ui"
 import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"
 import type { ProcessInstancesFilters } from "../../feed-contracts.js"
 import { useNav } from "../navigation.js"
 import { CAMUNDA7_PROCESS_INSTANCES_DATA } from "../../tool-names.js"
 import { InstancesHeader } from "./list-header.js"
+import { InstanceRow } from "./instance-row.js"
 import { useHandOff } from "../lib/hand-off.js"
-import { describeInstancesView, rootCauseHandOff, type InstanceChip } from "./hand-offs.js"
-import { InstanceLabel } from "../lib/identity.js"
+import { describeInstancesView, type InstanceChip } from "./hand-offs.js"
 import { instanceName } from "../lib/write-feedback.js"
 import { useT } from "../../messages/use-t.js"
 
@@ -50,109 +35,6 @@ const CHIP_SUSPENDED: InstanceChip = "suspended"
  * are owned by `usePagedViewData`; `engine` by the resolve-engine override.
  */
 type InstancesFilterArgs = Partial<ProcessInstancesFilters> & { engine?: string }
-
-function rowTone(row: ProcessInstanceRow): ToneVariant {
-  if (row.hasIncident) return "danger"
-  if (row.suspended) return "warning"
-  return "neutral"
-}
-
-function InstanceRow({
-  row,
-  processDefinitionKey,
-  engine,
-  showProcessColumn,
-  onOpen,
-  onOpenProcess,
-}: {
-  row: ProcessInstanceRow
-  /** The list's definition scope — null in the engine-wide list. */
-  processDefinitionKey: string | null
-  /** The engine the list was fetched from — undefined when the default routed it. */
-  engine: string | undefined
-  /** Engine-wide list: each row names (and drills into) its own definition. */
-  showProcessColumn: boolean
-  onOpen: (row: ProcessInstanceRow) => void
-  onOpenProcess: (row: ProcessInstanceRow) => void
-}) {
-  const t = useT()
-  const { ask } = useHandOff()
-  const tone = rowTone(row)
-  return (
-    <tr className="hover:bg-muted transition-colors">
-      <Td>
-        {/* One instance label (#322 U13): the business key, the UUID a
-            copyable chip beside it — never a three-line UUID. */}
-        <span className="flex items-center gap-2">
-          <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${TONE_DOT[tone]}`} />
-          <InstanceLabel id={row.id} businessKey={row.businessKey} />
-        </span>
-      </Td>
-      {showProcessColumn && (
-        <Td>
-          {row.processDefinitionKey ? (
-            <button
-              type="button"
-              onClick={() => onOpenProcess(row)}
-              className="text-link text-left hover:underline"
-              aria-label={t("processInstances.openProcessAria", {
-                key: row.processDefinitionName ?? row.processDefinitionKey,
-              })}
-            >
-              <NamedId name={row.processDefinitionName} id={row.processDefinitionKey} />
-            </button>
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )}
-        </Td>
-      )}
-      <Td>
-        {row.version !== null ? (
-          <VersionChip version={row.version} />
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </Td>
-      <Td>
-        {row.suspended ? (
-          <StatusBadge tone="warning">{t("processInstances.stateSuspended")}</StatusBadge>
-        ) : (
-          <span className="text-muted-foreground text-small">
-            {t("processInstances.stateRunning")}
-          </span>
-        )}
-      </Td>
-      <Td align="right">
-        {row.hasIncident ? (
-          <CountPill tone="danger">
-            <Icon icon={TriangleAlert} dense label={t("processInstances.hasIncident")} />
-          </CountPill>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </Td>
-      <Td align="right">
-        <div className="inline-flex items-center justify-end gap-1">
-          <DrillButton
-            onDrill={() => onOpen(row)}
-            ariaLabel={t("processInstances.openInstanceAria", {
-              name: instanceName(row.id, row.businessKey),
-            })}
-          >
-            {t("processInstances.openButton")}
-          </DrillButton>
-          {row.hasIncident && (
-            <HandOffButton
-              action="findCause"
-              variant="icon"
-              prompt={ask(rootCauseHandOff(row, processDefinitionKey, engine))}
-            />
-          )}
-        </div>
-      </Td>
-    </tr>
-  )
-}
 
 function deriveInstancesScope({
   initialData,
@@ -372,9 +254,15 @@ export function ProcessInstancesView({
             ariaLabel={t("processInstances.tableAriaLabel", { name: title })}
             columns={[
               { label: t("processInstances.colBusinessKey") },
-              ...(scopedKey ? [] : [{ label: t("processInstances.colProcess") }]),
-              { label: t("processInstances.colVersion") },
-              { label: t("processInstances.colState") },
+              // Engine-wide, each row names its process (its version on the
+              // quiet line) and the state hides in a chat's narrow column (the
+              // first cell then says "Suspended"); a scoped list has room for both.
+              scopedKey
+                ? { label: t("processInstances.colVersion") }
+                : { label: t("processInstances.colProcess") },
+              scopedKey
+                ? { label: t("processInstances.colState") }
+                : { label: t("processInstances.colState"), hideBelow: "md" as const },
               { label: t("processInstances.colIncident"), align: "right" as const },
               { plain: true, sticky: true },
             ]}
@@ -408,7 +296,11 @@ export function ProcessInstancesView({
       </PagedRows>
       {/* Also under an empty result: a failed search keeps the previous
           (empty) rows on screen, and its error + retry live in the footer. */}
-      <PagedListFooter paged={paged} noun={t("processInstances.footerNoun")} />
+      <PagedListFooter
+        paged={paged}
+        noun={t("processInstances.footerNoun")}
+        labels={paged.footerLabels}
+      />
     </>
   )
 }

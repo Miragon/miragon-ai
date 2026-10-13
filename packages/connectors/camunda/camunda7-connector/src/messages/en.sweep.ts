@@ -320,6 +320,7 @@ export const enSweep: MessageCatalog = {
   "processInstances.openButton": "Open",
   "processInstances.openInstanceAria": "Open instance detail for {name}",
   "processInstances.openProcessAria": "Open process {key}",
+  "processInstances.openProcessVersionAria": "Open process {key}, version {version}",
   "processInstances.runningCount": "{count} running",
   "processInstances.searchLabel": "Search by business key or ID",
   "processInstances.searchPlaceholder": "Search by business key or ID…",
@@ -410,8 +411,6 @@ export const enSweep: MessageCatalog = {
     "Could not schedule the retry ({message}). Check the error message and try again.",
   "procIncTable.retryHint":
     "Sets retries to 1. Incidents of this type clear with a retry, not by marking them resolved.",
-  "procIncTable.showMore": ({ count }) =>
-    `Show ${countOf(count, "more incident", "more incidents")} in this activity`,
   "procIncTable.tableLabel": "Incidents in this activity",
   "taskForm.addVariable": "Add variable",
   "taskForm.cancel": "Cancel",

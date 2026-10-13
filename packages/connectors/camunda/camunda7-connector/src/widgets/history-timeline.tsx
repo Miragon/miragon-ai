@@ -17,6 +17,7 @@ import {
   WidgetShell,
   formatDuration,
   formatTimestamp,
+  RowsBudgeted,
   usePagedViewData,
 } from "@miragon-ai/widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
@@ -127,6 +128,7 @@ export function HistoryTimelineView({
   totalActivities,
   incidentActivityIds,
   variant = "timeline",
+  attachRows,
 }: {
   activities: HistoryEntry[]
   processInstance?: HistoryTimelineData["processInstance"]
@@ -137,6 +139,8 @@ export function HistoryTimelineView({
   /** Activities with an open incident on this instance — their running step is marked. */
   incidentActivityIds?: readonly string[] | null
   variant?: "timeline" | "table"
+  /** The element whose children are the rows, for the inline fit of a paged timeline. */
+  attachRows?: (element: HTMLElement | null) => void
 }) {
   const t = useT()
   const { ask } = useHandOff()
@@ -199,7 +203,11 @@ export function HistoryTimelineView({
         />
       )}
 
-      <ol className="flex flex-col gap-1" aria-label={t("historyTimeline.timelineLabel")}>
+      <ol
+        ref={attachRows}
+        className="flex flex-col gap-1"
+        aria-label={t("historyTimeline.timelineLabel")}
+      >
         {activities.map((activity, index) => {
           const state = historyStepState(activity, incidentIds)
           return (
@@ -346,16 +354,24 @@ export function PagedHistoryView({
 
   return (
     <div className="flex flex-col gap-2">
-      <HistoryTimelineView
-        variant={variant}
-        activities={paged.items}
-        processInstance={processInstance}
-        instanceRef={{ id: processInstanceId, processDefinitionKey }}
-        engineId={engine}
-        totalActivities={paged.total}
-        incidentActivityIds={incidentActivityIds}
+      {/* The rows fit as ONE list: the table variant hands its body to it. */}
+      <RowsBudgeted rows={paged.fit}>
+        <HistoryTimelineView
+          variant={variant}
+          activities={paged.items}
+          processInstance={processInstance}
+          instanceRef={{ id: processInstanceId, processDefinitionKey }}
+          engineId={engine}
+          totalActivities={paged.total}
+          incidentActivityIds={incidentActivityIds}
+          attachRows={paged.fit.attachRows}
+        />
+      </RowsBudgeted>
+      <PagedListFooter
+        paged={paged}
+        noun={t("historyTimeline.footerNoun")}
+        labels={paged.footerLabels}
       />
-      <PagedListFooter paged={paged} noun={t("historyTimeline.footerNoun")} />
     </div>
   )
 }
