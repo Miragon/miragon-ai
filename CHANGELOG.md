@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.20.0](https://github.com/Miragon/miragon-ai/compare/v0.19.0...v0.20.0) (2026-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **widget-shell:** `inlineRowBudget`, `DEFAULT_INLINE_ROWS` and `InlineBudget.rows` are gone, replaced by the measured fit (`InlineFitBox`, `useInlineRows`). `RowsBudgeted` takes the paged list's `rows`. `PagedViewData` gains `fit` and `footerLabels`.
+* camunda7_show_user_profile, camunda7_user_profile_data and camunda7_save_user_profile are renamed to camunda7_show_settings, camunda7_settings_data and camunda7_save_settings; the widget id camunda7:user-profile is camunda7:settings; camunda7_save_settings no longer takes language (use shell_save_settings). AppShellProviders and ProfileGate take no profileTool. settingsLayout and filterLayoutToWidgets come from @miragon-ai/widget-shell/widgets, and camunda7's cockpitViews take no view context. A composition root passes { profileStore, allowSave } to createShellPlugin and spreads shellWidgets into its widget registry.
+* **camunda7:** the view payloads replace `bpmnXml` with `diagramDefinitionId` (camunda7) or carry no diagram at all (`analytics_show_bpmn_heatmap`, `analytics_bpmn_heatmap_data`). The widgets read the XML from the new app-only feeds `camunda7_bpmn_xml_data` and `analytics_bpmn_xml_data`. `BpmnDiagram` takes `definitionId` (+ `engineId`) instead of `bpmnXml`; `BpmnCanvas` draws XML already in hand.
+* **widget-shell:** `buildDataFeedResult` returns `{ content }` only: the feed payload is JSON text, no `structuredContent`. Read it with the toolkit's `parseToolResult`. The `camunda7:bpmnXml` key of `camunda7:load-process-instance` is gone.
+* **widget-shell:** `installToolCallLogging` is removed from `@miragon-ai/widget-shell/server` (mcp-use logs requests itself). `MCP_DEBUG_LEVEL` is no longer a known variable; use mcp-use's `MCP_USE_LOG_LEVEL`. A module named twice in `MCP_ACTIVE_MODULES` fails the boot.
+* **analytics:** the duration histograms are now `camunda_*_duration_milliseconds` and record milliseconds; the incident counters gain `process_definition_version`; `VersionCompareResult.notes` is removed. Upgrade the engine plugin and the analytics client together; dashboards and alert rules of your own need the new names and the reading rules in metrics-contract.json. A clustered engine needs a unique `service.instance.id` per node.
+
+### Features
+
+* **analytics:** millisecond histograms, versioned incidents, honest first counts and committed-only metrics ([#388](https://github.com/Miragon/miragon-ai/issues/388)) ([28dfa26](https://github.com/Miragon/miragon-ai/commit/28dfa2622c7c26f020e252416979d7c4de02a47a)), closes [#337](https://github.com/Miragon/miragon-ai/issues/337)
+* **camunda7:** one action group per view, every action one button size ([#405](https://github.com/Miragon/miragon-ai/issues/405)) ([483d386](https://github.com/Miragon/miragon-ai/commit/483d3868af4f8fd5acb7e33d08d11df2ba3003be))
+* **camunda7:** warn at boot that passthrough auth is for trusted single-audience setups only ([#390](https://github.com/Miragon/miragon-ai/issues/390)) ([3c39be9](https://github.com/Miragon/miragon-ai/commit/3c39be9fb715b541b563daf3c4cc4bea17334210)), closes [#330](https://github.com/Miragon/miragon-ai/issues/330)
+* the shell owns the UI language and the settings page ([#397](https://github.com/Miragon/miragon-ai/issues/397)) ([8fa4fb3](https://github.com/Miragon/miragon-ai/commit/8fa4fb3f4a83930c304fe08b7cc9496f5ef5d728)), closes [#346](https://github.com/Miragon/miragon-ai/issues/346)
+* **widget-shell:** an inline confirmation opens beside its opener ([#400](https://github.com/Miragon/miragon-ai/issues/400)) ([ce80c39](https://github.com/Miragon/miragon-ai/commit/ce80c39d067ae07136058e128b799ea06097142b)), closes [#344](https://github.com/Miragon/miragon-ai/issues/344)
+* **widget-shell:** focus after navigation, fullscreen in a drill, no pip, an outlier floor ([#399](https://github.com/Miragon/miragon-ai/issues/399)) ([4657df5](https://github.com/Miragon/miragon-ai/commit/4657df55230e9bc00785cb88a666ef1b15b734a3)), closes [#344](https://github.com/Miragon/miragon-ai/issues/344)
+* **widget-shell:** inline lists fit the host's height by measuring their rows ([#404](https://github.com/Miragon/miragon-ai/issues/404)) ([6791363](https://github.com/Miragon/miragon-ai/commit/6791363414ca8089d23288e0c96dd14a7951f4f2))
+* **widget-shell:** inline views are cards that fit the host's height budget ([#398](https://github.com/Miragon/miragon-ai/issues/398)) ([1b563e2](https://github.com/Miragon/miragon-ai/commit/1b563e2cbb51b241c2b6cf5566519d7674fadcac)), closes [#396](https://github.com/Miragon/miragon-ai/issues/396)
+* **widget-shell:** views ask for a border, the bundle gets a budget ([#401](https://github.com/Miragon/miragon-ai/issues/401)) ([266ab71](https://github.com/Miragon/miragon-ai/commit/266ab71f53f5901ced480ab3ead94b6e768d0713)), closes [#344](https://github.com/Miragon/miragon-ai/issues/344)
+
+
+### Bug Fixes
+
+* **camunda7:** row actions have the one action size, level with their icon buttons ([#408](https://github.com/Miragon/miragon-ai/issues/408)) ([84fcb31](https://github.com/Miragon/miragon-ai/commit/84fcb314266225c3541fadbb44c584d773a94a8e))
+* **camunda7:** the instances list finds an instance by its id, and pages in one order ([#402](https://github.com/Miragon/miragon-ai/issues/402)) ([5207a8e](https://github.com/Miragon/miragon-ai/commit/5207a8e30ccb7c901cb95c3f04fa9542f806969f))
+* docs and skills match the code, guarded; connectors declare the toolkit-ui peer ([#395](https://github.com/Miragon/miragon-ai/issues/395)) ([7fff7f4](https://github.com/Miragon/miragon-ai/commit/7fff7f47dd4de3a0f56efadea7a1cc2899c8d257)), closes [#345](https://github.com/Miragon/miragon-ai/issues/345)
+* **widget-shell:** the segmented toggle's selection follows its rounded corners ([#406](https://github.com/Miragon/miragon-ai/issues/406)) ([d0423e2](https://github.com/Miragon/miragon-ai/commit/d0423e23052f8ceea63a9989960a08d8bfb9ee98))
+
+
+### Code Refactoring
+
+* **camunda7:** views name the diagram they draw; the widgets read its XML by id ([#394](https://github.com/Miragon/miragon-ai/issues/394)) ([4169059](https://github.com/Miragon/miragon-ai/commit/416905982a80459cfec6998331df378338faba6f)), closes [#342](https://github.com/Miragon/miragon-ai/issues/342)
+* **widget-shell:** feeds answer once, diagrams are read once, summaries claim no UI ([#393](https://github.com/Miragon/miragon-ai/issues/393)) ([8bd2e51](https://github.com/Miragon/miragon-ai/commit/8bd2e519447e8521790ed93c8ec869211b3efc0f)), closes [#342](https://github.com/Miragon/miragon-ai/issues/342)
+* **widget-shell:** one request log, one module per name, honest tool-call metrics ([#392](https://github.com/Miragon/miragon-ai/issues/392)) ([4665445](https://github.com/Miragon/miragon-ai/commit/4665445865e91f8d778c5c07e2e6c0c5de6515ef)), closes [#346](https://github.com/Miragon/miragon-ai/issues/346)
+
 ## [0.19.0](https://github.com/Miragon/miragon-ai/compare/v0.18.0...v0.19.0) (2026-10-12)
 
 
