@@ -76,7 +76,7 @@ ChatGPT. Claude Desktop takes stdio servers only, so bridge it there:
 }
 ```
 
-See [How to use it](https://miragon.ai/tools/miragon-ai/usage) for the full connection matrix and
+See [How to use it](https://miragon.ai/tools/pulse/usage) for the full connection matrix and
 what to ask once connected.
 
 **Prefer to build the image yourself?** No credentials needed — build it and run `miragon-ai-server`
@@ -214,7 +214,7 @@ anonymous deployment shows no write buttons. The dashboard builder (`get-builder
 
 ## Configuration
 
-The most common variables — see [Operations](https://miragon.ai/tools/miragon-ai/operations) for
+The most common variables — see [Operations](https://miragon.ai/tools/pulse/operations) for
 the full reference.
 
 | Variable                                                  | Default                             | Description                                                                                                                                                               |
@@ -272,7 +272,7 @@ engines JSON as a map keyed by environment id, or tag entries individually:
 
 Engine ids stay globally unique across environments — the id remains the `ENGINE_ID` metrics
 join key and the per-call `engine` selector; the environment is a grouping level only.
-Full walkthrough in [Operations](https://miragon.ai/tools/miragon-ai/operations).
+Full walkthrough in [Operations](https://miragon.ai/tools/pulse/operations).
 
 ## Engine metrics plugin
 
@@ -304,18 +304,18 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 cd engine-plugins && ./gradlew build      # Kotlin: compile + unit + Konsist architecture tests
 ```
 
-See [For Developers](https://miragon.ai/tools/miragon-ai/developer) and [`CLAUDE.md`](CLAUDE.md)
+See [For Developers](https://miragon.ai/tools/pulse/developer) and [`CLAUDE.md`](CLAUDE.md)
 for the architecture invariants and house patterns.
 
 ## Documentation
 
-The documentation lives on [miragon.ai](https://miragon.ai/tools/miragon-ai/):
+The documentation lives on [miragon.ai](https://miragon.ai/tools/pulse/), where this server is called Pulse:
 
-- [Overview](https://miragon.ai/tools/miragon-ai/) — what the server does and how to [connect your Claude](https://miragon.ai/tools/miragon-ai/#connect-your-claude)
-- [Architecture](https://miragon.ai/tools/miragon-ai/architecture) — one-page mental model of the server, modules and systems
-- [For Developers](https://miragon.ai/tools/miragon-ai/developer) — clone, install, and run the stack locally
-- [Operations](https://miragon.ai/tools/miragon-ai/operations) — deployment, environment, and observability
-- [Usage](https://miragon.ai/tools/miragon-ai/usage) — connect an assistant and operate your processes
+- [Overview](https://miragon.ai/tools/pulse/) — what the server does and how to [connect your Claude](https://miragon.ai/tools/pulse/#connect-your-claude)
+- [Architecture](https://miragon.ai/tools/pulse/architecture) — one-page mental model of the server, modules and systems
+- [For Developers](https://miragon.ai/tools/pulse/developer) — clone, install, and run the stack locally
+- [Operations](https://miragon.ai/tools/pulse/operations) — deployment, environment, and observability
+- [Usage](https://miragon.ai/tools/pulse/usage) — connect an assistant and operate your processes
 
 The site is built from [Miragon/miragon-ai-docs](https://github.com/Miragon/miragon-ai-docs). A
 user-visible change here (env vars, tools, ports, getting-started steps) needs a matching PR there.

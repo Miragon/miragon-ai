@@ -29,6 +29,6 @@ mcp-use skill this file used to vendor taught 1.x APIs (`server.uiResource()`, t
 
 Where an mcp-use example and the house skills disagree, the house skills win.
 
-The docs site (https://miragon.ai/tools/miragon-ai/) lives in Miragon/miragon-ai-docs.
+The docs site (https://miragon.ai/tools/pulse/) lives in Miragon/miragon-ai-docs.
 A user-visible change (env vars, tools, ports, getting-started steps) needs a matching
 PR there.

@@ -60,7 +60,7 @@ export const composition = composeModules<SharedResources>({
   label: "miragon-ai",
   modules: MODULES,
   appEnvVars: APP_ENV_VARS,
-  envVarHint: "see https://miragon.ai/tools/miragon-ai/operations",
+  envVarHint: "see https://miragon.ai/tools/pulse/operations",
 })
 
 export const warnUnknownEnvVars = composition.warnUnknownEnvVars

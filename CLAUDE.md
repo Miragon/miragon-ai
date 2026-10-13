@@ -10,7 +10,7 @@ section on the settings page). The skills and READMEs are held to the code by
 registered, every repo path must exist, and every identifier a house skill names must exist
 in the sources or the toolkit/mcp-use typings.
 
-The docs site (https://miragon.ai/tools/miragon-ai/) lives in Miragon/miragon-ai-docs:
+The docs site (https://miragon.ai/tools/pulse/) lives in Miragon/miragon-ai-docs:
 user-visible changes (env vars, tools, ports, getting-started steps) need a matching PR there.
 
 ## What this repo is
