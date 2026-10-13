@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import {
@@ -10,7 +9,7 @@ import {
   cn,
   type FilterChip,
   type ToneVariant,
-  Button,
+  DrillButton,
 } from "@miragon/mcp-toolkit-ui"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type {
@@ -37,7 +36,6 @@ import {
   countTone,
   formatNumber,
   formatTimestamp,
-  Icon,
 } from "@miragon-ai/widget-shell/widgets"
 
 const TYPE_ALL = "all"
@@ -148,16 +146,12 @@ function ProcessSummary({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 ps-4">
         <span className="text-muted-foreground text-small min-w-0 flex-1">{facts.join(" · ")}</span>
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onOpenDetail}
-            aria-label={t("incidentsList.openDetailAria", { name })}
+          <DrillButton
+            onDrill={onOpenDetail}
+            ariaLabel={t("incidentsList.openDetailAria", { name })}
           >
             {t("incidentsList.open")}
-            <Icon icon={ArrowRight} />
-          </Button>
+          </DrillButton>
           <MoreActions label={t("incidentsList.moreActions", { name })}>
             {cockpitUrl && (
               <OpenInCockpitLink url={cockpitUrl} vendor={vendor} variant="menuitem" />

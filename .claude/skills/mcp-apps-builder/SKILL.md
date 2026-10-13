@@ -5,7 +5,7 @@ description: Where to look before changing MCP server code in this repo (tools, 
 
 # MCP server work in this repo
 
-This repo runs `mcp-use@2.7.3` with `@miragon/mcp-toolkit-*@2.8.0`. The generic
+This repo runs `mcp-use@2.7.3` with `@miragon/mcp-toolkit-*@2.8.1`. The generic
 mcp-use skill this file used to vendor taught 1.x APIs (`server.uiResource()`, the
 `text()`/`widget()` response helpers, `server.proxy()`, `useWidget`, hand-stamped
 `_meta.ui`), so it is gone. Read these instead, in this order:

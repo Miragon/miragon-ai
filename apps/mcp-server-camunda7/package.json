@@ -34,14 +34,14 @@
     "@miragon-ai/analytics-connector": "workspace:*",
     "@miragon-ai/camunda7-connector": "workspace:*",
     "@miragon-ai/widget-shell": "workspace:*",
-    "@miragon/mcp-toolkit-core": "2.8.0",
+    "@miragon/mcp-toolkit-core": "2.8.1",
     "mcp-use": "2.7.3",
     "postgres": "3.4.9",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
-    "@miragon/mcp-toolkit-ui": "2.8.0",
+    "@miragon/mcp-toolkit-ui": "2.8.1",
     "@modelcontextprotocol/client": "2.2.0",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",

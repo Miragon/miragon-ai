@@ -3,11 +3,12 @@ import { join, relative } from "node:path"
 import { describe, expect, it } from "vitest"
 
 /**
- * Every action a view shows, in its head and in its rows, is the toolkit's
- * `Button` `size="sm"` (32 px, 14 px, 600), so a row's "Open" sits level
- * with the chat icon button beside it. The toolkit's `DrillButton` is 30 px,
- * 13 px, 500 and stays out of the widgets until it matches the `Button`
- * scale (Miragon/mcp-toolkit#194). An operator reported the mix.
+ * Every action a view shows, in its head and in its rows, has one size: the
+ * toolkit's `Button` scale (32 px, 14 px, 600), so a row's "Open" sits level
+ * with the chat icon button beside it. A drill is the toolkit's `DrillButton`,
+ * the outline `Button` at that scale since toolkit 2.8.1
+ * (Miragon/mcp-toolkit#194), never a `Button` dressed up with a trailing
+ * arrow: one drill control, the toolkit's (CLAUDE.md invariant 6).
  */
 
 const WIDGETS = join(import.meta.dirname, "widgets")
@@ -20,11 +21,39 @@ function sources(dir: string): string[] {
   })
 }
 
-describe("one action size in heads and rows", () => {
-  it("no widget uses the toolkit's DrillButton until it matches the Button scale (#194)", () => {
+/** A `<Button …>` whose last child is an `ArrowRight` icon: a drill in disguise. */
+const DRESSED_DRILL =
+  /<Button\b[^>]*>(?:(?!<\/Button>)[\s\S])*?<Icon icon=\{ArrowRight\}[^>]*\/>\s*<\/Button>/
+
+describe("one drill control, at the one action size", () => {
+  it("every drill is the toolkit's DrillButton, never a Button with a trailing arrow", () => {
     const offenders = sources(WIDGETS)
-      .filter((path) => /\bDrillButton\b/.test(readFileSync(path, "utf8")))
+      .filter((path) => DRESSED_DRILL.test(readFileSync(path, "utf8")))
       .map((path) => relative(WIDGETS, path))
     expect(offenders).toEqual([])
+  })
+
+  it("a DrillButton is named by its ariaLabel prop: an aria-label attribute would be dropped", () => {
+    // TypeScript does not check hyphenated JSX attributes, and DrillButton
+    // spreads nothing: `aria-label` on it compiles and silently names nothing.
+    const offenders = sources(WIDGETS).flatMap((path) =>
+      (
+        readFileSync(path, "utf8").match(
+          /<DrillButton\b(?:(?!<\/DrillButton>)[\s\S])*?<\/DrillButton>/g,
+        ) ?? []
+      )
+        .filter((block) => /\baria-label=/.test(block))
+        .map(() => relative(WIDGETS, path)),
+    )
+    expect(offenders).toEqual([])
+  })
+
+  it("the scan sees a dressed drill (the pattern is not vacuous)", () => {
+    const dressed = `<Button type="button" variant="outline" size="sm" onClick={go}>
+      Open
+      <Icon icon={ArrowRight} />
+    </Button>`
+    expect(DRESSED_DRILL.test(dressed)).toBe(true)
+    expect(DRESSED_DRILL.test(`<DrillButton onDrill={go}>Open</DrillButton>`)).toBe(false)
   })
 })

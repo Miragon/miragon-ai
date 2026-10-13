@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react"
 import {
   HandOffButton,
   ListTable,
@@ -12,7 +11,6 @@ import {
   formatNumber,
   formatTimestamp,
   usePagedListView,
-  Icon,
 } from "@miragon-ai/widget-shell/widgets"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
@@ -21,7 +19,7 @@ import {
   StatusBadge,
   WidgetHeader,
   PagedListFooter,
-  Button,
+  DrillButton,
 } from "@miragon/mcp-toolkit-ui"
 import type { ClusterDetailData, ClusterIncidentRow } from "../view-models.js"
 import { DetailPage } from "./detail-page.js"
@@ -238,35 +236,27 @@ function IncidentRow({
       </Td>
       <Td align="right">
         <div className="inline-flex items-center justify-end gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
+          <DrillButton
+            onDrill={() =>
               go({ type: "instance-detail", processInstanceId: row.processInstanceId, label })
             }
-            aria-label={t("clusterDetail.openInstanceAria", { ref: label })}
+            ariaLabel={t("clusterDetail.openInstanceAria", { ref: label })}
           >
             {t("clusterDetail.instance")}
-            <Icon icon={ArrowRight} />
-          </Button>
+          </DrillButton>
           {row.incidentId && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
+            <DrillButton
+              onDrill={() =>
                 go({
                   type: "incident-detail",
                   incidentId: row.incidentId,
                   label: activityName ?? undefined,
                 })
               }
-              aria-label={t("clusterDetail.openIncidentAria", { ref: label })}
+              ariaLabel={t("clusterDetail.openIncidentAria", { ref: label })}
             >
               {t("clusterDetail.incident")}
-              <Icon icon={ArrowRight} />
-            </Button>
+            </DrillButton>
           )}
         </div>
       </Td>

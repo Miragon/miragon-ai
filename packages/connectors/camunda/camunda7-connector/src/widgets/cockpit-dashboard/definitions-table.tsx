@@ -1,7 +1,6 @@
-import { ArrowRight } from "lucide-react"
 import { useId, useState } from "react"
-import { ViewDataState, WidgetShell, formatNumber, Icon } from "@miragon-ai/widget-shell/widgets"
-import { FilterBar, ListFooter, useDebouncedValue, Button } from "@miragon/mcp-toolkit-ui"
+import { ViewDataState, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { FilterBar, ListFooter, useDebouncedValue, DrillButton } from "@miragon/mcp-toolkit-ui"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { CockpitDashboardData } from "../../view-models.js"
 import { buildRows } from "./lib.js"
@@ -119,32 +118,24 @@ export function ProcessDefinitionsSection({
         emptyText={debouncedSearch ? t("cockpitDefs.noMatch") : t("cockpitDefs.emptyState")}
         renderActions={(row) => (
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => go({ type: "process-instances", processDefinitionKey: row.key })}
-              aria-label={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
+            <DrillButton
+              onDrill={() => go({ type: "process-instances", processDefinitionKey: row.key })}
+              ariaLabel={t("cockpitDefs.viewInstancesAria", { name: row.name ?? row.key })}
             >
               {t("cockpitDefs.instancesAction")}
-              <Icon icon={ArrowRight} />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
+            </DrillButton>
+            <DrillButton
+              onDrill={() =>
                 go({
                   type: "process-detail",
                   processDefinitionKey: row.key,
                   label: row.name ?? undefined,
                 })
               }
-              aria-label={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
+              ariaLabel={t("cockpitDefs.openDetailAria", { name: row.name ?? row.key })}
             >
               {t("cockpitDefs.openAction")}
-              <Icon icon={ArrowRight} />
-            </Button>
+            </DrillButton>
           </>
         )}
       />
