@@ -140,9 +140,9 @@ describe("view stylesheets: role variables over the Miragon theme", () => {
 /**
  * Drift guard (modeler-tool-design §13: vendor the CI tokens unchanged, never
  * fork a value). The token file every view ships is the toolkit's vendored
- * copy — `theme.css` imports it, nobody in this repo declares a `--cd-*` of
- * its own — and the docs site's copy is the same file, so product and docs
- * show one CI version.
+ * copy — `theme.css` imports it, and nobody in this repo declares a `--cd-*`
+ * of its own. The docs site moved to Miragon/miragon-ai-docs; its copy of the
+ * tokens is guarded there (scripts/check-brand-assets.mjs).
  */
 describe("Miragon tokens: one vendored copy", () => {
   const require = createRequire(import.meta.url)
@@ -159,18 +159,10 @@ describe("Miragon tokens: one vendored copy", () => {
     expect(toolkit).toEqual([toolkitTokens, readFileSync(toolkitTheme, "utf8")])
   })
 
-  it("the docs site vendors the same token file (the toolkit's carries a provenance line)", () => {
-    const docs = read("../../../docs/.vitepress/theme/cd-tokens.generated.css")
-    expect(toolkitTokens.endsWith(docs)).toBe(true)
-    expect(docs).toMatch(/--cd-blau:/)
-  })
-
   it("no stylesheet in the repo declares a --cd-* token (no fork)", () => {
     const repo = fileURLToPath(new URL("../../../", import.meta.url))
-    const docsCopy = join(repo, "docs/.vitepress/theme/cd-tokens.generated.css")
-    const forks = ["apps", "packages", "templates", "docs"]
+    const forks = ["apps", "packages", "templates"]
       .flatMap((dir) => stylesheetsUnder(join(repo, dir)))
-      .filter((file) => file !== docsCopy)
       .filter((file) => /--cd-[\w-]+\s*:/.test(rulesOf(readFileSync(file, "utf8"))))
       .map((file) => relative(repo, file))
     expect(forks).toEqual([])

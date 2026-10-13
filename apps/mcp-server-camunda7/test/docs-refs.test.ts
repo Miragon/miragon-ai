@@ -7,11 +7,15 @@ import { REPO_ROOT } from "./source-scan.js"
 /**
  * Docs and skills say what the code does (#345). A skill an agent follows
  * writes the code it shows, so a stale name there lands in the next change.
- * This guard reads every backticked reference in the docs, the READMEs and
+ * This guard reads every backticked reference in the READMEs, CLAUDE.md and
  * the skills and checks it against the repo: tool names against the full
- * surface, repo paths against the tree, the skills' identifiers against the
- * sources and the toolkit/mcp-use typings, and each docs page against its
- * line budget (the docs-style skill's table).
+ * surface, repo paths against the tree, and the skills' identifiers against
+ * the sources and the toolkit/mcp-use typings.
+ *
+ * The docs site lives in Miragon/miragon-ai-docs (https://miragon.ai). Its
+ * pages are checked against this repo from there: tool names and paths by
+ * scripts/check-miragon-ai-refs.mjs (a weekly CI run), page budgets by its
+ * own checks.
  */
 
 const TEMPLATE_ROOT = path.join(REPO_ROOT, "templates", "composed-server")
@@ -25,7 +29,6 @@ const walk = (dir: string, keep: (file: string) => boolean): string[] =>
         .filter((file) => keep(file) && fs.statSync(file).isFile())
     : []
 
-const isMarkdown = (file: string) => file.endsWith(".md")
 const skillFiles = [
   ...walk(path.join(REPO_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
   ...walk(path.join(TEMPLATE_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
@@ -33,7 +36,6 @@ const skillFiles = [
 const docFiles = [
   path.join(REPO_ROOT, "README.md"),
   path.join(REPO_ROOT, "CLAUDE.md"),
-  ...walk(path.join(REPO_ROOT, "docs"), (f) => isMarkdown(f) && !f.includes(".vitepress")),
   ...walk(path.join(REPO_ROOT, "packages"), (f) => f.endsWith("README.md")),
   path.join(TEMPLATE_ROOT, "README.md"),
   path.join(TEMPLATE_ROOT, "CLAUDE.md"),
@@ -120,7 +122,7 @@ describe("identifiers in the skills", () => {
     fs.realpathSync(path.join(import.meta.dirname, "..", "node_modules", name))
   const isSource = (file: string) => /\.(?:tsx?|mts|mjs|cjs|kt)$/.test(file)
   const corpus = [
-    ...["apps", "packages", "scripts", "templates", "engine-plugins", "docs"].flatMap((dir) =>
+    ...["apps", "packages", "scripts", "templates", "engine-plugins"].flatMap((dir) =>
       walk(path.join(REPO_ROOT, dir), isSource),
     ),
     ...["@miragon/mcp-toolkit-core", "@miragon/mcp-toolkit-ui", "mcp-use"].flatMap((name) =>
@@ -149,29 +151,5 @@ describe("identifiers in the skills", () => {
         return name !== undefined && !PLACEHOLDER.test(name) && !words.has(name)
       })
     expect(unknown.map(where)).toEqual([])
-  })
-})
-
-describe("docs page budgets", () => {
-  const table = fs.readFileSync(
-    path.join(REPO_ROOT, ".claude", "skills", "docs-style", "SKILL.md"),
-    "utf8",
-  )
-  const budgets = [...table.matchAll(/^\| `([\w-]+\.md)`\s*\| ≤ (\d+) lines\s*\|$/gm)].map(
-    ([, page = "", lines = "0"]) => ({ page, lines: Number(lines) }),
-  )
-
-  it("reads the four budgets from the docs-style skill", () => {
-    expect(budgets.map((b) => b.page)).toEqual([
-      "architecture.md",
-      "developer.md",
-      "operations.md",
-      "usage.md",
-    ])
-  })
-
-  it.each(budgets)("$page stays within $lines lines", ({ page, lines }) => {
-    const text = fs.readFileSync(path.join(REPO_ROOT, "docs", page), "utf8")
-    expect(text.replace(/\n$/, "").split("\n").length).toBeLessThanOrEqual(lines)
   })
 })

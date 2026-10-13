@@ -5,10 +5,13 @@ Guidance for AI agents working in this repository. The repo-specific skills
 step-by-step walkthroughs for the two main feature paths — read them before adding tools,
 queries, or widgets; `.claude/skills/add-settings-section` covers the third path,
 module-owned user settings (a `profile.modules.<module>` slice + its tool triple + its
-section on the settings page). The skills, READMEs and `docs/` are held to the code by
+section on the settings page). The skills and READMEs are held to the code by
 `apps/mcp-server-camunda7/test/docs-refs.test.ts`: every backticked tool name must be
-registered, every repo path must exist, every identifier a house skill names must exist in
-the sources or the toolkit/mcp-use typings, and each docs page stays within its budget.
+registered, every repo path must exist, and every identifier a house skill names must exist
+in the sources or the toolkit/mcp-use typings.
+
+The docs site (https://miragon.ai/tools/miragon-ai/) lives in Miragon/miragon-ai-docs:
+user-visible changes (env vars, tools, ports, getting-started steps) need a matching PR there.
 
 ## What this repo is
 
@@ -27,7 +30,6 @@ operations and Prometheus-backed process analytics, including interactive React 
 | `packages/core/widget-shell/`                        | Shared widget kit: UI primitives incl. `useApplyTheme` + the host app shell `AppShellProviders` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders, the `shell:*` catalogue + the host-boot helpers (`/server`) |
 | `engine-plugins/`                                    | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                                                                                          |
 | `playground/`                                        | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                                                                                               |
-| `docs/`                                              | VitePress docs site (see the `docs-style` skill before editing)                                                                                                                                                                 |
 
 ## Commands
 
@@ -47,9 +49,6 @@ pnpm dev                             # MCP server on :8400
 
 # Kotlin engine plugins (Java 21):
 cd engine-plugins && ./gradlew build # compile + unit tests + Konsist architecture tests
-
-# Docs site:
-pnpm docs:dev                        # local dev server; pnpm docs:build to build
 ```
 
 `pnpm dev` serves the MCP endpoint at `http://localhost:8400/mcp` and the `mcp-use`
@@ -77,11 +76,10 @@ Dunkel darauf ab. Die App (`apps/mcp-server-camunda7/src/ui/globals.css`) und da
 Starter-Template (`server/src/ui/brand.css`) importieren es nach `tailwindcss` und überschreiben
 nur Rollen- und Alias-Variablen (`--primary`, `--link`, `--focus`, `--<ton>`, `--<ton>-soft`,
 `--<ton>-ink`, Radien, Schatten), nie `--cd-*`, nie Palettenklassen oder rohe Farben in
-Komponenten; widget-shell hat kein eigenes Theme mehr. Die Docs-Site vendort dieselbe
-Token-Datei unter `docs/.vitepress/theme/cd-tokens.generated.css`; bei jeder CI-Aktualisierung
-neu kopieren, nie von Hand ändern. Der Drift-Test (`apps/mcp-server-camunda7/test/
-ui-stylesheet.test.ts`: kein `--cd-*` außerhalb der Toolkit-Kopie, Docs-Kopie gleich der
+Komponenten; widget-shell hat kein eigenes Theme mehr. Der Drift-Test
+(`apps/mcp-server-camunda7/test/ui-stylesheet.test.ts`: kein `--cd-*` außerhalb der
 Toolkit-Kopie; `test:host`: das gebaute Stylesheet trägt die vendorten Werte) hält das fest.
+Die Docs-Site liegt in Miragon/miragon-ai-docs und prüft ihre Token-Kopie dort.
 
 UI-Texte gibt es auf Deutsch und Englisch, je nach Host-Locale. Deutsch folgt brand-tone
 vollständig: du-Ansprache, AI statt `KI`, „CIB seven“, kein Gedankenstrich als Verbinder,
@@ -403,10 +401,11 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    never stands alone), a shrink-only list. The app's `test/ui-stylesheet.test.ts` does the
    same over the app's and the template's stack (`globals.css`, the template's `brand.css`),
    pins that no consumer stylesheet names a raw colour (`stylesheetColorFindings`) or a
-   `--cd-*`/`--m-*`/`--critical` variable, and is the token DRIFT test (the docs' vendored
-   copy equals the toolkit's; `test:host` checks the built stylesheet's `--cd-*` values); the
-   template runs `server/test/brand.test.ts` over its own `brand.css`, the override example
-   included. `parseThemeVariables` reads a stylesheet stack the way
+   `--cd-*`/`--m-*`/`--critical` variable, and is the token DRIFT test (the shipped theme
+   imports the toolkit's vendored copy, no stylesheet in the repo declares a `--cd-*`;
+   `test:host` checks the built stylesheet's `--cd-*` values); the template
+   runs `server/test/brand.test.ts` over its own `brand.css`, the override example included.
+   `parseThemeVariables` reads a stylesheet stack the way
    `<html class="dark" data-theme="dark">` sees it: `:root` and the dark scopes (`.dark`,
    `[data-theme="dark"]`, `[data-theme-mode="dark"]`) in source order, later wins, so a brand
    override goes under BOTH (a light-only `:root` value shows in dark); a theme rule it cannot

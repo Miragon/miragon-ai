@@ -15,9 +15,9 @@
  * `tsconfig.<x>.json` project of the package (the widget/UI/test sources only
  * those projects type-check), and a package with a stryker.config.json must
  * run the plain `stryker run` (the mutation diff gate appends its own scope).
- * Packages without `src/` (the docs site) carry no source the gates could
- * cover. An EXISTING package's gate scripts are additionally pinned to the
- * merge base by scripts/check-ratchets.mjs.
+ * Packages without `src/` carry no source the gates could cover. An EXISTING
+ * package's gate scripts are additionally pinned to the merge base by
+ * scripts/check-ratchets.mjs.
  *
  * Runs as `pnpm lint:package-scripts` (chained into the root `pnpm lint`).
  */

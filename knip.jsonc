@@ -60,20 +60,5 @@
         "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
       },
     },
-
-    "docs": {
-      "ignoreDependencies": [
-        // Lazy-loaded mermaid diagram runtimes (mindmap → cytoscape*,
-        // timeline → dayjs, sanitize/debug) — imported by mermaid at render
-        // time, never by our code.
-        "@braintree/sanitize-url",
-        "cytoscape",
-        "cytoscape-cose-bilkent",
-        "dayjs",
-        "debug",
-        // Provided by vitepress; the theme imports it directly.
-        "vue",
-      ],
-    },
   },
 }
