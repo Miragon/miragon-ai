@@ -8,8 +8,8 @@ import { instancesFilterFacts, type InstancesListFilters } from "./hand-offs.js"
 /**
  * Triage of the running instances — of one definition (scoped list) or of the
  * whole engine. The count is the filtered set's, stated with its filters. The
- * process name is the deployer's text and the business-key filter the
- * operator's — both quoted.
+ * process name is the deployer's text, the business-key filter and the search
+ * the operator's — all quoted.
  */
 export function triageInstancesHandOff({
   scopedKey,
@@ -25,13 +25,16 @@ export function triageInstancesHandOff({
   filters: InstancesListFilters
 }): HandOff {
   const facts = { matchingInstances: total, ...instancesFilterFacts(filters) }
-  const businessKeyLike = { label: "businessKeyLike", text: filters.businessKeyLike }
+  const operatorText = [
+    { label: "businessKeyLike", text: filters.businessKeyLike },
+    { label: "search", text: filters.search },
+  ]
   return scopedKey
     ? {
         intent: "askAi.instances.triageProcess",
         ids: { engine, processDefinitionKey: scopedKey },
         facts,
-        untrusted: [{ label: "processName", text: processName }, businessKeyLike],
+        untrusted: [{ label: "processName", text: processName }, ...operatorText],
         tools: [
           "camunda7_list_incidents",
           "camunda7_query_historic_incidents",
@@ -42,7 +45,7 @@ export function triageInstancesHandOff({
         intent: "askAi.instances.triageEngine",
         ids: { engine },
         facts,
-        untrusted: [businessKeyLike],
+        untrusted: operatorText,
         tools: ["camunda7_list_incidents", "camunda7_query_historic_incidents"],
       }
 }

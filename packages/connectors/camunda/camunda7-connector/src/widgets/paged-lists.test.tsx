@@ -172,7 +172,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
     const Widget = () => <ProcessInstancesWidget data={instances(["pi-1", "pi-2"], 2)} />
     host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed.handler })
 
-    const search = screen.getByRole("searchbox", { name: "Search by business key" })
+    const search = screen.getByRole("searchbox", { name: "Search by business key or ID" })
     fireEvent.click(screen.getByRole("button", { name: "With incidents" }))
     await waitFor(() => expect(feed.calls).toHaveLength(1))
     expect(feed.calls[0].args).toMatchObject({ withIncidents: true })
@@ -184,7 +184,7 @@ describe("a search keeps the list and its search box mounted while page 0 is in 
 
     fireEvent.change(search, { target: { value: "BK-9" } })
     await waitFor(() => expect(feed.calls).toHaveLength(2), { timeout: 2_000 })
-    expect(feed.calls[1].args).toMatchObject({ businessKeyLike: "BK-9", withIncidents: true })
+    expect(feed.calls[1].args).toMatchObject({ search: "BK-9", withIncidents: true })
     expect(search.isConnected).toBe(true)
     expect(screen.getByText("BK-pi-2")).toBeTruthy()
   })
@@ -388,20 +388,42 @@ describe("the instance list states what is ON SCREEN while a filter is pending o
     const EMPTY = { ...instances([], 0), processDefinitionKey: null }
     const held = deferredFeed<ProcessInstancesData>()
     const feed = (args: Record<string, unknown>) =>
-      args.businessKeyLike ? held.handler(args) : Promise.resolve(EMPTY)
+      args.search ? held.handler(args) : Promise.resolve(EMPTY)
     const Widget = () => <ProcessInstancesWidget data={null} engine="prod-a" />
     host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed })
     await screen.findByText("No running instances for this process definition.")
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search by business key" }), {
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search by business key or ID" }), {
       target: { value: "ORD" },
     })
     await waitFor(() => expect(held.calls).toHaveLength(1), { timeout: 2_000 })
     expect(screen.getByText("No running instances for this process definition.")).toBeTruthy()
     expect(screen.queryByText("No instances match the filter.")).toBeNull()
 
-    held.calls[0].resolve({ ...EMPTY, filters: { businessKeyLike: "ORD" } })
+    held.calls[0].resolve({ ...EMPTY, filters: { search: "ORD" } })
     await screen.findByText("No instances match the filter.")
+    // What the box finds, so an id fragment or a lower-case key is no riddle.
+    expect(
+      screen.getByText(
+        "The search finds part of a business key or the whole ID. Check upper and lower case.",
+      ),
+    ).toBeTruthy()
+  })
+
+  it("a chip without matches says no match, without the search's hint", async () => {
+    const EMPTY = { ...instances([], 0), processDefinitionKey: null }
+    const feed = (args: Record<string, unknown>) =>
+      Promise.resolve(
+        args.suspended ? { ...EMPTY, filters: { suspended: true } } : instances(["pi-1"], 1),
+      )
+    const Widget = () => <ProcessInstancesWidget data={null} engine="prod-a" />
+    host(Widget, { [CAMUNDA7_PROCESS_INSTANCES_DATA]: feed })
+    await screen.findByText("BK-pi-1")
+
+    fireEvent.click(screen.getByRole("button", { name: "Suspended" }))
+
+    await screen.findByText("No instances match the filter.")
+    expect(screen.queryByText(/The search finds/)).toBeNull()
   })
 })
 

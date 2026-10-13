@@ -27,12 +27,18 @@ type ToolCallback = (
 ) => Promise<{ isError?: boolean; content: Array<{ type: string; text: string }> }>
 
 const engine = http.createServer((req, res) => {
-  const url = req.url ?? ""
-  const json = (status: number, body: unknown) => {
+  // A query's filter travels in the URL (GET) or in the body (POST queries).
+  let body = ""
+  req.on("data", (chunk: Buffer) => (body += chunk.toString("utf8")))
+  req.on("end", () => answer(req.url ?? "", body, res))
+})
+
+function answer(url: string, body: string, res: http.ServerResponse) {
+  const json = (status: number, payload: unknown) => {
     res.writeHead(status, { "Content-Type": "application/json" })
-    res.end(JSON.stringify(body))
+    res.end(JSON.stringify(payload))
   }
-  if (url.includes("hang")) return // never answers
+  if (url.includes("hang") || body.includes("hang")) return // never answers
   if (url.startsWith("/engine-rest/process-instance/missing")) {
     return json(404, {
       type: "InvalidRequestException",
@@ -56,7 +62,7 @@ const engine = http.createServer((req, res) => {
     return res.end("Service Unavailable: engine is starting")
   }
   json(200, { id: "ok" })
-})
+}
 
 let baseUrl = ""
 let closedPortUrl = ""
