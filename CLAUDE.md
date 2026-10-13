@@ -443,10 +443,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    deterministic steps, the engine's own web app, then the chat. The meta line under the
    title holds facts only, never a link or an action; a section with actions of its own
    (the incident's failure) keeps them in one row the same way (`action-group.test.tsx`).
-   Rows use the same size: every row action is the toolkit's `Button` `size="sm"` (a drill
-   with a trailing `ArrowRight`), level with the icon buttons beside it. The toolkit's
-   `DrillButton` (30 px, 13 px, 500) stays out of the widgets until it matches the `Button`
-   scale (Miragon/mcp-toolkit#194; `row-actions.test.ts`).
+   Rows use the same size: a drill is the toolkit's `DrillButton`, the outline `Button` at
+   that scale since toolkit 2.8.1 (Miragon/mcp-toolkit#194), level with the icon buttons
+   beside it, and never a `Button` dressed up with a trailing arrow
+   (`row-actions.test.ts`).
    **Every widget package runs the brand gates** from `@miragon-ai/widget-shell/testing` in
    its own tests (brand-lint cannot read strings in `.ts`/`.tsx`):
    `catalogTextFindings(catalog, { language })` over each en/de message catalog (no dash as a
@@ -788,7 +788,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   consumer-shared libraries are published as RANGED `peerDependencies` so a downstream
   React + zod app dedupes them against its own copy instead of getting a second
   instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
-  `~2.8.0` (2.8.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
+  `~2.8.1` (2.8.x patches only, tracking the exact `mcp-use` pin). Each ranged peer also
   appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
   version. A published package's shipped source imports only what its `dependencies` or
   `peerDependencies` declare (`apps/mcp-server-camunda7/test/published-imports.test.ts`;
@@ -797,7 +797,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
   `mcp-use` version in each package README and the release changelog. Toolkit updates are
   still deliberate version bumps across all packages — never bump a single package in
-  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.8.0` → `mcp-use@2.7.3`;
+  isolation; the toolkit peers `mcp-use` exactly (toolkit `2.8.1` → `mcp-use@2.7.3`;
   `zod`/`react` it peers as ranges), so a toolkit MAJOR/MINOR bump is a joint toolkit + `mcp-use` bump across
   every package incl. `templates/composed-server` — `scripts/test-template.sh` fails if
   the template is left behind.
@@ -880,8 +880,8 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
-  exactly pinned (`save-exact`, currently `2.8.0`); in the published surface it is a
-  ranged `peerDependency` (`~2.8.0`) so consumers dedupe it. Toolkit changes arrive here
+  exactly pinned (`save-exact`, currently `2.8.1`); in the published surface it is a
+  ranged `peerDependency` (`~2.8.1`) so consumers dedupe it. Toolkit changes arrive here
   as a deliberate, repo-wide version bump — since 1.0 the toolkit follows semver
   (breaking changes arrive as major bumps).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,

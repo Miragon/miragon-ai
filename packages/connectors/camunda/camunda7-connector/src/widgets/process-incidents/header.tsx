@@ -1,14 +1,12 @@
 import {
   HandOffButton,
-  Icon,
   OpenInCockpitLink,
   ViewDataState,
   WidgetShell,
   formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
-import { Button, StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
-import { ArrowRight } from "lucide-react"
+import { StatusBadge, WidgetHeader, DrillButton } from "@miragon/mcp-toolkit-ui"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
@@ -149,17 +147,13 @@ export function ProcessDetailHeader({
         sub={<HeaderSub data={data} engine={engine} />}
         actions={
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
+            <DrillButton
+              onDrill={() =>
                 go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
               }
             >
               {t("procIncHeader.viewRunningInstances")}
-              <Icon icon={ArrowRight} />
-            </Button>
+            </DrillButton>
             {data.cockpitUrl && (
               <OpenInCockpitLink url={data.cockpitUrl} vendor={data.engineVendor} />
             )}

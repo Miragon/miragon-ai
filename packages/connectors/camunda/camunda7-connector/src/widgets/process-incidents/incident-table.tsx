@@ -1,5 +1,5 @@
 import { Fragment } from "react"
-import { Button, StatusBadge, PagedListFooter } from "@miragon/mcp-toolkit-ui"
+import { Button, StatusBadge, PagedListFooter, DrillButton } from "@miragon/mcp-toolkit-ui"
 import {
   FIT_CONTINUES_ROW,
   formatTimestamp,
@@ -14,7 +14,7 @@ import {
   usePagedViewData,
   ViewDataState,
 } from "@miragon-ai/widget-shell/widgets"
-import { Check, ArrowRight } from "lucide-react"
+import { Check } from "lucide-react"
 
 import type { ActivityIncidentsData, IncidentInstance } from "../../view-models.js"
 import { CAMUNDA7_ACTIVITY_INCIDENTS_DATA } from "../../tool-names.js"
@@ -149,16 +149,12 @@ export function IncidentTable({
                     </StatusBadge>
                   ) : (
                     <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onAnalyze(incident.id)}
-                        aria-label={t("procIncTable.openIncidentDetail")}
+                      <DrillButton
+                        onDrill={() => onAnalyze(incident.id)}
+                        ariaLabel={t("procIncTable.openIncidentDetail")}
                       >
                         {t("procIncTable.open")}
-                        <Icon icon={ArrowRight} />
-                      </Button>
+                      </DrillButton>
                       <RecoveryButton incident={incident} recovery={recovery} />
                       <MoreActions label={t("procIncTable.moreActions")}>
                         {instanceUrl && (
