@@ -1,5 +1,5 @@
 import type { MouseEvent } from "react"
-import { cn, FOCUS_RING, useLocale } from "@miragon/mcp-toolkit-ui"
+import { buttonVariants, useLocale } from "@miragon/mcp-toolkit-ui"
 import { ExternalLink } from "lucide-react"
 import { useHostActions } from "@miragon/mcp-toolkit-ui/app"
 import { Icon } from "./icon.js"
@@ -8,8 +8,11 @@ import { MENU_ITEM } from "./menu-item.js"
 
 /**
  * The single, consistent "jump to the engine's own web app" affordance (the
- * vendor's cockpit, which leaves this app in a new tab). Neutral outline,
- * like {@link DrillButton}, since it is deterministic navigation, not AI.
+ * vendor's cockpit, which leaves this app in a new tab). A secondary button
+ * of the view's one action size (the toolkit's `buttonVariants` outline,
+ * `sm`: 32 px, 14 px, 600, like the chat hand-offs beside it), since it is
+ * deterministic navigation, not AI. It belongs in the view's action group,
+ * never in the meta line.
  * Named after the vendor ("In CIB seven öffnen" / "Open in CIB seven"), not
  * "Cockpit", which is this app's own name; the accessible name adds that it
  * opens a new tab. Owns the host bridge call, so callers pass only the URL.
@@ -21,7 +24,6 @@ export function OpenInCockpitLink({
   url,
   vendor,
   label,
-  size = "sm",
   variant = "outline",
 }: {
   url: string
@@ -33,14 +35,12 @@ export function OpenInCockpitLink({
   vendor?: string
   /** Visible text override for a narrower target, e.g. "Instanz in CIB seven öffnen". */
   label?: string
-  size?: "sm" | "md"
   /** `outline` (default): a link on its own; `menuitem`: an entry of an action menu. */
   variant?: "outline" | "menuitem"
 }) {
   const host = useHostActions()
   const labels = kitLabels(useLocale())
   const text = label ?? labels.openInVendor(vendor)
-  const pad = size === "md" ? "text-dense px-3 py-1.5" : "text-small px-2.5 py-1"
   const link = {
     href: url,
     target: "_blank",
@@ -60,14 +60,7 @@ export function OpenInCockpitLink({
     )
   }
   return (
-    <a
-      {...link}
-      className={cn(
-        "border-border text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-md border font-medium transition-colors",
-        FOCUS_RING,
-        pad,
-      )}
-    >
+    <a {...link} className={buttonVariants({ variant: "outline", size: "sm" })}>
       {text}
       <Icon icon={ExternalLink} dense />
     </a>
