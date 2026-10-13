@@ -50,8 +50,8 @@ pnpm start        # run the compiled server from dist/
 
 Configuration is entirely environment-driven — see
 [Configuration](../../README.md#configuration), [Toolsets](../../README.md#toolsets) and
-[`docs/operations.md`](../../docs/operations.md). To exercise write paths locally, set
-`MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env` (plus
+[Operations](https://miragon.ai/tools/miragon-ai/operations). To exercise write paths
+locally, set `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env` (plus
 `CAMUNDA_ALLOW_DEPLOYMENTS=true` for deployments).
 
 ## Layout
