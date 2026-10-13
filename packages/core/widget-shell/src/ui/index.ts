@@ -128,14 +128,20 @@ export {
   type DisplayModeControl,
 } from "./display-mode-toggle.js"
 export {
-  DEFAULT_INLINE_ROWS,
   INLINE_DIAGRAM_MAX_HEIGHT,
   InlineBudgetProvider,
   NO_INLINE_BUDGET,
-  inlineRowBudget,
+  RowsBudgeted,
   useInlineBudget,
   type InlineBudget,
 } from "./inline-budget.js"
+export {
+  InlineFitBox,
+  UNSTATED_BUDGET,
+  useInlineRows,
+  type FitMeasure,
+  type InlineRows,
+} from "./inline-fit.js"
 export {
   BpmnHeatmap,
   HeatmapLegend,

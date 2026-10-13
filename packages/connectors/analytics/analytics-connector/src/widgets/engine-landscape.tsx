@@ -185,7 +185,8 @@ function EngineRow({ engine: e, t }: { engine: EngineLandscapeEngine; t: T }) {
     <tr>
       <Td>
         <span className="flex flex-wrap items-center gap-2">
-          <span className="font-mono font-medium">{e.engineId}</span>
+          {/* An engine id is short and one word ("prod-a"): never wrapped. */}
+          <span className="font-mono font-medium whitespace-nowrap">{e.engineId}</span>
           {/* The badge may go under the id in a narrow column, but never
               breaks inside itself ("no / metrics"): a pill is one line. */}
           {!e.reporting && (

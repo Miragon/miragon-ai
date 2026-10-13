@@ -6,7 +6,6 @@ import {
   INLINE_DIAGRAM_MAX_HEIGHT,
   InlineBudgetProvider,
   NO_INLINE_BUDGET,
-  inlineRowBudget,
   type InlineBudget,
 } from "./inline-budget.js"
 import { DisplayModeControlProvider, type DisplayModeControl } from "./display-mode-toggle.js"
@@ -79,18 +78,18 @@ export function ViewHostBridge({ children }: { children: ReactNode }) {
     [hostContext, isAvailable, maxHeight, displayMode, availableDisplayModes],
   )
   // Inline, the view is a card in the chat: lists show the head of their rows
-  // and "show more" asks for fullscreen where the host offers it (#396).
+  // (as many as fit, `HostDocument`'s measured fit) and "show more" asks for
+  // fullscreen where the host offers it (#396).
   const canExpand = availableDisplayModes.includes("fullscreen")
   const budget = useMemo<InlineBudget>(
     () =>
       displayMode === "inline"
         ? {
-            rows: inlineRowBudget(maxHeight),
             diagramMaxHeight: INLINE_DIAGRAM_MAX_HEIGHT,
             expand: canExpand ? () => void requestDisplayMode({ mode: "fullscreen" }) : null,
           }
         : NO_INLINE_BUDGET,
-    [displayMode, maxHeight, canExpand, requestDisplayMode],
+    [displayMode, canExpand, requestDisplayMode],
   )
   const control = useMemo<DisplayModeControl>(
     () => ({

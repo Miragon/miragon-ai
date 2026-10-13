@@ -33,10 +33,11 @@ package customers build their own connectors and composed servers on (see the
 - **Shared UI primitives** (`./widgets`) — what the kit adds on top of `@miragon/mcp-toolkit-ui`
   (`WidgetShell`, tables, `ListTable` + `PagedRows`, the dual-mode data hooks, formatters,
   hand-offs, the BPMN viewer, `useApplyTheme`, …), reused across both widget packages.
-  Inline in a chat a view is a card (#396): `useInlineBudget` (provided by the host bridge
-  from `containerDimensions.maxHeight`) caps a paged list (`usePagedViewData`) and an unpaged
-  `ListTable` to the head of their rows with the count and a way to the rest (fullscreen
-  where the host offers it), the BPMN canvas to 320 px, long text to `TEXT_BLOCK_FRAME`.
+  Inline in a chat a view is a card (#396): `HostDocument`'s measured fit (`InlineFitBox`,
+  `useInlineRows`) caps a paged list (`usePagedViewData`) and an unpaged `ListTable` to the
+  rows that fit the host's height budget, measured on the rendered view, with the count and
+  a way to the rest (fullscreen where the host offers it); the BPMN canvas stays at 320 px,
+  long text in `TEXT_BLOCK_FRAME`.
   Layout, states and feedback: `ListTable` scrolls inside a named, keyboard-reachable region
   (column priorities via `hideBelow`, the row actions pinned with `sticky`, the sorted
   column marked with `sort`, heads over adjacent columns with `groups`), `IdCell`/`IdText`

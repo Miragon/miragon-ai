@@ -1,9 +1,10 @@
-import { Children, useId, useState, type ReactNode } from "react"
+import { Children, useId, type ReactNode } from "react"
 import { Button, cn, MICRO_LABEL, useLocale } from "@miragon/mcp-toolkit-ui"
 import { Maximize2 } from "lucide-react"
 import { formatNumber } from "./format.js"
 import { Icon } from "./icon.js"
 import { useInlineBudget, useRowsBudgeted } from "./inline-budget.js"
+import { useInlineRows } from "./inline-fit.js"
 import { kitLabels } from "./kit-labels.js"
 import { Th, type ColumnSort } from "./table.js"
 
@@ -214,11 +215,12 @@ function GroupRow({ groups }: { groups: ReadonlyArray<ListTableGroup> }) {
  * (`hideBelow`). Dense table text: 14 px (`text-dense`, the product exception
  * of the type scale), heads 13 px semibold.
  *
- * Inline in a chat (#396) it shows the head of its rows, at most the view's
- * row budget (`useInlineBudget`), and a last row says how many there are and
- * offers the rest: fullscreen where the host offers it, else the next rows in
- * place. A paged list budgets its own rows (`PagedRows`), so a table inside
- * one is never capped twice.
+ * Inline in a chat (#396) it shows the head of its rows, as many as fit the
+ * view's height budget (`useInlineRows`, measured on the rendered view), and
+ * a last row says how many there are and offers the rest: fullscreen where
+ * the host offers it, else the next rows in place. A paged list fits its rows
+ * as one list (`PagedRows`): a table inside one is never capped twice, it
+ * hands its body to the paged list's fit instead.
  */
 export function ListTable({
   columns,
@@ -240,12 +242,12 @@ export function ListTable({
   const scope = useId()
   const css = listTableCss(scope, columns, groups)
   const budget = useInlineBudget()
-  const budgeted = useRowsBudgeted()
-  const [revealed, setRevealed] = useState(0)
+  const paged = useRowsBudgeted()
   const rows = Children.toArray(children)
-  const cap = budget.rows === null || budgeted ? null : budget.rows + revealed
+  const own = useInlineRows(rows.length, { enabled: paged === null })
+  const cap = paged ? null : own.cap
   const capped = cap !== null && rows.length > cap
-  const showMore = budget.expand ?? (() => setRevealed((r) => r + (budget.rows ?? 0)))
+  const showMore = budget.expand ?? (() => own.reveal(own.step))
   return (
     // The frame does not scroll, so the ring laid over the region stays put
     // while the table scrolls under it.
@@ -279,7 +281,9 @@ export function ListTable({
               ))}
             </tr>
           </thead>
-          <tbody>{capped ? rows.slice(0, cap) : children}</tbody>
+          <tbody ref={paged ? paged.attachRows : own.attachRows}>
+            {capped ? rows.slice(0, cap) : children}
+          </tbody>
           {capped && (
             <MoreRows
               colSpan={columns.length}

@@ -391,7 +391,11 @@ export function ClusterDetailView({
                 </ListTable>
               )}
             </PagedRows>
-            <PagedListFooter paged={paged} noun={t("clusterDetail.footerNoun")} />
+            <PagedListFooter
+              paged={paged}
+              noun={t("clusterDetail.footerNoun")}
+              labels={paged.footerLabels}
+            />
             {listCapped(data) && (
               <p className="text-muted-foreground text-small">
                 {t("clusterDetail.listCapped", { count: formatNumber(data.scannedIncidentCount) })}

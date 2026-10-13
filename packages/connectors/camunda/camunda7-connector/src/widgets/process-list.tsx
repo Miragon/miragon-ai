@@ -229,7 +229,11 @@ export function ProcessListWidget({
           )}
         />
       </PagedRows>
-      <PagedListFooter paged={paged} noun={t("processList.footerNoun")} />
+      <PagedListFooter
+        paged={paged}
+        noun={t("processList.footerNoun")}
+        labels={paged.footerLabels}
+      />
     </WidgetShell>
   )
 }

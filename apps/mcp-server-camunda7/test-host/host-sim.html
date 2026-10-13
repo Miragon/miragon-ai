@@ -106,6 +106,16 @@
       const iframe = document.getElementById("app")
       if (scenario.width) iframe.style.width = `${scenario.width}px`
       const post = (msg) => iframe.contentWindow.postMessage(msg, "*")
+      // Changes at runtime, as a host does (a resized chat column, another
+      // height budget): `setContext` sends host-context-changed, `setWidth`
+      // resizes the frame.
+      window.__hostSim = {
+        setContext: (params) =>
+          post({ jsonrpc: "2.0", method: "ui/notifications/host-context-changed", params }),
+        setWidth: (px) => {
+          iframe.style.width = `${px}px`
+        },
+      }
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
       let displayMode = "inline"
 

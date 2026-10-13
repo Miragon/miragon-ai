@@ -1,6 +1,7 @@
 import { useLayoutEffect, type CSSProperties, type ReactNode } from "react"
 import { adoptHostFontVariables } from "@miragon/mcp-toolkit-ui"
 import { declareServedFonts } from "./declare-served-fonts.js"
+import { InlineFitBox, UNSTATED_BUDGET } from "./inline-fit.js"
 import { useShellHost } from "./shell-host.js"
 
 const HOST_FONTS_ID = "__mcp-host-fonts"
@@ -29,9 +30,11 @@ const INLINE_STYLE: CSSProperties = { display: "contents" }
  *    theme's font roles (`--host-font-*`), so the stack stays Geist first,
  *    then the host's font (what renders while Geist loads, or when the host
  *    blocks the server's origin), then the system;
- *  - inline views size to their content (auto-resize reports it) and, when the
- *    host states a height budget (`containerDimensions` → `maxHeight`), scroll
- *    inside it instead of being clipped;
+ *  - inline views size to their content (auto-resize reports it), their lists
+ *    show as many rows as fit the host's height budget (`containerDimensions`
+ *    → `maxHeight`, else {@link UNSTATED_BUDGET}; the measured fit,
+ *    `InlineFitBox`), and a view that still does not fit a stated budget
+ *    scrolls inside it instead of being clipped;
  *  - fullscreen/PiP fill the viewport (`html`/`body`/`#root` at 100%).
  */
 export function HostDocument({ children }: { children: ReactNode }) {
@@ -64,7 +67,11 @@ export function HostDocument({ children }: { children: ReactNode }) {
   let style = INLINE_STYLE
   if (fill) style = FILL_STYLE
   else if (maxHeight !== undefined) style = { maxHeight, overflowY: "auto" }
-  return <div style={style}>{children}</div>
+  return (
+    <InlineFitBox active={!fill} budget={maxHeight ?? UNSTATED_BUDGET} style={style}>
+      {children}
+    </InlineFitBox>
+  )
 }
 
 /** `html`/`body`/`#root` at 100% while the view fills the host; restored on exit. */

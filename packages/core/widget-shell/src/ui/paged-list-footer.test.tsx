@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { LocaleProvider, PagedListFooter } from "@miragon/mcp-toolkit-ui"
+import { NO_FIT_ROWS } from "./inline-fit.js"
 import { PagedRows } from "./paged-rows.js"
 import type { PagedViewData } from "./use-paged-view-data.js"
 
@@ -22,6 +23,8 @@ function paged(overrides: Partial<PagedViewData<string, object>> = {}) {
     error: null,
     retry: vi.fn(),
     loadMoreError: null,
+    fit: NO_FIT_ROWS,
+    footerLabels: undefined,
     ...overrides,
   } satisfies PagedViewData<string, object>
 }

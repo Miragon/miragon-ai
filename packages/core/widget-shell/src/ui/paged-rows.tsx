@@ -14,7 +14,9 @@ import type { PagedViewData } from "./use-paged-view-data.js"
  * words what the bar marks ("Updating…", the failure above it), so old rows
  * under a new search never read as its answer. The toolkit did not lift this
  * piece: it is the kit's own. Its rows are already the inline head
- * (`usePagedViewData`, #396), so a `ListTable` inside does not cap them again.
+ * (`usePagedViewData`, #396), so a `ListTable` inside does not cap them again
+ * and hands its body to the list's fit; without a table, the wrapper's
+ * children (row cards) are the rows the fit measures.
  */
 export function PagedRows<TItem, TData>({
   paged,
@@ -27,8 +29,11 @@ export function PagedRows<TItem, TData>({
   children: ReactNode
 }) {
   const tone = paged.refreshing ? "info" : "warning"
+  // The wrapper's children are the rows when no table inside names its body.
+  const { attachFallback } = paged.fit
   return (
     <div
+      ref={attachFallback}
       aria-busy={paged.refreshing}
       data-stale={paged.stale || undefined}
       className={cn("relative", className)}
@@ -43,7 +48,7 @@ export function PagedRows<TItem, TData>({
           )}
         />
       )}
-      <RowsBudgeted>{children}</RowsBudgeted>
+      <RowsBudgeted rows={paged.fit}>{children}</RowsBudgeted>
     </div>
   )
 }

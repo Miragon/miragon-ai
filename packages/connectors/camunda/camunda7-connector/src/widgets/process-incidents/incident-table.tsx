@@ -287,7 +287,11 @@ export function PagedIncidentTable({
         </PagedRows>
       )}
       <div className="bg-muted px-3 pb-1">
-        <PagedListFooter paged={paged} noun={t("procIncTable.footerNoun")} />
+        <PagedListFooter
+          paged={paged}
+          noun={t("procIncTable.footerNoun")}
+          labels={paged.footerLabels}
+        />
       </div>
       {/* The per-row button only requests the resolve; the actual
           camunda7_resolve_incident call runs after this confirmation. The

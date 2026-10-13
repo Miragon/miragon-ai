@@ -87,6 +87,13 @@ function InstanceRow({
           <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${TONE_DOT[tone]}`} />
           <InstanceLabel id={row.id} businessKey={row.businessKey} />
         </span>
+        {/* Where the State column hides (a narrow engine-wide list), the
+            state still shows in words, never as the dot's colour alone. */}
+        {showProcessColumn && row.suspended && (
+          <span className="mt-1 flex @min-[48rem]:hidden">
+            <StatusBadge tone="warning">{t("processInstances.stateSuspended")}</StatusBadge>
+          </span>
+        )}
       </Td>
       {showProcessColumn && (
         <Td>
@@ -99,20 +106,28 @@ function InstanceRow({
                 key: row.processDefinitionName ?? row.processDefinitionKey,
               })}
             >
-              <NamedId name={row.processDefinitionName} id={row.processDefinitionKey} />
+              {/* The version on the quiet line: the column it had is the
+                  width the process name needs in a chat. */}
+              <NamedId
+                name={row.processDefinitionName}
+                id={row.processDefinitionKey}
+                detail={[row.version !== null ? `v${row.version}` : null]}
+              />
             </button>
           ) : (
             <span className="text-muted-foreground">—</span>
           )}
         </Td>
       )}
-      <Td>
-        {row.version !== null ? (
-          <VersionChip version={row.version} />
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </Td>
+      {!showProcessColumn && (
+        <Td>
+          {row.version !== null ? (
+            <VersionChip version={row.version} />
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </Td>
+      )}
       <Td>
         {row.suspended ? (
           <StatusBadge tone="warning">{t("processInstances.stateSuspended")}</StatusBadge>
@@ -372,9 +387,15 @@ export function ProcessInstancesView({
             ariaLabel={t("processInstances.tableAriaLabel", { name: title })}
             columns={[
               { label: t("processInstances.colBusinessKey") },
-              ...(scopedKey ? [] : [{ label: t("processInstances.colProcess") }]),
-              { label: t("processInstances.colVersion") },
-              { label: t("processInstances.colState") },
+              // Engine-wide, each row names its process (its version on the
+              // quiet line) and the state hides in a chat's narrow column (the
+              // first cell then says "Suspended"); a scoped list has room for both.
+              scopedKey
+                ? { label: t("processInstances.colVersion") }
+                : { label: t("processInstances.colProcess") },
+              scopedKey
+                ? { label: t("processInstances.colState") }
+                : { label: t("processInstances.colState"), hideBelow: "md" as const },
               { label: t("processInstances.colIncident"), align: "right" as const },
               { plain: true, sticky: true },
             ]}
@@ -408,7 +429,11 @@ export function ProcessInstancesView({
       </PagedRows>
       {/* Also under an empty result: a failed search keeps the previous
           (empty) rows on screen, and its error + retry live in the footer. */}
-      <PagedListFooter paged={paged} noun={t("processInstances.footerNoun")} />
+      <PagedListFooter
+        paged={paged}
+        noun={t("processInstances.footerNoun")}
+        labels={paged.footerLabels}
+      />
     </>
   )
 }

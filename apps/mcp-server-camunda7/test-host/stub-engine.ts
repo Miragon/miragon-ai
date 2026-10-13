@@ -2,12 +2,15 @@ import { readFileSync } from "node:fs"
 import http from "node:http"
 import type { AddressInfo } from "node:net"
 import path from "node:path"
+import { REALISTIC_PREFIX, realisticRoute } from "./realistic-engine.js"
 
 export interface StubEngine {
   /** `baseUrl` of the healthy engine (`…/engine-rest`). */
   baseUrl: string
   /** `baseUrl` of an engine that answers every request with a 503. */
   brokenBaseUrl: string
+  /** `baseUrl` of the realistic engine (`realistic-engine.ts`): long names, 160 instances, 73 jobs. */
+  realisticBaseUrl: string
   /** Origin of the scenario control routes — see {@link startStubEngine}. */
   controlUrl: string
   close(): Promise<void>
@@ -243,7 +246,11 @@ export async function startStubEngine(): Promise<StubEngine> {
       } else if (req.method === "POST" && url.pathname === "/__control/release") {
         send(200, { released: holds.release(term) })
       } else {
-        const { status, body } = jobRoute(req.method ?? "GET", url, requestBody, jobs) ?? route(url)
+        const method = req.method ?? "GET"
+        const { status, body } =
+          realisticRoute(method, url, requestBody) ??
+          jobRoute(method, url, requestBody, jobs) ??
+          route(url)
         holds.answer(term, () => send(status, body))
       }
     })
@@ -254,6 +261,7 @@ export async function startStubEngine(): Promise<StubEngine> {
   return {
     baseUrl: `${origin}/engine-rest`,
     brokenBaseUrl: `${origin}/broken/engine-rest`,
+    realisticBaseUrl: `${origin}${REALISTIC_PREFIX}/engine-rest`,
     controlUrl: origin,
     close: () =>
       new Promise<void>((resolve, reject) => {
