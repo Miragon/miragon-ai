@@ -3,11 +3,9 @@ import {
   Button,
   DrillButton,
   ErrorState,
-  FOCUS_RING,
   KpiGrid,
   StatusBadge,
   WidgetHeader,
-  cn,
   type ToneVariant,
 } from "@miragon/mcp-toolkit-ui"
 import {
@@ -410,30 +408,29 @@ export function EngineHealthView({
           <>
             <EngineMeta engineId={engineId} asOf={data.fetchedAt} />
             <span>{healthVerdictLine(t, data)}</span>
-            {!inCockpit && (
-              <button
-                type="button"
-                onClick={refetch}
-                disabled={refreshing}
-                className={cn(
-                  "hover:text-foreground inline-flex items-center gap-1 rounded font-medium disabled:opacity-50",
-                  FOCUS_RING,
-                )}
-              >
-                <Icon icon={RefreshCw} dense />
-                {refreshing ? t("engineHealth.refreshing") : t("engineHealth.refresh")}
-              </button>
-            )}
           </>
         }
         actions={
           <>
             {/* The deterministic next step leads (#322 U11): with open
-                incidents, look at them; the chat assessment follows. */}
+                incidents, look at them; a fresh read (standalone; the
+                cockpit's bar has its own) and the chat assessment follow. */}
             {data.summary.totalIncidents > 0 && (
               <Button type="button" size="sm" onClick={() => go({ type: "incidents" })}>
                 <Icon icon={TriangleAlert} />
                 {t("engineHealth.openIncidents")}
+              </Button>
+            )}
+            {!inCockpit && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={refetch}
+                disabled={refreshing}
+              >
+                <Icon icon={RefreshCw} />
+                {refreshing ? t("engineHealth.refreshing") : t("engineHealth.refresh")}
               </Button>
             )}
             <HandOffButton action="assess" prompt={ask(triageHandOff(data, engine))} />

@@ -1,12 +1,14 @@
 import {
   HandOffButton,
+  Icon,
   OpenInCockpitLink,
   ViewDataState,
   WidgetShell,
   formatNumber,
   formatTimestamp,
 } from "@miragon-ai/widget-shell/widgets"
-import { DrillButton, StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
+import { Button, StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
+import { ArrowRight } from "lucide-react"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
@@ -69,11 +71,10 @@ function HeaderBadge({ data }: { data: ProcessIncidentsData }) {
 
 /**
  * Sub line: definition key + its scope (every version — the view is key-wide),
- * running-instance count, last event, cockpit link.
+ * running-instance count, last event. Facts only: the actions are the head's.
  */
 function HeaderSub({ data, engine }: { data: ProcessIncidentsData; engine?: string }) {
   const t = useT()
-  const cockpitUrl = data.cockpitUrl
   return (
     <>
       <EngineMeta engineId={engine ?? data.engineId} />
@@ -94,15 +95,15 @@ function HeaderSub({ data, engine }: { data: ProcessIncidentsData; engine?: stri
           </span>
         </>
       )}
-      {cockpitUrl && <OpenInCockpitLink url={cockpitUrl} vendor={data.engineVendor} />}
     </>
   )
 }
 
 /**
- * Header of the unified definition view — the single action home: the primary
- * chat hand-off plus the running-instances drill live here, so the
- * section widgets below stay action-free.
+ * Header of the unified definition view — the single action home, ONE group
+ * of one action size: the running-instances drill, the engine's own web app,
+ * then the chat hand-off (deterministic first). The section widgets below
+ * stay action-free, and the meta line holds facts only.
  */
 export function ProcessDetailHeader({
   data: initialData = null,
@@ -147,22 +148,28 @@ export function ProcessDetailHeader({
         title={title}
         sub={<HeaderSub data={data} engine={engine} />}
         actions={
-          <HandOffButton
-            action="assess"
-            prompt={ask(triageProcessHandOff(data, engine ?? data.engineId))}
-          />
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
+              }
+            >
+              {t("procIncHeader.viewRunningInstances")}
+              <Icon icon={ArrowRight} />
+            </Button>
+            {data.cockpitUrl && (
+              <OpenInCockpitLink url={data.cockpitUrl} vendor={data.engineVendor} />
+            )}
+            <HandOffButton
+              action="assess"
+              prompt={ask(triageProcessHandOff(data, engine ?? data.engineId))}
+            />
+          </>
         }
       />
-      <div className="flex flex-wrap items-center gap-2">
-        <DrillButton
-          size="md"
-          onDrill={() =>
-            go({ type: "process-instances", processDefinitionKey: data.processDefinitionKey })
-          }
-        >
-          {t("procIncHeader.viewRunningInstances")}
-        </DrillButton>
-      </div>
     </WidgetShell>
   )
 }

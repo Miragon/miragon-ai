@@ -437,7 +437,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    into the kit's table with its icon and both labels). `OpenInCockpitLink` takes `vendor`
    (`provider.branding.displayName`) and reads "In CIB seven öffnen" / "Open in CIB seven",
    with "öffnet in neuem Tab" in its accessible name. `WidgetHeader` has no icon tile; a state
-   goes into `badge` (a `StatusBadge`).
+   goes into `badge` (a `StatusBadge`). **A view's actions are ONE group in its head**
+   (`WidgetHeader` `actions`), all of one size (the toolkit's `Button` `size="sm"`, 32 px /
+   14 px / 600; `OpenInCockpitLink` renders with `buttonVariants` too), in one order: the
+   deterministic steps, the engine's own web app, then the chat. The meta line under the
+   title holds facts only, never a link or an action; a section with actions of its own
+   (the incident's failure) keeps them in one row the same way (`action-group.test.tsx`).
+   Rows keep the toolkit's `DrillButton` until it matches the `Button` scale
+   (Miragon/mcp-toolkit#194).
    **Every widget package runs the brand gates** from `@miragon-ai/widget-shell/testing` in
    its own tests (brand-lint cannot read strings in `.ts`/`.tsx`):
    `catalogTextFindings(catalog, { language })` over each en/de message catalog (no dash as a

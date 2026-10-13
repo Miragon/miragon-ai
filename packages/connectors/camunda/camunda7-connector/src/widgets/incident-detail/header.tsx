@@ -80,6 +80,12 @@ export function IncidentDetailHeader({
           {/* One instance label: its business key, the UUID a copyable chip. */}
           <InstanceLabel id={data.processInstanceId} businessKey={data.businessKey} />
           <EngineMeta engineId={data.engineId} />
+        </>
+      }
+      // One action group, facts stay in the meta line: the engine's own web
+      // app (deterministic) before the chat hand-off.
+      actions={
+        <>
           {cockpitInstanceUrl && (
             <OpenInCockpitLink
               url={cockpitInstanceUrl}
@@ -87,9 +93,9 @@ export function IncidentDetailHeader({
               label={t("incidentDetail.openInstanceIn", { vendor: data.engineVendor })}
             />
           )}
+          <HandOffButton action="findCause" prompt={ask(diagnoseIncidentHandOff(data))} />
         </>
       }
-      actions={<HandOffButton action="findCause" prompt={ask(diagnoseIncidentHandOff(data))} />}
     />
   )
 }

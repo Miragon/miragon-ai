@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { LocaleProvider } from "@miragon/mcp-toolkit-ui"
+import { buttonVariants, LocaleProvider } from "@miragon/mcp-toolkit-ui"
 import { HostBridgeProvider, type HostBridge } from "@miragon/mcp-toolkit-ui/app"
 import { TriangleAlert } from "lucide-react"
 import { Icon } from "./icon.js"
@@ -133,6 +133,8 @@ describe("OpenInCockpitLink", () => {
     expect(link.textContent).toBe("In CIB seven öffnen")
     expect(link.querySelector("svg.lucide-external-link")?.getAttribute("aria-hidden")).toBe("true")
     expect(link.className).not.toContain("text-muted-foreground")
+    // One action size with the buttons beside it: the toolkit's outline button, sm.
+    expect(link.className).toBe(buttonVariants({ variant: "outline", size: "sm" }))
   })
 
   it("falls back to the engine cockpit and honours a caller's label, in English", () => {
