@@ -1,7 +1,6 @@
 import { useId } from "react"
 import {
   Button,
-  DrillButton,
   ErrorState,
   KpiGrid,
   StatusBadge,
@@ -17,7 +16,7 @@ import {
   formatNumber,
   viewRefreshState,
 } from "@miragon-ai/widget-shell/widgets"
-import { RefreshCw, TriangleAlert } from "lucide-react"
+import { RefreshCw, TriangleAlert, ArrowRight } from "lucide-react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "../view-models.js"
@@ -198,12 +197,16 @@ function ClusterRow({
         <p className="text-muted-foreground text-small">{facts.join(" · ")}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        <DrillButton
-          onDrill={drill}
-          ariaLabel={t("engineHealth.clusterViewAria", { activity: name })}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={drill}
+          aria-label={t("engineHealth.clusterViewAria", { activity: name })}
         >
           {t("engineHealth.clusterOpen")}
-        </DrillButton>
+          <Icon icon={ArrowRight} />
+        </Button>
         <HandOffButton action={canFix ? "planFix" : "explainError"} prompt={ask(handOff)} />
       </div>
     </li>
