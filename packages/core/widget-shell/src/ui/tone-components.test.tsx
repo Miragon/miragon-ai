@@ -70,6 +70,29 @@ describe("selection in the info tone (CI: blue contour + tint, black text)", () 
     expect(classes(pressed)).toContain("focus-visible:ring-focus")
     expect(classes(screen.getByRole("button", { name: "Frequenz" }))).not.toContain("ring-info")
   })
+
+  it("SegmentedControl: segments sit inside the track with concentric corners, no separators", () => {
+    const { container } = render(
+      <SegmentedControl
+        ariaLabel="Ansicht"
+        options={[
+          { value: "live", label: "Live" },
+          { value: "freq", label: "Frequenz" },
+          { value: "dur", label: "Dauer" },
+        ]}
+        value="live"
+        onChange={() => undefined}
+      />,
+    )
+    const track = container.firstElementChild!
+    // The contour never touches the track's border, and the track never clips it.
+    expect(classes(track)).toEqual(expect.arrayContaining(["p-0.5", "gap-0.5", "rounded-md"]))
+    expect(classes(track)).not.toContain("overflow-hidden")
+    for (const segment of screen.getAllByRole("button")) {
+      expect(classes(segment)).toContain("rounded-[calc(var(--radius-md)-3px)]")
+      expect(classes(segment).some((c) => c.includes("border-r"))).toBe(false)
+    }
+  })
 })
 
 describe("icons", () => {
