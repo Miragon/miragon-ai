@@ -26,6 +26,9 @@ import { mergeConfig, type DefaultTheme, type HeadConfig, type UserConfig } from
 import { withMermaid } from "vitepress-plugin-mermaid"
 import type { MermaidConfig } from "mermaid"
 import { githubSlug } from "./slug.mjs"
+import { miragonLegal, type MiragonLegal } from "./legal"
+
+export { miragonLegal, type MiragonLegal } from "./legal"
 
 /** Optionen von miragonDocs. Was hier nicht steht, legt das Kit fest. */
 export interface MiragonDocsOptions {
@@ -68,20 +71,10 @@ export interface MiragonDocsOptions {
   mermaid?: MermaidConfig
 }
 
-/** Was die Rechtsleiste (theme/LegalRow.vue) liest. */
-export interface MiragonLegal {
-  label: string
-  copyright: string
-  message?: string
-  links: { text: string; link: string }[]
-}
-
 export interface MiragonThemeConfig extends DefaultTheme.Config {
   miragon: { legal: MiragonLegal }
 }
 
-const IMPRESSUM = "https://www.miragon.io/impressum/"
-const DATENSCHUTZ = "https://www.miragon.io/datenschutz/"
 const SPRACHEN = ["en-US", "de-DE"] as const
 
 // Englisch sind die Texte von VitePress, dazu die aus Miragon/mcp-toolkit. Deutsch wie die Doku der CI.
@@ -89,7 +82,6 @@ const TEXTE = {
   "en-US": {
     editLink: "Edit this page on GitHub",
     lastUpdated: "Last updated",
-    legal: "Legal",
     // Was passiert ist und was zu tun ist, im Satzbau statt „PAGE NOT FOUND“ und Zitat.
     notFound: {
       title: "This page doesn't exist",
@@ -103,7 +95,6 @@ const TEXTE = {
   "de-DE": {
     editLink: "Diese Seite auf GitHub bearbeiten",
     lastUpdated: "Zuletzt aktualisiert",
-    legal: "Rechtliches",
     notFound: {
       title: "Diese Seite gibt es nicht",
       quote: "Der Link ist vielleicht veraltet. Durchsuche die Doku oder fang auf der Startseite an.",
@@ -235,17 +226,8 @@ export function miragonDocs(options: MiragonDocsOptions): UserConfig<MiragonThem
       ...texte.themeConfig,
       // Kein footer von VitePress: Er fehlt auf Seiten mit Seitenleiste. Die Rechtsleiste
       // (theme/LegalRow.vue) steht auf jeder Seite.
-      miragon: {
-        legal: {
-          label: texte.legal,
-          copyright: `© ${new Date().getFullYear()} Miragon GmbH`,
-          ...(options.footerMessage ? { message: options.footerMessage } : {}),
-          links: [
-            { text: "Impressum", link: IMPRESSUM },
-            { text: "Datenschutz", link: DATENSCHUTZ },
-          ],
-        },
-      },
+      // Texte und Links aus legal.ts.
+      miragon: { legal: miragonLegal({ lang, message: options.footerMessage }) },
     },
   }
 

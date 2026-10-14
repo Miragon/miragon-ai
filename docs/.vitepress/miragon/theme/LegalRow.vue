@@ -3,8 +3,8 @@
   Startseite, Seiten mit und ohne Seitenleiste und 404, in jeder Breite. Impressum (§ 5 DDG) und
   Datenschutzerklärung (Art. 13 DSGVO) müssen von jeder Seite erreichbar sein. Der footer von
   VitePress fehlt auf Seiten mit Seitenleiste, darum hängt das Theme diese Leiste in den Slot
-  layout-bottom. Texte und Links setzt config.ts (themeConfig.miragon.legal), das Aussehen
-  theme/miragon.css (Abschnitt RECHTSLEISTE).
+  layout-bottom. Texte und Links kommen aus legal.ts über themeConfig.miragon.legal (miragonDocs
+  setzt sie), das Aussehen aus theme/miragon.css (Abschnitt RECHTSLEISTE).
 
   Quelle: Miragon/corporate-identity, Skill docs-site. Im Repo unverändert unter
   docs/.vitepress/miragon/theme/LegalRow.vue.
@@ -13,9 +13,9 @@
 import { computed } from "vue"
 import { useData } from "vitepress"
 import { useSidebar } from "vitepress/theme-without-fonts"
-import type { MiragonThemeConfig } from "../config"
+import type { MiragonLegalThemeConfig } from "../legal"
 
-const { theme } = useData<MiragonThemeConfig>()
+const { theme } = useData<MiragonLegalThemeConfig>()
 const { hasSidebar } = useSidebar()
 const legal = computed(() => theme.value.miragon?.legal)
 </script>

@@ -10,7 +10,12 @@
     {
       "pfad": "docs/.vitepress/miragon/config.ts",
       "quelle": "miragon/config.ts",
-      "sha256": "8d903937ca51940251490fc4f9af77fa3243ac4f172d30e83b4134a8bd6baa91"
+      "sha256": "56ba36d908749227d8aa50efbdae7a1145b607717b8774bec8b40d4adfa62434"
+    },
+    {
+      "pfad": "docs/.vitepress/miragon/legal.ts",
+      "quelle": "miragon/legal.ts",
+      "sha256": "9768181ae8f130e22a540f70030c873b5455a314d66efdffcc49550e713c552a"
     },
     {
       "pfad": "docs/.vitepress/miragon/slug.d.mts",
@@ -25,7 +30,7 @@
     {
       "pfad": "docs/.vitepress/miragon/theme/LegalRow.vue",
       "quelle": "miragon/theme/LegalRow.vue",
-      "sha256": "946697c1fbabeb1a791313acd30017b04562e6db877d0070308c68a086b81a0f"
+      "sha256": "79f5c733137b39eed14e17b894edd00854ca484da12f2836d7314fdb7ca1552c"
     },
     {
       "pfad": "docs/.vitepress/miragon/theme/cd-tokens.generated.css",
