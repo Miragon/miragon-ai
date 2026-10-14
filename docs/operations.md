@@ -114,6 +114,7 @@ and `analytics_engine_health` surfaces the same gauges and firing alerts in one 
 ## CI/CD
 
 `.github/workflows/ci.yml` runs parallel jobs on every push against public npm dependencies
-only: TypeScript (build, test, lint, format), Kotlin engine plugins, the CIB seven example.
-`.github/workflows/docs.yml` builds this site from `docs/` on every pull request that touches it
-(a dead link fails it) and publishes it to GitHub Pages from `main`.
+only: TypeScript (build, test, lint, format), Kotlin engine plugins, the CIB seven example, and
+the brand checks against Miragon/corporate-identity. `.github/workflows/docs.yml` checks the
+vendored Miragon docs kit and builds this site from `docs/` on every pull request that touches it
+(a dead link fails it), and publishes it to GitHub Pages from `main`.

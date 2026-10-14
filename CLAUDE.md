@@ -10,10 +10,12 @@ section on the settings page). The skills, READMEs and `docs/` are held to the c
 registered, every repo path must exist, every identifier a house skill names must exist in
 the sources or the toolkit/mcp-use typings, and each docs page stays within its budget.
 
-`docs/` holds the Pulse docs (Pulse is this server's product name), a VitePress site in
-mcp-toolkit's docs theme that `.github/workflows/docs.yml` publishes to
+`docs/` holds the Pulse docs (Pulse is this server's product name), a VitePress site built
+with the Miragon docs kit (`docs/.vitepress/miragon/`, vendored from Miragon/corporate-identity,
+skill `miragon-brand:docs-site`) that `.github/workflows/docs.yml` publishes to
 https://miragon.github.io/miragon-ai/: a user-visible change (env vars, tools, ports,
-getting-started steps) updates them in the same PR. The website https://miragon.ai lives in
+getting-started steps) updates them in the same PR. Headings get GitHub's anchors, so a
+`#anchor` link works on the site and on GitHub. The website https://miragon.ai lives in
 Miragon/miragon-ai-docs; a change its product page https://miragon.ai/tools/pulse/ shows needs a
 PR there too.
 
@@ -84,12 +86,12 @@ Dunkel darauf ab. Die App (`apps/mcp-server-camunda7/src/ui/globals.css`) und da
 Starter-Template (`server/src/ui/brand.css`) importieren es nach `tailwindcss` und überschreiben
 nur Rollen- und Alias-Variablen (`--primary`, `--link`, `--focus`, `--<ton>`, `--<ton>-soft`,
 `--<ton>-ink`, Radien, Schatten), nie `--cd-*`, nie Palettenklassen oder rohe Farben in
-Komponenten; widget-shell hat kein eigenes Theme mehr. Die Docs-Site nutzt das Docs-Theme von
-mcp-toolkit unverändert und vendort dieselbe Token-Datei unter
-`docs/.vitepress/theme/cd-tokens.generated.css`; bei jeder CI-Aktualisierung neu aus dem Toolkit
-kopieren, nie von Hand ändern. Der Drift-Test
+Komponenten; widget-shell hat kein eigenes Theme mehr. Die Docs-Site nimmt das Doku-Kit der CI
+(Skill `miragon-brand:docs-site`): Konfiguration, Theme, Token-Datei und Logos liegen unverändert
+unter `docs/.vitepress/miragon/` und `docs/public/logo/`, bei jedem CI-Release neu vendoren, nie
+von Hand ändern; `docs/.vitepress/config.ts` ruft nur `miragonDocs()` auf. Der Drift-Test
 (`apps/mcp-server-camunda7/test/ui-stylesheet.test.ts`: kein `--cd-*` außerhalb der
-Toolkit-Kopie, Docs-Kopie Byte für Byte gleich der Toolkit-Kopie, Docs-Logos per Hash;
+Toolkit-Kopie und des Kits, das Kit gleich seinem Manifest über dessen `check.mjs`;
 `test:host`: das gebaute Stylesheet trägt die vendorten Werte) hält das fest. Die Website
 miragon.ai liegt in Miragon/miragon-ai-docs und prüft ihre Token-Kopie dort.
 

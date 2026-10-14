@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
-import { join, relative } from "node:path"
+import { join, relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
@@ -30,6 +30,9 @@ import {
  *    a consumer stylesheet: the tokens are the toolkit's, vendored once;
  *  - the tone and role pairs at WCAG AA in light AND dark over what ships.
  */
+
+/** The Miragon docs kit, vendored from Miragon/corporate-identity with its own manifest. */
+const DOCS_KIT = "docs/.vitepress/miragon"
 
 const read = (relativePath: string) => readFileSync(new URL(relativePath, import.meta.url), "utf8")
 
@@ -142,11 +145,11 @@ describe("view stylesheets: role variables over the Miragon theme", () => {
  * Drift guard (modeler-tool-design §13: vendor the CI tokens unchanged, never
  * fork a value). The token file every view ships is the toolkit's vendored
  * copy — `theme.css` imports it, and nobody in this repo declares a `--cd-*`
- * of its own. The docs site (`docs/.vitepress/theme`, mcp-toolkit's docs
- * theme unchanged) vendors the same file byte for byte, marker line included,
- * so product and docs show one CI version; its wordmarks and Komet are the
- * CI's files, pinned by hash. A toolkit bump that brings a new CI version
- * fails here until the docs copy is re-copied from the toolkit.
+ * of its own. The docs site builds on the Miragon docs kit
+ * (`docs/.vitepress/miragon/`, vendored from Miragon/corporate-identity, skill
+ * docs-site): its token file, theme and logos are pinned by the kit's own
+ * manifest, which `check.mjs` verifies; the kit's contrast and role mapping
+ * are tested at its source.
  */
 describe("Miragon tokens: one vendored copy", () => {
   const require = createRequire(import.meta.url)
@@ -163,31 +166,21 @@ describe("Miragon tokens: one vendored copy", () => {
     expect(toolkit).toEqual([toolkitTokens, readFileSync(toolkitTheme, "utf8")])
   })
 
-  it("the docs site vendors the toolkit's token file byte for byte", () => {
-    const docs = read("../../../docs/.vitepress/theme/cd-tokens.generated.css")
-    expect(docs, "re-copy @miragon/mcp-toolkit-ui's cd-tokens.generated.css").toBe(toolkitTokens)
-    expect(docs).toMatch(/^\/\* .*miragon-brand \d+\.\d+\.\d+/)
-    expect(docs).toMatch(/--cd-blau:/)
-  })
-
-  it("the docs site ships the CI's wordmarks and Komet unchanged (pinned hashes)", () => {
-    const LOGOS: Record<string, string> = {
-      "miragon-logo-gruen.svg": "bc815e0698689546771e629139d86ac9dfbe29dc5618cd5e2910e6079629eae3",
-      "miragon-logo-weiss.svg": "a235870d9347600d83f4294b4a31799338ead399f1351dc8880809efcc8621fd",
-      "miragon-komet-blau.svg": "c44c4a00f93f4255442bb70afeb8dbcb7eaae6af331ff04b6c685b6d20f587c9",
-    }
-    for (const [file, sha] of Object.entries(LOGOS)) {
-      const bytes = readFileSync(new URL(`../../../docs/public/logo/${file}`, import.meta.url))
-      expect(createHash("sha256").update(bytes).digest("hex"), file).toBe(sha)
-    }
+  it("the docs site vendors the Miragon docs kit unchanged (check.mjs)", () => {
+    const repo = fileURLToPath(new URL("../../../", import.meta.url))
+    const check = spawnSync(process.execPath, [join(repo, DOCS_KIT, "check.mjs")], {
+      encoding: "utf8",
+    })
+    expect(check.stderr, "re-vendor the kit, see the docs-site skill").toBe("")
+    expect(check.status).toBe(0)
   })
 
   it("no stylesheet in the repo declares a --cd-* token (no fork)", () => {
     const repo = fileURLToPath(new URL("../../../", import.meta.url))
-    const docsCopy = join(repo, "docs/.vitepress/theme/cd-tokens.generated.css")
+    const kit = join(repo, DOCS_KIT) + sep
     const forks = ["apps", "packages", "templates", "docs"]
       .flatMap((dir) => stylesheetsUnder(join(repo, dir)))
-      .filter((file) => file !== docsCopy)
+      .filter((file) => !file.startsWith(kit))
       .filter((file) => /--cd-[\w-]+\s*:/.test(rulesOf(readFileSync(file, "utf8"))))
       .map((file) => relative(repo, file))
     expect(forks).toEqual([])
