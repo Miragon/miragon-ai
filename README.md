@@ -139,7 +139,7 @@ A pnpm + Turbo monorepo. The server composes the two modules and serves them as 
 | [`packages/core/widget-shell/`](packages/core/widget-shell)                                               | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
 | [`engine-plugins/`](engine-plugins)                                                                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB Seven (Java 21)                |
 | [`playground/`](playground)                                                                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
-| [`docs/`](docs/README.md)                                                                                 | —                                         | Pulse docs (GitHub Markdown)                                            |
+| [`docs/`](docs/README.md)                                                                                 | `@miragon-ai/docs`                        | Pulse docs, a VitePress site on GitHub Pages                            |
 
 ## Tools
 
@@ -308,13 +308,16 @@ invariants and house patterns.
 
 ## Documentation
 
-The docs live in [`docs/`](docs/README.md), where this server is called Pulse:
+The docs live in [`docs/`](docs/README.md), where this server is called Pulse, and are published
+as a VitePress site at [miragon.github.io/miragon-ai](https://miragon.github.io/miragon-ai/):
 
 - [Getting started](docs/getting-started.md) — connect your Claude to the playground, then run it on your own engine
 - [Usage](docs/usage.md) — connect an assistant and operate your processes
 - [Architecture](docs/architecture.md) — one-page mental model of the server, modules and systems
 - [For Developers](docs/developer.md) — clone, install, and run the stack locally
 - [Operations](docs/operations.md) — deployment, environment, and observability
+
+Build the site locally with `pnpm docs:dev`.
 
 The website [miragon.ai](https://miragon.ai/tools/pulse/) is built from
 [Miragon/miragon-ai-docs](https://github.com/Miragon/miragon-ai-docs). A user-visible change here

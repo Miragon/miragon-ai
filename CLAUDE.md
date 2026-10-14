@@ -10,10 +10,12 @@ section on the settings page). The skills, READMEs and `docs/` are held to the c
 registered, every repo path must exist, every identifier a house skill names must exist in
 the sources or the toolkit/mcp-use typings, and each docs page stays within its budget.
 
-`docs/` holds the Pulse docs as plain GitHub Markdown (Pulse is this server's product name):
-a user-visible change (env vars, tools, ports, getting-started steps) updates them in the same
-PR. The website https://miragon.ai lives in Miragon/miragon-ai-docs; a change its product page
-https://miragon.ai/tools/pulse/ shows needs a PR there too.
+`docs/` holds the Pulse docs (Pulse is this server's product name), a VitePress site in
+mcp-toolkit's docs theme that `.github/workflows/docs.yml` publishes to
+https://miragon.github.io/miragon-ai/: a user-visible change (env vars, tools, ports,
+getting-started steps) updates them in the same PR. The website https://miragon.ai lives in
+Miragon/miragon-ai-docs; a change its product page https://miragon.ai/tools/pulse/ shows needs a
+PR there too.
 
 ## What this repo is
 
@@ -32,7 +34,7 @@ operations and Prometheus-backed process analytics, including interactive React 
 | `packages/core/widget-shell/`                        | Shared widget kit: UI primitives incl. `useApplyTheme` + the host app shell `AppShellProviders` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders, the `shell:*` catalogue + the host-boot helpers (`/server`) |
 | `engine-plugins/`                                    | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                                                                                          |
 | `playground/`                                        | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                                                                                               |
-| `docs/`                                              | Pulse docs as plain GitHub Markdown (getting started, usage, architecture, developer, operations)                                                                                                                               |
+| `docs/`                                              | Pulse docs, a VitePress site on GitHub Pages (getting started, usage, architecture, developer, operations)                                                                                                                      |
 
 ## Commands
 
@@ -52,6 +54,9 @@ pnpm dev                             # MCP server on :8400
 
 # Kotlin engine plugins (Java 21):
 cd engine-plugins && ./gradlew build # compile + unit tests + Konsist architecture tests
+
+# Docs site:
+pnpm docs:dev                        # local dev server; pnpm docs:build to build
 ```
 
 `pnpm dev` serves the MCP endpoint at `http://localhost:8400/mcp` and the `mcp-use`
@@ -79,10 +84,14 @@ Dunkel darauf ab. Die App (`apps/mcp-server-camunda7/src/ui/globals.css`) und da
 Starter-Template (`server/src/ui/brand.css`) importieren es nach `tailwindcss` und überschreiben
 nur Rollen- und Alias-Variablen (`--primary`, `--link`, `--focus`, `--<ton>`, `--<ton>-soft`,
 `--<ton>-ink`, Radien, Schatten), nie `--cd-*`, nie Palettenklassen oder rohe Farben in
-Komponenten; widget-shell hat kein eigenes Theme mehr. Der Drift-Test
+Komponenten; widget-shell hat kein eigenes Theme mehr. Die Docs-Site nutzt das Docs-Theme von
+mcp-toolkit unverändert und vendort dieselbe Token-Datei unter
+`docs/.vitepress/theme/cd-tokens.generated.css`; bei jeder CI-Aktualisierung neu aus dem Toolkit
+kopieren, nie von Hand ändern. Der Drift-Test
 (`apps/mcp-server-camunda7/test/ui-stylesheet.test.ts`: kein `--cd-*` außerhalb der
-Toolkit-Kopie; `test:host`: das gebaute Stylesheet trägt die vendorten Werte) hält das fest.
-Die Website miragon.ai liegt in Miragon/miragon-ai-docs und prüft ihre Token-Kopie dort.
+Toolkit-Kopie, Docs-Kopie Byte für Byte gleich der Toolkit-Kopie, Docs-Logos per Hash;
+`test:host`: das gebaute Stylesheet trägt die vendorten Werte) hält das fest. Die Website
+miragon.ai liegt in Miragon/miragon-ai-docs und prüft ihre Token-Kopie dort.
 
 UI-Texte gibt es auf Deutsch und Englisch, je nach Host-Locale. Deutsch folgt brand-tone
 vollständig: du-Ansprache, AI statt `KI`, „CIB seven“, kein Gedankenstrich als Verbinder,
@@ -405,8 +414,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    same over the app's and the template's stack (`globals.css`, the template's `brand.css`),
    pins that no consumer stylesheet names a raw colour (`stylesheetColorFindings`) or a
    `--cd-*`/`--m-*`/`--critical` variable, and is the token DRIFT test (the shipped theme
-   imports the toolkit's vendored copy, no stylesheet in the repo declares a `--cd-*`;
-   `test:host` checks the built stylesheet's `--cd-*` values); the template
+   imports the toolkit's vendored copy, no stylesheet in the repo declares a `--cd-*`, the
+   docs site's copy equals the toolkit's byte for byte; `test:host` checks the built
+   stylesheet's `--cd-*` values); the template
    runs `server/test/brand.test.ts` over its own `brand.css`, the override example included.
    `parseThemeVariables` reads a stylesheet stack the way
    `<html class="dark" data-theme="dark">` sees it: `:root` and the dark scopes (`.dark`,
