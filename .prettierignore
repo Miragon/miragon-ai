@@ -15,3 +15,12 @@ apps/*/test/__golden__/
 
 # Conductor workspace scratch dir (gitignored)
 .context/
+
+# Vite dev-server cache of the docs site (git-ignored via Vite's own nested
+# .gitignore, which Prettier does not read)
+docs/.vitepress/cache/
+
+# CI design tokens, vendored unchanged from miragon-brand (the same file
+# @miragon/mcp-toolkit-ui ships, see ui-stylesheet.test.ts): re-copied on
+# every CI change, never formatted or hand-edited here.
+docs/.vitepress/theme/cd-tokens.generated.css

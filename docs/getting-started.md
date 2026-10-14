@@ -10,18 +10,18 @@ The hosted [playground](https://miragon-ai-playground.fly.dev/mcp) runs a seeded
 with live demo traffic and the full analytics stack. It is read-only and needs no login. Every
 night at 22:00 UTC the engine reseeds and the metrics are wiped.
 
-In Claude Code:
+::: code-group
 
-```sh
+```sh [Claude Code]
 claude mcp add --transport http miragon-ai https://miragon-ai-playground.fly.dev/mcp
 ```
 
-In claude.ai:
-
-```txt
+```txt [claude.ai]
 Settings → Connectors → Add custom connector
 URL: https://miragon-ai-playground.fly.dev/mcp
 ```
+
+:::
 
 Then ask _"Which processes have open incidents right now?"_ and drill into the widgets. Claude
 Desktop needs a bridge, described in [Usage](usage.md#connect-your-assistant).

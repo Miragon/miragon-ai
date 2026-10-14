@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "packages/core/*"
   - "packages/connectors/*/*"
+  - "docs"
 
 # Transitive packages carrying open advisories that their dependents have not
 # caught up with yet. All three sit in the build/test toolchain only — none of

@@ -140,4 +140,4 @@ served by the engine REST history API, not the metrics.
 | `engine-plugins/`           | Kotlin Micrometer plugins (process metrics).            |
 | `playground/`               | Demo env: showcases, Compose stack, Fly.io deployment.  |
 
-For deeper detail, the root [`README.md`](../README.md) keeps the full module table and tool list.
+For deeper detail, the root [`README.md`](https://github.com/Miragon/miragon-ai/blob/main/README.md) keeps the full module table and tool list.

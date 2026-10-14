@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
 import { join, relative } from "node:path"
@@ -141,8 +142,11 @@ describe("view stylesheets: role variables over the Miragon theme", () => {
  * Drift guard (modeler-tool-design §13: vendor the CI tokens unchanged, never
  * fork a value). The token file every view ships is the toolkit's vendored
  * copy — `theme.css` imports it, and nobody in this repo declares a `--cd-*`
- * of its own. The docs site moved to Miragon/miragon-ai-docs; its copy of the
- * tokens is guarded there (scripts/check-brand-assets.mjs).
+ * of its own. The docs site (`docs/.vitepress/theme`, mcp-toolkit's docs
+ * theme unchanged) vendors the same file byte for byte, marker line included,
+ * so product and docs show one CI version; its wordmarks and Komet are the
+ * CI's files, pinned by hash. A toolkit bump that brings a new CI version
+ * fails here until the docs copy is re-copied from the toolkit.
  */
 describe("Miragon tokens: one vendored copy", () => {
   const require = createRequire(import.meta.url)
@@ -159,10 +163,31 @@ describe("Miragon tokens: one vendored copy", () => {
     expect(toolkit).toEqual([toolkitTokens, readFileSync(toolkitTheme, "utf8")])
   })
 
+  it("the docs site vendors the toolkit's token file byte for byte", () => {
+    const docs = read("../../../docs/.vitepress/theme/cd-tokens.generated.css")
+    expect(docs, "re-copy @miragon/mcp-toolkit-ui's cd-tokens.generated.css").toBe(toolkitTokens)
+    expect(docs).toMatch(/^\/\* .*miragon-brand \d+\.\d+\.\d+/)
+    expect(docs).toMatch(/--cd-blau:/)
+  })
+
+  it("the docs site ships the CI's wordmarks and Komet unchanged (pinned hashes)", () => {
+    const LOGOS: Record<string, string> = {
+      "miragon-logo-gruen.svg": "bc815e0698689546771e629139d86ac9dfbe29dc5618cd5e2910e6079629eae3",
+      "miragon-logo-weiss.svg": "a235870d9347600d83f4294b4a31799338ead399f1351dc8880809efcc8621fd",
+      "miragon-komet-blau.svg": "c44c4a00f93f4255442bb70afeb8dbcb7eaae6af331ff04b6c685b6d20f587c9",
+    }
+    for (const [file, sha] of Object.entries(LOGOS)) {
+      const bytes = readFileSync(new URL(`../../../docs/public/logo/${file}`, import.meta.url))
+      expect(createHash("sha256").update(bytes).digest("hex"), file).toBe(sha)
+    }
+  })
+
   it("no stylesheet in the repo declares a --cd-* token (no fork)", () => {
     const repo = fileURLToPath(new URL("../../../", import.meta.url))
-    const forks = ["apps", "packages", "templates"]
+    const docsCopy = join(repo, "docs/.vitepress/theme/cd-tokens.generated.css")
+    const forks = ["apps", "packages", "templates", "docs"]
       .flatMap((dir) => stylesheetsUnder(join(repo, dir)))
+      .filter((file) => file !== docsCopy)
       .filter((file) => /--cd-[\w-]+\s*:/.test(rulesOf(readFileSync(file, "utf8"))))
       .map((file) => relative(repo, file))
     expect(forks).toEqual([])

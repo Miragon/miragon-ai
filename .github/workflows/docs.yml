@@ -1,0 +1,72 @@
+name: Docs
+
+# The Pulse docs (docs/*.md) as a VitePress site on GitHub Pages:
+# https://miragon.github.io/miragon-ai/. A pull request that touches the docs
+# builds the site (VitePress fails the build on a dead link); a push to main
+# also deploys it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; let a queued deploy finish rather than cancelling it.
+# Pull requests get a group of their own, so they never queue behind a deploy.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('docs-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build VitePress site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.1.0
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm docs:build
+        env:
+          # Project pages are served under /<repo>/; the VitePress config
+          # reads this to set `base` (defaults to "/" for local dev).
+          DOCS_BASE: /miragon-ai/
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6.0.0
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5.0.1

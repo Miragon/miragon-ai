@@ -197,6 +197,8 @@ export default tseslint.config(
             "packages/connectors/camunda/camunda7-client/openapi-ts.config.ts",
             "packages/core/widget-shell/vitest.config.ts",
             "packages/core/widget-shell/vitest.stryker.config.ts",
+            "docs/.vitepress/config.ts",
+            "docs/.vitepress/theme/index.ts",
           ],
         },
         tsconfigRootDir: import.meta.dirname,

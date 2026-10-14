@@ -58,7 +58,7 @@ write paths, uncomment `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in
 The modules ship on public npm: `@miragon-ai/camunda7-connector`,
 `@miragon-ai/analytics-connector`, `@miragon-ai/widget-shell` plus the two client packages,
 released in lockstep (pin one version across all of them).
-[`templates/composed-server/`](../templates/composed-server/)
+[`templates/composed-server/`](https://github.com/Miragon/miragon-ai/tree/main/templates/composed-server)
 is a ready-to-copy pnpm workspace that composes them with an example custom module (tools,
 widget, guard tests included); its `CLAUDE.md` and `.claude/skills/` document the module
 contract and the invariants, its `README.md` is the quick tour. CI runs the template against the
@@ -69,6 +69,6 @@ mirror [`Miragon/miragon-ai-starter`](https://github.com/Miragon/miragon-ai-star
 
 ## Documentation
 
-- These pages are plain Markdown in `docs/`, next to the code they describe: a change to env vars, tools, ports or the getting-started steps updates them in the same PR. `apps/mcp-server-camunda7/test/docs-refs.test.ts` checks every tool name and repo path they cite, and each page's line budget.
+- These pages are Markdown in `docs/`, next to the code they describe, and build into this VitePress site (`pnpm docs:dev`, `pnpm docs:build`), published to [miragon.github.io/miragon-ai](https://miragon.github.io/miragon-ai/) on every push to `main`. A change to env vars, tools, ports or the getting-started steps updates them in the same PR. `apps/mcp-server-camunda7/test/docs-refs.test.ts` checks every tool name and repo path they cite, and each page's line budget.
 - The product page [miragon.ai/tools/pulse](https://miragon.ai/tools/pulse/) is built from [Miragon/miragon-ai-docs](https://github.com/Miragon/miragon-ai-docs).
-- The root [`README.md`](../README.md) stays the full reference for every tool, toolset and env var; [`engine-plugins/README.md`](../engine-plugins/README.md) covers the Kotlin plugin build.
+- The root [`README.md`](https://github.com/Miragon/miragon-ai/blob/main/README.md) stays the full reference for every tool, toolset and env var; [`engine-plugins/README.md`](https://github.com/Miragon/miragon-ai/blob/main/engine-plugins/README.md) covers the Kotlin plugin build.

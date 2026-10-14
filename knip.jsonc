@@ -60,5 +60,20 @@
         "config": ["vitest.config.ts", "vitest.stryker.config.ts"],
       },
     },
+
+    "docs": {
+      "ignoreDependencies": [
+        // mermaid's diagram runtimes, which vitepress-plugin-mermaid lists in
+        // Vite's optimizeDeps.include: under pnpm's strict layout the dev
+        // server resolves them only as direct dependencies of docs (without
+        // them `pnpm docs:dev` fails to resolve each one). Never imported by
+        // our code.
+        "@braintree/sanitize-url",
+        "cytoscape",
+        "cytoscape-cose-bilkent",
+        "dayjs",
+        "debug",
+      ],
+    },
   },
 }

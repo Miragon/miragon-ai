@@ -10,8 +10,9 @@ import { REPO_ROOT } from "./source-scan.js"
  * This guard reads every backticked reference in the docs, the READMEs and
  * the skills and checks it against the repo: tool names against the full
  * surface, repo paths against the tree, the skills' identifiers against the
- * sources and the toolkit/mcp-use typings, and each page in docs/ against its
- * line budget (DOCS_BUDGETS below).
+ * sources and the toolkit/mcp-use typings, and each page of the docs site
+ * (docs/*.md, built by VitePress to https://miragon.github.io/miragon-ai/)
+ * against its line budget (DOCS_BUDGETS below).
  *
  * The product page https://miragon.ai/tools/pulse/ is built from
  * Miragon/miragon-ai-docs, which checks its own tool names against this repo
@@ -30,6 +31,8 @@ const walk = (dir: string, keep: (file: string) => boolean): string[] =>
     : []
 
 const isMarkdown = (file: string) => file.endsWith(".md")
+/** The docs pages: the Markdown in docs/, not the VitePress config, theme or build output. */
+const isDocsPage = (file: string) => isMarkdown(file) && !file.includes(".vitepress")
 const skillFiles = [
   ...walk(path.join(REPO_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
   ...walk(path.join(TEMPLATE_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
@@ -37,7 +40,7 @@ const skillFiles = [
 const docFiles = [
   path.join(REPO_ROOT, "README.md"),
   path.join(REPO_ROOT, "CLAUDE.md"),
-  ...walk(path.join(REPO_ROOT, "docs"), isMarkdown),
+  ...walk(path.join(REPO_ROOT, "docs"), isDocsPage),
   ...walk(path.join(REPO_ROOT, "packages"), (f) => f.endsWith("README.md")),
   path.join(TEMPLATE_ROOT, "README.md"),
   path.join(TEMPLATE_ROOT, "CLAUDE.md"),
@@ -156,8 +159,12 @@ describe("identifiers in the skills", () => {
   })
 })
 
-/** The pages in docs/ and their line budgets: a page that outgrows its budget condenses. */
+/**
+ * The pages in docs/ and their line budgets: a page that outgrows its budget
+ * condenses. index.md is the site's home, README.md the index on GitHub.
+ */
 const DOCS_BUDGETS: Record<string, number> = {
+  "index.md": 40,
   "README.md": 40,
   "getting-started.md": 60,
   "architecture.md": 150,
@@ -169,7 +176,7 @@ const DOCS_BUDGETS: Record<string, number> = {
 describe("docs page budgets", () => {
   it("every page in docs/ has a budget", () => {
     expect(
-      walk(path.join(REPO_ROOT, "docs"), isMarkdown)
+      walk(path.join(REPO_ROOT, "docs"), isDocsPage)
         .map((f) => path.basename(f))
         .sort(),
     ).toEqual(Object.keys(DOCS_BUDGETS).sort())

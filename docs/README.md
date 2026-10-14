@@ -12,5 +12,9 @@ the chat. Commands, configs and packages keep the name `miragon-ai`.
 | [Developer guide](developer.md)       | Run the stack from source and build your own server on the published modules         |
 | [Operations](operations.md)           | The Docker image, security, environment variables, toolsets, health routes and CI    |
 
-The root [`README.md`](../README.md) is the full reference for every tool, toolset and environment
-variable. The product page is [miragon.ai/tools/pulse](https://miragon.ai/tools/pulse/).
+The pages build into a VitePress site, published at
+[miragon.github.io/miragon-ai](https://miragon.github.io/miragon-ai/) from `main`. Run
+`pnpm docs:dev` for a local preview. This file is the index for reading them on GitHub and is not
+part of the site. The root [`README.md`](../README.md) is the full reference for every tool,
+toolset and environment variable. The product page is
+[miragon.ai/tools/pulse](https://miragon.ai/tools/pulse/).
