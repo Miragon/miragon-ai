@@ -5,13 +5,15 @@ Guidance for AI agents working in this repository. The repo-specific skills
 step-by-step walkthroughs for the two main feature paths — read them before adding tools,
 queries, or widgets; `.claude/skills/add-settings-section` covers the third path,
 module-owned user settings (a `profile.modules.<module>` slice + its tool triple + its
-section on the settings page). The skills and READMEs are held to the code by
+section on the settings page). The skills, READMEs and `docs/` are held to the code by
 `apps/mcp-server-camunda7/test/docs-refs.test.ts`: every backticked tool name must be
-registered, every repo path must exist, and every identifier a house skill names must exist
-in the sources or the toolkit/mcp-use typings.
+registered, every repo path must exist, every identifier a house skill names must exist in
+the sources or the toolkit/mcp-use typings, and each docs page stays within its budget.
 
-The docs site (https://miragon.ai/tools/pulse/) lives in Miragon/miragon-ai-docs:
-user-visible changes (env vars, tools, ports, getting-started steps) need a matching PR there.
+`docs/` holds the Pulse docs as plain GitHub Markdown (Pulse is this server's product name):
+a user-visible change (env vars, tools, ports, getting-started steps) updates them in the same
+PR. The website https://miragon.ai lives in Miragon/miragon-ai-docs; a change its product page
+https://miragon.ai/tools/pulse/ shows needs a PR there too.
 
 ## What this repo is
 
@@ -30,6 +32,7 @@ operations and Prometheus-backed process analytics, including interactive React 
 | `packages/core/widget-shell/`                        | Shared widget kit: UI primitives incl. `useApplyTheme` + the host app shell `AppShellProviders` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders, the `shell:*` catalogue + the host-boot helpers (`/server`) |
 | `engine-plugins/`                                    | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                                                                                          |
 | `playground/`                                        | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                                                                                               |
+| `docs/`                                              | Pulse docs as plain GitHub Markdown (getting started, usage, architecture, developer, operations)                                                                                                                               |
 
 ## Commands
 
@@ -79,7 +82,7 @@ nur Rollen- und Alias-Variablen (`--primary`, `--link`, `--focus`, `--<ton>`, `-
 Komponenten; widget-shell hat kein eigenes Theme mehr. Der Drift-Test
 (`apps/mcp-server-camunda7/test/ui-stylesheet.test.ts`: kein `--cd-*` außerhalb der
 Toolkit-Kopie; `test:host`: das gebaute Stylesheet trägt die vendorten Werte) hält das fest.
-Die Docs-Site liegt in Miragon/miragon-ai-docs und prüft ihre Token-Kopie dort.
+Die Website miragon.ai liegt in Miragon/miragon-ai-docs und prüft ihre Token-Kopie dort.
 
 UI-Texte gibt es auf Deutsch und Englisch, je nach Host-Locale. Deutsch folgt brand-tone
 vollständig: du-Ansprache, AI statt `KI`, „CIB seven“, kein Gedankenstrich als Verbinder,

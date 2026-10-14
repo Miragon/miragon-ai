@@ -260,9 +260,7 @@ absent" instead of erroring.
 Also add the three tool names to `apps/mcp-server-camunda7/test/expected-tools.ts`, refresh
 the tools/list goldens (`GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test`,
 commit `test/__golden__/`; a grown char budget needs a `Ratchet-Exception:` trailer), and
-document any new env var on the docs site
-([Operations](https://miragon.ai/tools/pulse/operations)). The site lives in
-Miragon/miragon-ai-docs, so a user-visible change needs a matching PR there.
+document any new env var in `docs/operations.md`.
 
 ## Step 7 — tests
 

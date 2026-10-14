@@ -7,15 +7,15 @@ import { REPO_ROOT } from "./source-scan.js"
 /**
  * Docs and skills say what the code does (#345). A skill an agent follows
  * writes the code it shows, so a stale name there lands in the next change.
- * This guard reads every backticked reference in the READMEs, CLAUDE.md and
+ * This guard reads every backticked reference in the docs, the READMEs and
  * the skills and checks it against the repo: tool names against the full
- * surface, repo paths against the tree, and the skills' identifiers against
- * the sources and the toolkit/mcp-use typings.
+ * surface, repo paths against the tree, the skills' identifiers against the
+ * sources and the toolkit/mcp-use typings, and each page in docs/ against its
+ * line budget (DOCS_BUDGETS below).
  *
- * The docs site lives in Miragon/miragon-ai-docs (https://miragon.ai). Its
- * pages are checked against this repo from there: tool names and paths by
- * scripts/check-miragon-ai-refs.mjs (a weekly CI run), page budgets by its
- * own checks.
+ * The product page https://miragon.ai/tools/pulse/ is built from
+ * Miragon/miragon-ai-docs, which checks its own tool names against this repo
+ * (scripts/check-miragon-ai-refs.mjs there).
  */
 
 const TEMPLATE_ROOT = path.join(REPO_ROOT, "templates", "composed-server")
@@ -29,6 +29,7 @@ const walk = (dir: string, keep: (file: string) => boolean): string[] =>
         .filter((file) => keep(file) && fs.statSync(file).isFile())
     : []
 
+const isMarkdown = (file: string) => file.endsWith(".md")
 const skillFiles = [
   ...walk(path.join(REPO_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
   ...walk(path.join(TEMPLATE_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
@@ -36,6 +37,7 @@ const skillFiles = [
 const docFiles = [
   path.join(REPO_ROOT, "README.md"),
   path.join(REPO_ROOT, "CLAUDE.md"),
+  ...walk(path.join(REPO_ROOT, "docs"), isMarkdown),
   ...walk(path.join(REPO_ROOT, "packages"), (f) => f.endsWith("README.md")),
   path.join(TEMPLATE_ROOT, "README.md"),
   path.join(TEMPLATE_ROOT, "CLAUDE.md"),
@@ -151,5 +153,30 @@ describe("identifiers in the skills", () => {
         return name !== undefined && !PLACEHOLDER.test(name) && !words.has(name)
       })
     expect(unknown.map(where)).toEqual([])
+  })
+})
+
+/** The pages in docs/ and their line budgets: a page that outgrows its budget condenses. */
+const DOCS_BUDGETS: Record<string, number> = {
+  "README.md": 40,
+  "getting-started.md": 60,
+  "architecture.md": 150,
+  "developer.md": 80,
+  "operations.md": 120,
+  "usage.md": 150,
+}
+
+describe("docs page budgets", () => {
+  it("every page in docs/ has a budget", () => {
+    expect(
+      walk(path.join(REPO_ROOT, "docs"), isMarkdown)
+        .map((f) => path.basename(f))
+        .sort(),
+    ).toEqual(Object.keys(DOCS_BUDGETS).sort())
+  })
+
+  it.each(Object.entries(DOCS_BUDGETS))("%s stays within %i lines", (page, lines) => {
+    const text = fs.readFileSync(path.join(REPO_ROOT, "docs", page), "utf8")
+    expect(text.replace(/\n$/, "").split("\n").length).toBeLessThanOrEqual(lines)
   })
 })

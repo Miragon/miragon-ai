@@ -76,8 +76,7 @@ ChatGPT. Claude Desktop takes stdio servers only, so bridge it there:
 }
 ```
 
-See [How to use it](https://miragon.ai/tools/pulse/usage) for the full connection matrix and
-what to ask once connected.
+See [How to use it](docs/usage.md) for the full connection matrix and what to ask once connected.
 
 **Prefer to build the image yourself?** No credentials needed — build it and run `miragon-ai-server`
 in place of the Docker Hub image above.
@@ -140,6 +139,7 @@ A pnpm + Turbo monorepo. The server composes the two modules and serves them as 
 | [`packages/core/widget-shell/`](packages/core/widget-shell)                                               | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
 | [`engine-plugins/`](engine-plugins)                                                                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB Seven (Java 21)                |
 | [`playground/`](playground)                                                                               | —                                         | Demo env: CIB Seven showcase, Compose stack, Fly.io deploy              |
+| [`docs/`](docs/README.md)                                                                                 | —                                         | Pulse docs (GitHub Markdown)                                            |
 
 ## Tools
 
@@ -214,8 +214,7 @@ anonymous deployment shows no write buttons. The dashboard builder (`get-builder
 
 ## Configuration
 
-The most common variables — see [Operations](https://miragon.ai/tools/pulse/operations) for
-the full reference.
+The most common variables — see [`docs/operations.md`](docs/operations.md) for the full reference.
 
 | Variable                                                  | Default                             | Description                                                                                                                                                               |
 | --------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -272,7 +271,7 @@ engines JSON as a map keyed by environment id, or tag entries individually:
 
 Engine ids stay globally unique across environments — the id remains the `ENGINE_ID` metrics
 join key and the per-call `engine` selector; the environment is a grouping level only.
-Full walkthrough in [Operations](https://miragon.ai/tools/pulse/operations).
+Full walkthrough in [`docs/operations.md`](docs/operations.md).
 
 ## Engine metrics plugin
 
@@ -304,21 +303,23 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 cd engine-plugins && ./gradlew build      # Kotlin: compile + unit + Konsist architecture tests
 ```
 
-See [For Developers](https://miragon.ai/tools/pulse/developer) and [`CLAUDE.md`](CLAUDE.md)
-for the architecture invariants and house patterns.
+See [`docs/developer.md`](docs/developer.md) and [`CLAUDE.md`](CLAUDE.md) for the architecture
+invariants and house patterns.
 
 ## Documentation
 
-The documentation lives on [miragon.ai](https://miragon.ai/tools/pulse/), where this server is called Pulse:
+The docs live in [`docs/`](docs/README.md), where this server is called Pulse:
 
-- [Overview](https://miragon.ai/tools/pulse/) — what the server does and how to [connect your Claude](https://miragon.ai/tools/pulse/#connect-your-claude)
-- [Architecture](https://miragon.ai/tools/pulse/architecture) — one-page mental model of the server, modules and systems
-- [For Developers](https://miragon.ai/tools/pulse/developer) — clone, install, and run the stack locally
-- [Operations](https://miragon.ai/tools/pulse/operations) — deployment, environment, and observability
-- [Usage](https://miragon.ai/tools/pulse/usage) — connect an assistant and operate your processes
+- [Getting started](docs/getting-started.md) — connect your Claude to the playground, then run it on your own engine
+- [Usage](docs/usage.md) — connect an assistant and operate your processes
+- [Architecture](docs/architecture.md) — one-page mental model of the server, modules and systems
+- [For Developers](docs/developer.md) — clone, install, and run the stack locally
+- [Operations](docs/operations.md) — deployment, environment, and observability
 
-The site is built from [Miragon/miragon-ai-docs](https://github.com/Miragon/miragon-ai-docs). A
-user-visible change here (env vars, tools, ports, getting-started steps) needs a matching PR there.
+The website [miragon.ai](https://miragon.ai/tools/pulse/) is built from
+[Miragon/miragon-ai-docs](https://github.com/Miragon/miragon-ai-docs). A user-visible change here
+(env vars, tools, ports, getting-started steps) updates `docs/` in the same PR, and needs a PR
+there when the product page shows it.
 
 ## Releases
 
