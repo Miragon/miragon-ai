@@ -1,6 +1,6 @@
 [versions]
 # Language / platform
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 # Spring Boot 4.1.0 (latest). CIB Seven 2.2.0's matrix officially lists 4.0.x, but
 # 4.1.0 boots and serves cleanly here — engine, REST and the Cockpit/Tasklist
 # webapp were all verified by actually running the cibseven-example app — once the
@@ -15,7 +15,7 @@ maven-publish = "0.37.0"
 ktlint = "14.2.0"
 
 # Quality / testing
-konsist = "0.17.3"
+konsist = "0.18.1"
 # Aligned with the Spring Boot 4 BOM (junit-jupiter 6.0.3) so the explicit
 # junit-jupiter-api matches the BOM-managed junit-platform-launcher (no skew).
 junit-jupiter = "6.1.3"
