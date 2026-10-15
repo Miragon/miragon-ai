@@ -1,6 +1,6 @@
 # Pulse developer guide
 
-A working development environment for Pulse (the miragon-ai MCP server) in five commands, or zero if you start with the hosted playground.
+A working development environment for Pulse in five commands, or zero if you start with the hosted playground.
 
 ## Try it first (no install)
 

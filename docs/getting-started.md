@@ -1,6 +1,6 @@
 # Get started with Pulse
 
-Pulse (the miragon-ai MCP server) answers questions about your Camunda 7, CIB seven and Operaton
+Pulse answers questions about your Camunda 7, CIB seven and Operaton
 engines in Claude, ChatGPT or any other MCP client. Try it on the hosted playground first, then run
 it on your own engine. Commands and configs call the server `miragon-ai`.
 

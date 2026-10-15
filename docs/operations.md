@@ -1,6 +1,6 @@
 # Pulse operations
 
-Run Pulse (the miragon-ai MCP server) in production: the Docker image, its security model, environment variables, toolsets, health routes and CI.
+Run Pulse in production: the Docker image, its security model, environment variables, toolsets, health routes and CI.
 
 ## Deployment artifact
 

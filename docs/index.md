@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Miragon Pulse
   text: Ask your engines what is stuck and why.
-  tagline: Pulse (the miragon-ai MCP server) lets Claude, ChatGPT or any other MCP client read and operate your Camunda 7, CIB seven and Operaton engines. It starts read-only and answers with widgets in the chat.
+  tagline: Pulse lets Claude, ChatGPT or any other MCP client read and operate your Camunda 7, CIB seven and Operaton engines. It starts read-only and answers with widgets in the chat.
   actions:
     - theme: brand
       text: Get started

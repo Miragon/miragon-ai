@@ -1,6 +1,6 @@
 # Pulse usage
 
-You use Pulse (the miragon-ai MCP server) by pointing an MCP-aware AI assistant
+You use Pulse by pointing an MCP-aware AI assistant
 at it and asking questions in natural language.
 
 ## Connect your assistant

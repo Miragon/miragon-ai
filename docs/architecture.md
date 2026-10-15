@@ -1,6 +1,6 @@
 # Pulse architecture
 
-Pulse (the miragon-ai MCP server) is a single Node.js MCP server that exposes Camunda 7 / CIB seven
+Pulse is a single Node.js MCP server that exposes Camunda 7 / CIB seven
 operations and Prometheus-backed analytics to any MCP host (Claude, ChatGPT, …). A Kotlin plugin
 in the engine emits process metrics via Micrometer, pushed over OTLP; the OTEL Collector exports
 them to Prometheus so the analytics module can query them.
