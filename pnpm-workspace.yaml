@@ -5,13 +5,13 @@ packages:
   - "docs"
 
 # Transitive packages carrying open advisories that their dependents have not
-# caught up with yet. All three sit in the build/test toolchain only — none of
+# caught up with yet. All of them sit in the build/test toolchain only — none of
 # them ships in the server image — but pinning the patched line here is what
-# closes the Dependabot alert. Keep every entry caret-ranged: an override
-# replaces the dependent's own range outright, so a bare `>=` would happily
-# resolve the next major (js-yaml 5, fast-uri 4) into a dependent that never
-# asked for it. Drop an entry once its dependent resolves the patched version
-# on its own.
+# closes the Dependabot alert. Keep every entry caret-ranged (the docs pin at
+# the end is the one exception): an override replaces the dependent's own range
+# outright, so a bare `>=` would happily resolve the next major (js-yaml 5,
+# fast-uri 4) into a dependent that never asked for it. Drop an entry once its
+# dependent resolves the patched version on its own.
 overrides:
   # via the Stryker toolchain: qs.stringify DoS + array-limit bypass
   qs: "^6.16.0"
@@ -20,3 +20,8 @@ overrides:
   js-yaml: "^4.3.2"
   # via ajv <- @stryker-mutator/core: host confusion + SSRF in URI normalization
   fast-uri: "^3.1.6"
+  # The docs site (docs/): VitePress 1.6.4 asks for vite ^5.4.14, below the fix
+  # for the server.fs.deny bypass. An exact pin, not a range: it is the vite the
+  # Miragon docs kit (docs/.vitepress/miragon/) is built and tested with, and it
+  # moves only with a release of Miragon/corporate-identity (skill docs-site).
+  "vitepress>vite": 6.4.3

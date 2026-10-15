@@ -62,16 +62,23 @@
     },
 
     "docs": {
+      // The Miragon docs kit (.vitepress/miragon/, vendored unchanged from
+      // Miragon/corporate-identity, pinned by its check.mjs): slug.d.mts types
+      // slug.mjs for TypeScript, so no import names the declaration itself.
+      "ignore": [".vitepress/miragon/slug.d.mts"],
       "ignoreDependencies": [
-        // Lazy-loaded mermaid diagram runtimes (mindmap → cytoscape*,
-        // timeline → dayjs, sanitize/debug) — imported by mermaid at render
-        // time, never by our code.
+        // mermaid's diagram runtimes, which vitepress-plugin-mermaid lists in
+        // Vite's optimizeDeps.include: under pnpm's strict layout the dev
+        // server resolves them only as direct dependencies of docs (without
+        // them `pnpm docs:dev` fails to resolve each one). Never imported by
+        // our code.
         "@braintree/sanitize-url",
         "cytoscape",
         "cytoscape-cose-bilkent",
         "dayjs",
         "debug",
-        // Provided by vitepress; the theme imports it directly.
+        // Provided by vitepress, which aliases `vue` to its own copy; the kit's
+        // theme imports it directly.
         "vue",
       ],
     },

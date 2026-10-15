@@ -3,11 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "description": "VitePress site with the Pulse docs, published to https://miragon.github.io/miragon-ai/, built with the Miragon docs kit. The pages are the Markdown files next to this package.json.",
   "type": "module",
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
-    "preview": "vitepress preview"
+    "preview": "vitepress preview",
+    "check:kit": "node .vitepress/miragon/check.mjs"
   },
   "devDependencies": {
     "@braintree/sanitize-url": "7.1.2",

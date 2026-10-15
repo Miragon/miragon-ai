@@ -2,69 +2,35 @@
 layout: home
 
 hero:
-  name: Your processes,
-  text: one conversation away.
-  tagline: "An MCP server for Camunda 7 / CIB Seven — run operations, analytics, and incident response by asking, with every answer rendered as an interactive widget right in the chat."
+  name: Miragon Pulse
+  text: Ask your engines what is stuck and why.
+  tagline: Pulse lets Claude, ChatGPT or any other MCP client read and operate your Camunda 7, CIB seven and Operaton engines. It starts read-only and answers with widgets in the chat.
   actions:
     - theme: brand
-      text: Try it out
-      link: "https://inspector.manufact.com/inspector?server=https%3A%2F%2Fmiragon-ai-playground.fly.dev%2Fmcp&tab=chat"
-      target: _blank
+      text: Get started
+      link: /getting-started
     - theme: alt
-      text: Connect Claude
-      link: "#connect-your-claude"
+      text: Product page
+      link: https://miragon.ai/tools/pulse/
     - theme: alt
       text: GitHub
       link: https://github.com/Miragon/miragon-ai
-
-features:
-  - title: For End Users
-    details: Connect Claude, ask questions about your processes, fix incidents.
-    link: /usage
-    linkText: Start using it
-  - title: For Developers
-    details: Clone, install, and run the full stack locally in a few minutes.
-    link: /developer
-    linkText: Set up your machine
-  - title: Architecture
-    details: A one-page mental model of the server, modules, and external systems.
-    link: /architecture
-    linkText: See the diagram
-  - title: Operations
-    details: Deployment artifact, environment variables, and observability.
-    link: /operations
-    linkText: Run it in production
 ---
 
-<TryItOut />
+## Try it, then run it on your engine
 
-## Connect your Claude in 30 seconds {#connect-your-claude}
+[Getting started](./getting-started.md) connects your Claude to the public playground with one
+command, then runs the Docker image `miragon/miragon-ai-server` against your own engine's REST API.
+[Usage](./usage.md) covers the other assistants, what to ask and your settings.
 
-The hosted [playground](https://miragon-ai-playground.fly.dev/mcp) runs a seeded
-CIB Seven engine with live traffic and the full analytics stack — read-only,
-nothing to install. Point any MCP client at it:
+## Run it for your team
 
-```
-https://miragon-ai-playground.fly.dev/mcp
-```
+[Operations](./operations.md) holds the image, the security model, every environment variable, the
+toolsets that allow writes and the health routes. [Architecture](./architecture.md) shows the
+server, its two modules (camunda7 and analytics) and the systems they talk to.
 
-::: code-group
+## Build on it
 
-```sh [Claude Code]
-claude mcp add --transport http miragon-ai https://miragon-ai-playground.fly.dev/mcp
-```
-
-```txt [claude.ai]
-Settings → Connectors → Add custom connector
-URL: https://miragon-ai-playground.fly.dev/mcp
-```
-
-:::
-
-Then ask: _"Which processes have open incidents right now?"_ — and drill into
-the interactive widgets. Ready for your own stack? Head to
-[For Developers](/developer).
-
-<CockpitToConversation />
-
-<BrandContact />
+The [developer guide](./developer.md) runs the stack from source and composes the published
+`@miragon-ai/*` modules into a server of your own. Pulse is pre-1.0: minor releases can rename
+tools, so pin a version from the [releases](https://github.com/Miragon/miragon-ai/releases).

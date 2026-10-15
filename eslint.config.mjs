@@ -169,6 +169,9 @@ export default tseslint.config(
       // and its tsconfig projects — verified by scripts/test-template.sh
       // (build + typecheck + tests) instead of the repo's typed linting.
       "templates/**",
+      // The Miragon docs kit, vendored byte for byte from
+      // Miragon/corporate-identity and linted there; check.mjs pins the copy.
+      "docs/.vitepress/miragon/**",
     ],
   },
 

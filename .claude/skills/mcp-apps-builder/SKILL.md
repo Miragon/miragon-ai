@@ -20,7 +20,6 @@ mcp-use skill this file used to vendor taught 1.x APIs (`server.uiResource()`, t
    - `add-analytics-feature`: a PromQL query, an analytics tool or a dashboard
      widget.
    - `add-settings-section`: a module's user settings slice and its section.
-   - `docs-style`: any page under `docs/`.
 3. **The toolkit's guides**, for the framework underneath:
    [migrating to mcp-use 2](https://github.com/Miragon/mcp-toolkit/blob/main/docs/guides/migrating-to-mcp-use-2.md)
    and the other pages in that folder.
@@ -29,3 +28,8 @@ mcp-use skill this file used to vendor taught 1.x APIs (`server.uiResource()`, t
    from the web.
 
 Where an mcp-use example and the house skills disagree, the house skills win.
+
+A user-visible change (env vars, tools, ports, getting-started steps) updates the Pulse docs
+in `docs/` in the same PR; they build into the site https://miragon.github.io/miragon-ai/
+(`pnpm docs:build` fails on a dead link). The product page https://miragon.ai/tools/pulse/ is
+built from Miragon/miragon-ai-docs; a change it shows needs a PR there too.

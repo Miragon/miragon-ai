@@ -10,8 +10,13 @@ import { REPO_ROOT } from "./source-scan.js"
  * This guard reads every backticked reference in the docs, the READMEs and
  * the skills and checks it against the repo: tool names against the full
  * surface, repo paths against the tree, the skills' identifiers against the
- * sources and the toolkit/mcp-use typings, and each docs page against its
- * line budget (the docs-style skill's table).
+ * sources and the toolkit/mcp-use typings, and each page of the docs site
+ * (docs/*.md, built by VitePress to https://miragon.github.io/miragon-ai/)
+ * against its line budget (DOCS_BUDGETS below).
+ *
+ * The product page https://miragon.ai/tools/pulse/ is built from
+ * Miragon/miragon-ai-docs, which checks its own tool names against this repo
+ * (scripts/check-miragon-ai-refs.mjs there).
  */
 
 const TEMPLATE_ROOT = path.join(REPO_ROOT, "templates", "composed-server")
@@ -26,6 +31,8 @@ const walk = (dir: string, keep: (file: string) => boolean): string[] =>
     : []
 
 const isMarkdown = (file: string) => file.endsWith(".md")
+/** The docs pages: the Markdown in docs/, not the VitePress config, theme or build output. */
+const isDocsPage = (file: string) => isMarkdown(file) && !file.includes(".vitepress")
 const skillFiles = [
   ...walk(path.join(REPO_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
   ...walk(path.join(TEMPLATE_ROOT, ".claude", "skills"), (f) => f.endsWith("SKILL.md")),
@@ -33,7 +40,7 @@ const skillFiles = [
 const docFiles = [
   path.join(REPO_ROOT, "README.md"),
   path.join(REPO_ROOT, "CLAUDE.md"),
-  ...walk(path.join(REPO_ROOT, "docs"), (f) => isMarkdown(f) && !f.includes(".vitepress")),
+  ...walk(path.join(REPO_ROOT, "docs"), isDocsPage),
   ...walk(path.join(REPO_ROOT, "packages"), (f) => f.endsWith("README.md")),
   path.join(TEMPLATE_ROOT, "README.md"),
   path.join(TEMPLATE_ROOT, "CLAUDE.md"),
@@ -120,7 +127,7 @@ describe("identifiers in the skills", () => {
     fs.realpathSync(path.join(import.meta.dirname, "..", "node_modules", name))
   const isSource = (file: string) => /\.(?:tsx?|mts|mjs|cjs|kt)$/.test(file)
   const corpus = [
-    ...["apps", "packages", "scripts", "templates", "engine-plugins", "docs"].flatMap((dir) =>
+    ...["apps", "packages", "scripts", "templates", "engine-plugins"].flatMap((dir) =>
       walk(path.join(REPO_ROOT, dir), isSource),
     ),
     ...["@miragon/mcp-toolkit-core", "@miragon/mcp-toolkit-ui", "mcp-use"].flatMap((name) =>
@@ -152,25 +159,30 @@ describe("identifiers in the skills", () => {
   })
 })
 
-describe("docs page budgets", () => {
-  const table = fs.readFileSync(
-    path.join(REPO_ROOT, ".claude", "skills", "docs-style", "SKILL.md"),
-    "utf8",
-  )
-  const budgets = [...table.matchAll(/^\| `([\w-]+\.md)`\s*\| ≤ (\d+) lines\s*\|$/gm)].map(
-    ([, page = "", lines = "0"]) => ({ page, lines: Number(lines) }),
-  )
+/**
+ * The pages in docs/ and their line budgets: a page that outgrows its budget
+ * condenses. index.md is the site's home, README.md the index on GitHub.
+ */
+const DOCS_BUDGETS: Record<string, number> = {
+  "index.md": 40,
+  "README.md": 40,
+  "getting-started.md": 60,
+  "architecture.md": 150,
+  "developer.md": 80,
+  "operations.md": 120,
+  "usage.md": 150,
+}
 
-  it("reads the four budgets from the docs-style skill", () => {
-    expect(budgets.map((b) => b.page)).toEqual([
-      "architecture.md",
-      "developer.md",
-      "operations.md",
-      "usage.md",
-    ])
+describe("docs page budgets", () => {
+  it("every page in docs/ has a budget", () => {
+    expect(
+      walk(path.join(REPO_ROOT, "docs"), isDocsPage)
+        .map((f) => path.basename(f))
+        .sort(),
+    ).toEqual(Object.keys(DOCS_BUDGETS).sort())
   })
 
-  it.each(budgets)("$page stays within $lines lines", ({ page, lines }) => {
+  it.each(Object.entries(DOCS_BUDGETS))("%s stays within %i lines", (page, lines) => {
     const text = fs.readFileSync(path.join(REPO_ROOT, "docs", page), "utf8")
     expect(text.replace(/\n$/, "").split("\n").length).toBeLessThanOrEqual(lines)
   })

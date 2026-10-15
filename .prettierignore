@@ -20,7 +20,8 @@ apps/*/test/__golden__/
 # .gitignore, which Prettier does not read)
 docs/.vitepress/cache/
 
-# CI design tokens, vendored verbatim from Miragon/corporate-identity
-# (docs/.vitepress/theme/tokens.generated.css there) — re-copied on every CI
-# change, never formatted or hand-edited here.
-docs/.vitepress/theme/cd-tokens.generated.css
+# The Miragon docs kit, vendored byte for byte from Miragon/corporate-identity
+# (skill docs-site) and pinned by its own manifest (check.mjs, run by
+# ui-stylesheet.test.ts and docs.yml): re-vendored on every CI release, never
+# formatted or hand-edited here.
+docs/.vitepress/miragon/

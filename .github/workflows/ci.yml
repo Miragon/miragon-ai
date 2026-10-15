@@ -269,6 +269,47 @@ jobs:
       # against what the release train will publish.
       - run: ./scripts/test-template.sh
 
+  # The Miragon brand against its source, the private Miragon/corporate-identity:
+  # the docs kit vendored in docs/.vitepress/miragon/ equals the release pinned
+  # below, and brand-lint finds no hard violation in the docs and the README
+  # (rules and exceptions in .miragon/brand.json). Without the secret (not set up
+  # yet, or a fork PR) the job warns and skips; the kit's own manifest check
+  # still runs in `pnpm test` and in docs.yml.
+  brand:
+    name: Brand (CI source + brand-lint)
+    runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_TOKEN: ${{ secrets.CORPORATE_IDENTITY_READ_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: No access to Miragon/corporate-identity
+        if: env.CI_SOURCE_TOKEN == ''
+        run: echo "::warning title=Brand checks skipped::CORPORATE_IDENTITY_READ_TOKEN is not set, so the vendored docs kit is not compared with Miragon/corporate-identity and brand-lint does not run. Add the secret (contents:read on Miragon/corporate-identity)."
+
+      # Keep ref on the release in docs/.vitepress/miragon/manifest.json.
+      - uses: actions/checkout@v7.0.1
+        if: env.CI_SOURCE_TOKEN != ''
+        with:
+          repository: Miragon/corporate-identity
+          ref: v1.10.0
+          token: ${{ env.CI_SOURCE_TOKEN }}
+          path: .ci-source
+          sparse-checkout: plugins/miragon-brand
+
+      - uses: actions/setup-node@v7.0.0
+        if: env.CI_SOURCE_TOKEN != ''
+        with:
+          node-version: 22
+
+      - name: The docs kit equals the CI source
+        if: env.CI_SOURCE_TOKEN != ''
+        run: node docs/.vitepress/miragon/check.mjs --ci .ci-source
+
+      - name: brand-lint
+        if: env.CI_SOURCE_TOKEN != ''
+        run: node .ci-source/plugins/miragon-brand/scripts/brand-lint.mjs --nur-hart docs README.md
+
   kotlin:
     name: Kotlin (Build + Test)
     runs-on: ubuntu-latest
