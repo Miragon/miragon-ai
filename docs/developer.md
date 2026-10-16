@@ -4,8 +4,8 @@ A working development environment for Pulse in five commands, or zero if you sta
 
 ## Try it first (no install)
 
-Point any MCP client at the [playground](https://miragon-ai-playground.fly.dev/mcp)
-(`https://miragon-ai-playground.fly.dev/mcp`): a seeded engine, live traffic, and the full
+Point any MCP client at the [playground](https://pulse-playground.miragon.ai/mcp)
+(`https://pulse-playground.miragon.ai/mcp`): a seeded engine, live traffic, and the full
 analytics stack, read-only. See [Connect your Claude in 30 seconds](getting-started.md#connect-your-claude-in-30-seconds). Everything below is for running your own stack.
 
 ## Prerequisites

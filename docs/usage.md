@@ -6,16 +6,16 @@ at it and asking questions in natural language.
 ## Connect your assistant
 
 Point the assistant at your deployment's `/mcp` endpoint, or at the hosted
-[playground](https://miragon-ai-playground.fly.dev/mcp) to try it without any
+[playground](https://pulse-playground.miragon.ai/mcp) to try it without any
 setup. The playground is public and therefore **read-only**: you can ask
 anything, but it never changes the engine.
 
-| Host               | How to connect                                                                                                                    |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| claude.ai          | Settings → Connectors → **Add custom connector**, URL `https://miragon-ai-playground.fly.dev/mcp` (needs a public HTTPS endpoint) |
-| Claude Code        | `claude mcp add --transport http miragon-ai https://miragon-ai-playground.fly.dev/mcp`                                            |
-| Claude Desktop     | stdio only: bridge the HTTP endpoint with `mcp-remote` (below)                                                                    |
-| Any other MCP host | add it as a streamable-HTTP server                                                                                                |
+| Host               | How to connect                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| claude.ai          | Settings → Connectors → **Add custom connector**, URL `https://pulse-playground.miragon.ai/mcp` (needs a public HTTPS endpoint) |
+| Claude Code        | `claude mcp add --transport http miragon-ai https://pulse-playground.miragon.ai/mcp`                                            |
+| Claude Desktop     | stdio only: bridge the HTTP endpoint with `mcp-remote` (below)                                                                  |
+| Any other MCP host | add it as a streamable-HTTP server                                                                                              |
 
 Claude Desktop validates `claude_desktop_config.json` against the stdio shape,
 so a bare `"url"` entry is dropped silently. Open Settings → Developer → Edit
@@ -29,7 +29,7 @@ Config, add the bridge, and restart the app:
       "args": [
         "-y",
         "mcp-remote",
-        "https://miragon-ai-playground.fly.dev/mcp",
+        "https://pulse-playground.miragon.ai/mcp",
         "--transport",
         "http-only"
       ]
