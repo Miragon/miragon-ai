@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.21.0](https://github.com/Miragon/pulse/compare/v0.20.0...v0.21.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* the npm packages are now @miragon/pulse-widget-shell, @miragon/pulse-camunda7-client, @miragon/pulse-camunda7-connector, @miragon/pulse-analytics-client and @miragon/pulse-analytics-connector (subpaths unchanged; the @miragon-ai packages are deprecated). The server image is ghcr.io/miragon/pulse-server on the GitHub Container Registry; the Docker Hub image miragon/miragon-ai-server stays frozen at 0.20.0. The repo is Miragon/pulse, the starter Miragon/pulse-starter, the playground https://pulse-playground.miragon.ai/mcp. The MCP server introduces itself as pulse (title "Pulse") and logs as [pulse]; the examples register it as pulse. See "Renamed from miragon-ai" in the README.
+
+### Code Refactoring
+
+* rename the repo and everything it ships to Pulse ([0bab7b9](https://github.com/Miragon/pulse/commit/0bab7b9d4d9051b041f564cf071a5de276379bba))
+
 ## [0.20.0](https://github.com/Miragon/miragon-ai/compare/v0.19.0...v0.20.0) (2026-10-13)
 
 
