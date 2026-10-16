@@ -4,13 +4,13 @@ Run Pulse in production: the Docker image, its security model, environment varia
 
 ## Deployment artifact
 
-The server ships as a single Docker image on Docker Hub, `docker.io/miragon/pulse-server` (`:<version>` or `:latest`):
+The server ships as a single multi-arch Docker image on the GitHub Container Registry, `ghcr.io/miragon/pulse-server` (`:<version>` or `:latest`):
 
 ```bash
 docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=... \
   -e PROMETHEUS_URL=... \
-  docker.io/miragon/pulse-server:latest
+  ghcr.io/miragon/pulse-server:latest
 ```
 
 release-please tags `v<version>`; after manual approval `publish-to-docker.yml` builds the root

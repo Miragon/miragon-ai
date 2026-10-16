@@ -38,7 +38,7 @@ read-only, and `MCP_ACTIVE_MODULES=camunda7` leaves out analytics until you run 
 docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8080/engine-rest \
   -e MCP_ACTIVE_MODULES=camunda7 \
-  docker.io/miragon/pulse-server:latest
+  ghcr.io/miragon/pulse-server:latest
 claude mcp add --transport http pulse http://localhost:8400/mcp
 ```
 

@@ -14,7 +14,6 @@ permissions:
   contents: write # release-please commits + tags; publish checks out the repo
   pull-requests: write # release-please opens/updates the Release PR
   issues: write # release-please manages release labels
-  id-token: write # image provenance/SBOM attestation in publish-to-docker
 
 jobs:
   release-please:
@@ -58,11 +57,16 @@ jobs:
     with:
       dry_run: ${{ inputs.dry_run == true }}
 
+  # A called workflow gets no more than this job grants, and the workflow-level
+  # permissions above lack packages: write, so the job names its own.
   publish-docker:
-    name: Publish server image to Docker Hub
+    name: Publish server image to GHCR
     needs: [release-please, gate]
+    permissions:
+      contents: read
+      packages: write # push ghcr.io/miragon/pulse-server
+    # No secrets: the called workflow logs in with its own GITHUB_TOKEN.
     uses: ./.github/workflows/publish-to-docker.yml
-    secrets: inherit
     with:
       dry_run: ${{ inputs.dry_run == true }}
       version: ${{ needs.release-please.outputs.tag_name }}

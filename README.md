@@ -1,7 +1,6 @@
 # Pulse
 
-[![Docker Hub](https://img.shields.io/docker/v/miragon/pulse-server?style=flat-square&label=docker%20hub&logo=docker&logoColor=white&color=2496ED&sort=semver)](https://hub.docker.com/r/miragon/pulse-server)
-[![Docker Pulls](https://img.shields.io/docker/pulls/miragon/pulse-server?style=flat-square&logo=docker&logoColor=white&color=2496ED)](https://hub.docker.com/r/miragon/pulse-server)
+[![Image](https://img.shields.io/badge/image-ghcr.io%2Fmiragon%2Fpulse--server-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/Miragon/pulse/pkgs/container/pulse-server)
 [![Release](https://img.shields.io/github/v/release/Miragon/pulse?style=flat-square&label=release)](https://github.com/Miragon/pulse/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/Miragon/pulse/ci.yml?style=flat-square&label=ci)](https://github.com/Miragon/pulse/actions/workflows/ci.yml)
 [![MCP](https://img.shields.io/badge/Model%20Context%20Protocol-server-blue?style=flat-square)](https://modelcontextprotocol.io/)
@@ -18,7 +17,7 @@ panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp
 > opens the incident panel, reads the metrics and pinpoints the failing step. Once you grant the
 > `operations` toolset, it also retries the failed jobs. No cockpit tab-hunting, no PromQL.
 
-**[🐳 Pull the server image from Docker Hub →](https://hub.docker.com/r/miragon/pulse-server)**
+**[🐳 Pull the server image from the GitHub Container Registry →](https://github.com/Miragon/pulse/pkgs/container/pulse-server)**
 
 ## What you get
 
@@ -34,8 +33,8 @@ panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp
   or compare across engines.
 - **Fail-closed toolsets:** read-only unless you widen it: `operations` (the default under OAuth)
   or `admin` per deployment; deployments additionally need an explicit opt-in flag.
-- **Self-hostable:** a single multi-arch (amd64/arm64) image on Docker Hub, plus a drop-in
-  Micrometer metrics plugin for the engine.
+- **Self-hostable:** a single multi-arch (amd64/arm64) image on the GitHub Container Registry,
+  plus a drop-in Micrometer metrics plugin for the engine.
 
 ## Quick start
 
@@ -49,7 +48,7 @@ docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_USERNAME=demo \
   -e CAMUNDA_PASSWORD=demo \
   -e PROMETHEUS_URL=http://host.docker.internal:9090 \
-  docker.io/miragon/pulse-server:latest
+  ghcr.io/miragon/pulse-server:latest
 ```
 
 Without `MCP_OAUTH` the endpoint is unauthenticated, so this boots **read-only**: queries, widgets
@@ -80,7 +79,7 @@ ChatGPT. Claude Desktop takes stdio servers only, so bridge it there:
 See [How to use it](docs/usage.md) for the full connection matrix and what to ask once connected.
 
 **Prefer to build the image yourself?** No credentials needed: build it and run `pulse-server`
-in place of the Docker Hub image above.
+in place of the published image above.
 
 ```bash
 docker build -t pulse-server .
@@ -335,8 +334,8 @@ everything it ships carries the Pulse name:
   (`/server`, `/widgets` …) stay. Rename the dependencies and the import specifiers, one version
   across all five. The old packages are deprecated with a pointer to the new name, and update bots
   do not follow a rename, so switch by hand.
-- Docker image: `miragon/miragon-ai-server` becomes `miragon/pulse-server`; the old image stays
-  frozen at 0.20.0.
+- Docker image: `miragon/miragon-ai-server` on Docker Hub becomes `ghcr.io/miragon/pulse-server`
+  on the GitHub Container Registry; the old image stays on Docker Hub, frozen at 0.20.0.
 - Starter: `Miragon/miragon-ai-starter` becomes
   [`Miragon/pulse-starter`](https://github.com/Miragon/pulse-starter).
 - Playground: `https://pulse-playground.miragon.ai/mcp`; the old `fly.dev` URL keeps answering.
@@ -356,8 +355,8 @@ everything it ships carries the Pulse name:
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please): semantic
 commits on `main` open a Release PR; merging it tags the repo and publishes the
-[server image](https://hub.docker.com/r/miragon/pulse-server) to Docker Hub and the engine
-plugin to Maven Central.
+[server image](https://github.com/Miragon/pulse/pkgs/container/pulse-server) to the GitHub
+Container Registry, the packages to npm and the engine plugin to Maven Central.
 
 ## Contributing
 

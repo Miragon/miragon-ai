@@ -897,10 +897,14 @@ camunda7-client,analytics-connector,analytics-client}`; matrix entries are packa
   (`<engine>-<artifact>`); the cibseven metrics plugin publishes as
   `io.miragon.mcp:cibseven-history-metrics`. Per-module publishing config lives in the
   module's own `build.gradle.kts` (`mavenPublishing { ... }`), not the root convention.
-- **The server image publishes via `publish-to-docker.yml`** (same train): builds the
-  root `Dockerfile` and pushes `docker.io/miragon/pulse-server:<version>` and
-  `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
-  to `apps/mcp-server-camunda7/package.json`).
+- **The server image publishes via `publish-to-docker.yml`** (same train, the file name
+  kept): builds the root `Dockerfile` multi-arch and pushes
+  `ghcr.io/miragon/pulse-server:<version>` and `:latest` to the GitHub Container Registry
+  (version = release tag without the `v` prefix, falling back to
+  `apps/mcp-server-camunda7/package.json`). It logs in with the run's `GITHUB_TOKEN`, no
+  registry secret; a reusable workflow gets no more than its caller grants, so the
+  `publish-docker` job in `release-please.yml` grants `packages: write` itself. Nothing
+  publishes to Docker Hub.
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
   exactly pinned (`save-exact`, currently `2.8.1`); in the published surface it is a
   ranged `peerDependency` (`~2.8.1`) so consumers dedupe it. Toolkit changes arrive here
