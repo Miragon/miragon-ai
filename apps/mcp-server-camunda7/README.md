@@ -1,6 +1,6 @@
 # @miragon/pulse-mcp-server-camunda7
 
-The MCP host for [Miragon AI](../../README.md). It composes the `camunda7` and `analytics` modules
+The MCP host for [Pulse](../../README.md). It composes the `camunda7` and `analytics` modules
 into a single [mcp-use](https://github.com/mcp-use/mcp-use) server, bundles every React widget into
 one Vite bundle served as per-tool view resources, and serves the streamable-HTTP MCP transport on
 port `8400`.
@@ -11,26 +11,26 @@ is `private` and not published to npm.
 
 ## What it does
 
-- **Composes modules** — loads the modules named in `MCP_ACTIVE_MODULES` (default: all) and merges
+- **Composes modules:** loads the modules named in `MCP_ACTIVE_MODULES` (default: all) and merges
   their tools, widgets and pipeline steps. Each module runs one fail-closed toolset per boot: the
   suffix if given (`camunda7:operations`, …), otherwise read-only without `MCP_OAUTH` and its
-  standard toolset (camunda7 `operations`, analytics `standard`) with it — `admin` is never implied,
+  standard toolset (camunda7 `operations`, analytics `standard`) with it; `admin` is never implied,
   an empty or unknown suffix falls back to read-only, and the boot log states the result. The
   toolkit's dashboard builder is registered only under OAuth while no module runs read-only.
   Modules self-describe via their `src/module.ts` (`configFromEnv`, `knownEnvVars`, `bootWarnings`,
   `instructions`, plugin factory) against the app-owned port in
-  [`src/module-contract.ts`](src/module-contract.ts) — the app only selects modules and wires shared
+  [`src/module-contract.ts`](src/module-contract.ts); the app only selects modules and wires shared
   resources.
-- **Bundles the widget UI** — Vite builds the two-file bundle `dist/mcp-app.js` + `dist/mcp-app.css`,
+- **Bundles the widget UI:** Vite builds the two-file bundle `dist/mcp-app.js` + `dist/mcp-app.css`,
   a self-contained bundle (React, Tailwind, all widgets). mcp-use serves it behind one
   `ui://views/<tool>.html` view resource per widget tool (derived from each tool's `view` binding).
-  The `dedupe` array in [`vite.config.ts`](vite.config.ts) is load-bearing — it keeps a single React /
+  The `dedupe` array in [`vite.config.ts`](vite.config.ts) is load-bearing: it keeps a single React /
   toolkit instance so in-widget `useCallTool()` works.
-- **Serves HTTP** — streamable-HTTP MCP on `:8400/mcp`; the `mcp-use` inspector (`:8400/mcp/inspector`) ships with `mcp-use dev` only, never with the production entrypoint
+- **Serves HTTP:** streamable-HTTP MCP on `:8400/mcp`; the `mcp-use` inspector (`:8400/mcp/inspector`) ships with `mcp-use dev` only, never with the production entrypoint
   in dev.
 
 The server is self-contained (tools + widget UI in one endpoint). Aggregating it with other MCP
-servers is the job of an external MCP gateway (e.g. agentgateway) in front — there is no built-in
+servers is the job of an external MCP gateway (e.g. agentgateway) in front; there is no built-in
 upstream/proxy federation.
 
 ## Run
@@ -48,7 +48,7 @@ pnpm build        # build:ui (Vite widget bundle) + build:server (tsc)
 pnpm start        # run the compiled server from dist/
 ```
 
-Configuration is entirely environment-driven — see
+Configuration is entirely environment-driven. See
 [Configuration](../../README.md#configuration), [Toolsets](../../README.md#toolsets) and
 [`docs/operations.md`](../../docs/operations.md). To exercise write paths locally, set
 `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env` (plus
@@ -58,8 +58,8 @@ Configuration is entirely environment-driven — see
 
 | Path                     | Contents                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `src/index.ts`           | Server entry — `createApp()`, then `listen()` (body cap, drain) unless `mcp-use dev` serves it           |
-| `src/app.ts`             | `createApp(env, deps?)` — OAuth, persistence, plugins into the shared boot; the e2e suites boot it too   |
+| `src/index.ts`           | Server entry: `createApp()`, then `listen()` (body cap, drain) unless `mcp-use dev` serves it            |
+| `src/app.ts`             | `createApp(env, deps?)`: OAuth, persistence, plugins into the shared boot; the e2e suites boot it too    |
 | `src/module-contract.ts` | App-owned port: `ModuleDefinition` + `SharedResources { profileStore, fetchBpmnXml? }`                   |
 | `src/setup.ts`           | Module selection (`MCP_ACTIVE_MODULES`), env-typo warner + boot warnings from the modules, shared wiring |
 | `src/ui/`                | Widget host bundle: `widget-registry.ts` (the host map) + `McpAppView` dispatcher                        |

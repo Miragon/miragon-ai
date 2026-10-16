@@ -119,10 +119,10 @@ function EngineRow({
 
 /**
  * The product signature of an app-level surface (#322 U15, owner decision):
- * the Komet beside "Miragon AI" over "Operations Cockpit". Both Miragon
- * marks hang on the theme slot a customer brand empties
- * (`--brand-mark-display: none`); the product title stays. The landing and
- * the "no engines" surface open with it.
+ * the Komet (the company's mark) beside "Pulse" (the product's name, never
+ * translated) over "Operations Cockpit". Both hang on the theme slot a
+ * customer brand empties (`--brand-mark-display: none`); the page title
+ * stays. The landing and the "no engines" surface open with it.
  */
 export function LandingHeader({ subtitle, action }: { subtitle?: string; action?: ReactNode }) {
   const locale = useLocale()

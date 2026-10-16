@@ -28,7 +28,7 @@ RUN pnpm install --frozen-lockfile --offline
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
     pnpm turbo build --filter=@miragon/pulse-mcp-server-camunda7...
 
-RUN pnpm --filter @miragon/pulse-mcp-server-camunda7 deploy --prod --legacy /app/deployed
+RUN pnpm --fail-if-no-match --filter @miragon/pulse-mcp-server-camunda7 deploy --prod --legacy /app/deployed
 
 FROM base AS runtime
 WORKDIR /app

@@ -121,7 +121,7 @@ export function getAppConfig(boot: ResolvedBoot = resolveBoot()): AppConfig {
 // Deliberately minimal: filesystem-backed when the env knob is set (survives
 // restarts), in-memory otherwise. For Postgres stores with migrations, see
 // the stock server (`apps/mcp-server-camunda7/src/persistence/` in the
-// miragon-ai repo).
+// Pulse repo).
 
 export function createProfileStore(env: NodeJS.ProcessEnv = process.env): ProfileStore {
   return profileStoreFromEnv(env)

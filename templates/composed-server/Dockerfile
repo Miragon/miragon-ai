@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Mirrors the stock miragon-ai server image (two-stage pnpm build). Requires a
+# Mirrors the stock Pulse server image (two-stage pnpm build). Requires a
 # committed pnpm-lock.yaml — run `pnpm install` once and commit the lockfile.
 
 FROM node:26-slim AS base

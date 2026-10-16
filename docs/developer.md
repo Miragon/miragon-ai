@@ -18,8 +18,8 @@ analytics stack, read-only. See [Connect your Claude in 30 seconds](getting-star
 ## Clone and install
 
 ```bash
-git clone git@github.com:miragon/pulse.git
-cd miragon-ai
+git clone git@github.com:Miragon/pulse.git
+cd pulse
 pnpm install
 ```
 

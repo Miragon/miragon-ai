@@ -58,7 +58,7 @@ const oauthConfigSchema = z.discriminatedUnion("provider", [keycloakSchema, auth
 export interface OAuthFromEnvOptions {
   /** Defaults to `process.env`. */
   env?: NodeJS.ProcessEnv
-  /** Log prefix, e.g. `miragon-ai`. */
+  /** Log prefix, e.g. `pulse`. */
   label?: string
 }
 

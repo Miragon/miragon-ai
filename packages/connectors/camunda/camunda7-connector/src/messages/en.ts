@@ -27,7 +27,7 @@ export const en: MessageCatalog = {
   "cockpit.empty.enginesTitle": "No engines configured",
   "cockpit.empty.engines":
     "Ask your administrator to add an engine to the server configuration. Then it shows up here.",
-  "cockpit.signature": "Miragon AI",
+  "cockpit.signature": "Pulse",
   "cockpit.nav.crossEngine": "Cross-engine overview",
   "cockpit.aria.breadcrumb": "Breadcrumb",
   "cockpit.aria.sections": "Cockpit sections",

@@ -67,6 +67,11 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.IMAGE }}:latest
+          # Links the image on Docker Hub back to its source repo.
+          labels: |
+            org.opencontainers.image.source=https://github.com/Miragon/pulse
+            org.opencontainers.image.title=Pulse
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
           provenance: ${{ inputs.dry_run != true }}
           sbom: ${{ inputs.dry_run != true }}
           cache-from: type=gha

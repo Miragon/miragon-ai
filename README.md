@@ -1,4 +1,4 @@
-# Miragon AI
+# Pulse
 
 [![Docker Hub](https://img.shields.io/docker/v/miragon/pulse-server?style=flat-square&label=docker%20hub&logo=docker&logoColor=white&color=2496ED&sort=semver)](https://hub.docker.com/r/miragon/pulse-server)
 [![Docker Pulls](https://img.shields.io/docker/pulls/miragon/pulse-server?style=flat-square&logo=docker&logoColor=white&color=2496ED)](https://hub.docker.com/r/miragon/pulse-server)
@@ -7,7 +7,8 @@
 [![MCP](https://img.shields.io/badge/Model%20Context%20Protocol-server-blue?style=flat-square)](https://modelcontextprotocol.io/)
 
 Drive **Camunda 7 / CIB seven** from any AI assistant: process operations and analytics over the
-[Model Context Protocol](https://modelcontextprotocol.io/).
+[Model Context Protocol](https://modelcontextprotocol.io/). Pulse is part of
+[Miragon AI](https://miragon.ai/), the family of Miragon's AI tools.
 
 One MCP server, two modules (**operations** + **analytics**), and a fleet of interactive
 [MCP App](https://modelcontextprotocol.io/) widgets that render dashboards, BPMN diagrams and incident
@@ -61,14 +62,14 @@ until `MCP_URL` or `MCP_ALLOWED_HOSTS` names it: `Host`/`Origin` validation is i
 protection.
 
 The server speaks the streamable-HTTP MCP transport on `http://localhost:8400/mcp`. Add it to your
-MCP host as an HTTP/streamable server: `claude mcp add --transport http miragon-ai
+MCP host as an HTTP/streamable server: `claude mcp add --transport http pulse
 http://localhost:8400/mcp` for Claude Code, a custom connector on your public URL for claude.ai /
 ChatGPT. Claude Desktop takes stdio servers only, so bridge it there:
 
 ```json
 {
   "mcpServers": {
-    "miragon-ai": {
+    "pulse": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "http://127.0.0.1:8400/mcp", "--transport", "http-only"]
     }
@@ -95,7 +96,7 @@ Collector, Prometheus and Grafana wired together. See
 ┌─────────────────────────────────────────────────────┐
 │            MCP Host (Claude, ChatGPT, ...)          │
 │  ┌──────────────────────────────────────────────┐   │
-│  │              pulse-server               │   │
+│  │                 pulse-server                 │   │
 │  │  ┌─────────────────┐  ┌──────────────────┐   │   │
 │  │  │ camunda7 module │  │ analytics module │   │   │
 │  │  │  BPM ops tools  │  │  analytics tools │   │   │
@@ -308,8 +309,8 @@ invariants and house patterns.
 
 ## Documentation
 
-The docs live in [`docs/`](docs/README.md), where this server is called Pulse, and are published
-as a VitePress site at [miragon.github.io/pulse](https://miragon.github.io/pulse/):
+The docs live in [`docs/`](docs/README.md) and are published as a VitePress site at
+[miragon.github.io/pulse](https://miragon.github.io/pulse/):
 
 - [Getting started](docs/getting-started.md): connect your Claude to the playground, then run it on your own engine
 - [Usage](docs/usage.md): connect an assistant and operate your processes
@@ -323,6 +324,33 @@ The website [miragon.ai](https://miragon.ai/tools/pulse/) is built from
 [Miragon/miragon-ai-docs](https://github.com/Miragon/miragon-ai-docs). A user-visible change here
 (env vars, tools, ports, getting-started steps) updates `docs/` in the same PR, and needs a PR
 there when the product page shows it.
+
+## Renamed from miragon-ai
+
+Up to 0.20.0 this server shipped as "Miragon AI" from `Miragon/miragon-ai`. From 0.21.0 on,
+everything it ships carries the Pulse name:
+
+- npm: `@miragon-ai/<name>` becomes `@miragon/pulse-<name>` for `widget-shell`,
+  `camunda7-client`, `camunda7-connector`, `analytics-client` and `analytics-connector`; subpaths
+  (`/server`, `/widgets` …) stay. Rename the dependencies and the import specifiers, one version
+  across all five. The old packages are deprecated with a pointer to the new name, and update bots
+  do not follow a rename, so switch by hand.
+- Docker image: `miragon/miragon-ai-server` becomes `miragon/pulse-server`; the old image stays
+  frozen at 0.20.0.
+- Starter: `Miragon/miragon-ai-starter` becomes
+  [`Miragon/pulse-starter`](https://github.com/Miragon/pulse-starter).
+- Playground: `https://pulse-playground.miragon.ai/mcp`; the old `fly.dev` URL keeps answering.
+- MCP client key: the examples register the server as `pulse` (was `miragon-ai`; this repo's
+  `.mcp.json` used `automation-mcp`), and it introduces itself as `pulse`; its log lines start
+  with `[pulse]`. In Claude Code the key is the tool prefix: allowlists and hooks on
+  `mcp__miragon-ai__*` or `mcp__automation-mcp__*` need `mcp__pulse__*`.
+- Engine access logs: the client's User-Agent is `@miragon/pulse-camunda7-client/<version>` (was
+  `@miragon-ai/camunda7-client/0.1.0`).
+- Local Keycloak (`--profile auth`): the pre-registered client is `pulse-server` with secret
+  `pulse-secret`; recreate the container to re-import the realm.
+- Repo: GitHub redirects the old URL; `git remote set-url origin git@github.com:Miragon/pulse.git`
+  updates a clone. The local Compose stack runs as project `pulse` now, so stop an old one first
+  ([`playground/`](playground/README.md#run-locally)).
 
 ## Releases
 

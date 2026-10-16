@@ -13,7 +13,7 @@ anything, but it never changes the engine.
 | Host               | How to connect                                                                                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | claude.ai          | Settings → Connectors → **Add custom connector**, URL `https://pulse-playground.miragon.ai/mcp` (needs a public HTTPS endpoint) |
-| Claude Code        | `claude mcp add --transport http miragon-ai https://pulse-playground.miragon.ai/mcp`                                            |
+| Claude Code        | `claude mcp add --transport http pulse https://pulse-playground.miragon.ai/mcp`                                                 |
 | Claude Desktop     | stdio only: bridge the HTTP endpoint with `mcp-remote` (below)                                                                  |
 | Any other MCP host | add it as a streamable-HTTP server                                                                                              |
 
@@ -24,7 +24,7 @@ Config, add the bridge, and restart the app:
 ```json
 {
   "mcpServers": {
-    "miragon-ai": {
+    "pulse": {
       "command": "npx",
       "args": [
         "-y",

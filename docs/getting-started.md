@@ -2,7 +2,7 @@
 
 Pulse answers questions about your Camunda 7, CIB seven and Operaton
 engines in Claude, ChatGPT or any other MCP client. Try it on the hosted playground first, then run
-it on your own engine. Commands and configs call the server `miragon-ai`.
+it on your own engine. Commands and configs call the server `pulse`.
 
 ## Connect your Claude in 30 seconds
 
@@ -13,7 +13,7 @@ night at 22:00 UTC the engine reseeds and the metrics are wiped.
 ::: code-group
 
 ```sh [Claude Code]
-claude mcp add --transport http miragon-ai https://pulse-playground.miragon.ai/mcp
+claude mcp add --transport http pulse https://pulse-playground.miragon.ai/mcp
 ```
 
 ```txt [claude.ai]
@@ -39,7 +39,7 @@ docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8080/engine-rest \
   -e MCP_ACTIVE_MODULES=camunda7 \
   docker.io/miragon/pulse-server:latest
-claude mcp add --transport http miragon-ai http://localhost:8400/mcp
+claude mcp add --transport http pulse http://localhost:8400/mcp
 ```
 
 Pulse is pre-1.0 and minor releases can rename tools, so pin a version tag from the

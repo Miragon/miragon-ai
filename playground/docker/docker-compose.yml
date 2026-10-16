@@ -4,7 +4,7 @@
 # Postgres, Keycloak and the OTEL Collector use demo-grade credentials or none.
 # Don't drop the 127.0.0.1: prefixes to reach the stack from another machine —
 # tunnel instead, e.g. `ssh -L 8400:127.0.0.1:8400 -L 8470:127.0.0.1:8470 <host>`.
-name: miragon-ai
+name: pulse
 
 services:
   # Default: custom-built CIB Seven with the Micrometer metrics plugin.
@@ -217,8 +217,8 @@ services:
       retries: 18
       start_period: 30s
 
-  # Automation MCP server (Node). Opt-in via the `full` profile so the
-  # default `docker compose up` brings up infra only — leaving port 8400
+  # Pulse server (Node). Opt-in via the `full` profile so the
+  # default `docker compose up` brings up infra only, leaving port 8400
   # free for a locally-run server (`pnpm -F @miragon/pulse-mcp-server-camunda7 dev`).
   # Use: docker compose --profile full up -d
   mcp-server:

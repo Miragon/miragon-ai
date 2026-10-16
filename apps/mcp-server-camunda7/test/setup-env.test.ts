@@ -177,7 +177,7 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
     vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:admin,analytics")
 
     expect(logEffectiveToolsets(resolveBoot())).toBe(
-      "[miragon-ai] Toolsets — camunda7:admin (suffix), analytics:read-only (default without OAuth)",
+      "[pulse] Toolsets — camunda7:admin (suffix), analytics:read-only (default without OAuth)",
     )
     expect(info).toHaveBeenCalledTimes(1)
   })

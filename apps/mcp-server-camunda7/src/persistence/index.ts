@@ -15,6 +15,7 @@ import {
   type ProfileStore,
   type ReadinessCheck,
 } from "@miragon/pulse-widget-shell/server"
+import { SERVER_LABEL } from "../server-label.js"
 
 /**
  * Everything the composition root wires that depends on the deployment's
@@ -70,7 +71,7 @@ function announce(
     { profiles, ...(options.dashboards === false ? {} : { dashboards }) },
     {
       env,
-      label: "miragon-ai",
+      label: SERVER_LABEL,
       remedy:
         "Set DATABASE_URL (Postgres, both stores), or MCP_PROFILE_DIR / MCP_DASHBOARD_DIR to directories on a persistent volume.",
     },
@@ -106,7 +107,7 @@ export async function initRuntime(
 
   if (env.MCP_PROFILE_DIR || env.MCP_DASHBOARD_DIR) {
     console.warn(
-      "[miragon-ai] DATABASE_URL is set — ignoring MCP_PROFILE_DIR/MCP_DASHBOARD_DIR; profiles and dashboards persist to Postgres.",
+      `[${SERVER_LABEL}] DATABASE_URL is set — ignoring MCP_PROFILE_DIR/MCP_DASHBOARD_DIR; profiles and dashboards persist to Postgres.`,
     )
   }
 
@@ -126,13 +127,13 @@ export async function initRuntime(
     throw error
   }
   if (applied.length > 0) {
-    console.log(`[miragon-ai] applied database migrations: ${applied.join(", ")}`)
+    console.log(`[${SERVER_LABEL}] applied database migrations: ${applied.join(", ")}`)
   }
   announce({ profiles: "postgres", dashboards: "postgres" }, env, options)
 
   return {
     profileStore: createPostgresProfileStore({ sql }),
-    dashboardStore: createPostgresDashboardStore({ sql, label: "miragon-ai" }),
+    dashboardStore: createPostgresDashboardStore({ sql, label: SERVER_LABEL }),
     shutdown: () => sql.end({ timeout: 5 }),
     readiness: { database: postgresReadinessCheck(sql) },
   }

@@ -1,17 +1,17 @@
 # CLAUDE.md
 
-Guidance for AI agents working in this repository — a composed MCP server built
-from the published `@miragon-ai` modules (camunda7 BPM operations, Prometheus
+Guidance for AI agents working in this repository: a composed MCP server built
+from the published `@miragon/pulse-*` modules (camunda7 BPM operations, Prometheus
 process analytics) plus your own custom modules. `README.md` is the quick tour
 for humans; this file plus the skills carry the architecture rules.
 
 The skills in `.claude/skills/` are step-by-step walkthroughs for the four main
-task paths — read the matching one BEFORE starting:
+task paths. Read the matching one BEFORE starting:
 
 | Skill                  | Use when…                                                                                       |
 | ---------------------- | ----------------------------------------------------------------------------------------------- |
 | `setup-server`         | configuring, running, branding, or deploying this server (env, modules, toolsets, Docker)       |
-| `create-module`        | building your own connector module — tools for your own API or system                           |
+| `create-module`        | building your own connector module: tools for your own API or system                            |
 | `add-widget`           | adding or changing an interactive widget (`show_*` tool + `*_data` feed + React component)      |
 | `add-settings-section` | persisting per-user preferences for a module (a `profile.modules.<module>` slice + tool triple) |
 
@@ -30,30 +30,30 @@ docker build -t my-mcp-server .   # needs a committed pnpm-lock.yaml
 ```
 
 Use the inspector (`http://localhost:8400/mcp/inspector`, `pnpm dev` only) to call
-tools and render widgets manually — `notes_show_notes` works without any
+tools and render widgets manually; `notes_show_notes` works without any
 external infrastructure.
 
-## Architecture invariants (short form — details in the skills)
+## Architecture invariants (short form, details in the skills)
 
 1. **Modules are self-contained peers; the server is a thin composition root.**
    A module is a package exporting a `ModuleDefinition` (the port type in
-   `server/src/setup.ts` — conformance is structural, modules never import
+   `server/src/setup.ts`; conformance is structural, modules never import
    the server or each other). Wiring a module touches the server in three
    places (`MODULES` in `setup.ts`, the spread in `ui/widget-registry.ts`,
    the definition in `test/widget-registry.test.ts`) plus the `workspace:*`
-   dependency — the `create-module` skill walks through all of them. Tailwind
+   dependency; the `create-module` skill walks through all of them. Tailwind
    scans workspace modules via the `modules/*/src` glob in `ui/globals.css`;
    only npm-installed module packages need their own `@source` line.
-2. **Plain tools go through `createToolRegistrar`, never raw `server.tool()`** —
+2. **Plain tools go through `createToolRegistrar`, never raw `server.tool()`**:
    the raw path is reserved for widget tools (`widget-tools.ts`). Three render
    paths: registrar tools (JSON for the model), `*_show_*` widget tools
    (widget for the user + summary for the model), app-only `*_data` feeds
    (JSON for in-widget self-fetch). The `_show_`/`_data` **naming is
    load-bearing**: `server/test/widget-contract.e2e.test.ts` asserts the widget
    `_meta` contract by name across ALL composed modules, including yours.
-   All three take **strict input** — the registrar with `{ strictInput: true }`,
+   All three take **strict input** (the registrar with `{ strictInput: true }`,
    raw `server.tool()` with `strictToolInput(shape)` from
-   `@miragon/pulse-widget-shell/server` — so an unknown key is a tool error naming
+   `@miragon/pulse-widget-shell/server`), so an unknown key is a tool error naming
    the valid keys, never a silently dropped filter
    (`server/test/strict-input.e2e.test.ts` probes every tool of every module
    on every toolset it declares).
@@ -61,28 +61,28 @@ external infrastructure.
    server registry → `tool-names.ts`); a missed link is a SILENTLY absent
    widget. Guarded by each module's `catalogue-sync.test.ts` and the server's
    `widget-registry.test.ts`.
-4. **`resolve.dedupe` in `server/vite.config.ts` is load-bearing — never trim
+4. **`resolve.dedupe` in `server/vite.config.ts` is load-bearing: never trim
    it.** Without it every in-widget query hangs on "Loading…" (duplicate React
    contexts).
 5. **Exact version pins** (`save-exact` in `.npmrc`) for `dependencies`/
    `devDependencies`: upgrade all `@miragon/pulse-*` packages together to one
    version. The consumer-shared libraries are ranged `peerDependencies`
-   instead — `react`/`react-dom` (`^19.2.0`), `zod` (`^4.4.0`) and
-   `@miragon/mcp-toolkit-*` (`~2.8.1`) — so they dedupe against your app's
+   instead (`react`/`react-dom` `^19.2.0`, `zod` `^4.4.0` and
+   `@miragon/mcp-toolkit-*` `~2.8.1`), so they dedupe against your app's
    copy; keep an exact copy of each in `devDependencies` for local builds.
    **`mcp-use` stays exactly pinned** even as a peer (`2.7.3`): a duplicate
    `mcp-use` instance breaks the React context and hangs every in-widget query
    on "Loading…" (invariant #4). `@mcp-use/client` (a dev dependency of `server/`) is
    pre-pinned to the newest version mcp-use's optional peer range accepts, so
    the mcp-use CLI's on-demand install can never mutate `package.json`
-   mid-task or introduce a second, differently-resolved mcp-use instance — on
+   mid-task or introduce a second, differently-resolved mcp-use instance. On
    an mcp-use bump, re-pin it to the newest version the new peer range
    accepts.
-6. **Never hand-write `_meta.ui.*` keys** — spread `showToolBinding(...)` for
+6. **Never hand-write `_meta.ui.*` keys**: spread `showToolBinding(...)` for
    widget tools and `appOnly` for data feeds (both from
    `@miragon/pulse-widget-shell/server`); mcp-use owns and overwrites the `ui`
    namespace.
-7. **`.env.example` documents every env var the server reads** — both drift
+7. **`.env.example` documents every env var the server reads**: both drift
    directions are guarded by `server/test/env-example.test.ts`; add your
    module's vars there.
 8. **Toolsets fail closed.** A module opts into the `module:toolset` suffix by
@@ -92,7 +92,7 @@ external infrastructure.
    (`oauthFromEnv` in `server/src/app.ts`) a module without a suffix runs its
    read-only floor, an empty/unknown suffix falls back to it, and an
    admin-like toolset is only reachable by naming it. Gate durable writes on the vocabulary
-   (`allowsDurableWrites(resolve(toolset))`) — never on a name compare or on
+   (`allowsDurableWrites(resolve(toolset))`), never on a name compare or on
    `toolset === undefined`, both of which fail open. Details: `create-module`
    Step 5.
 
@@ -105,10 +105,10 @@ pnpm build && pnpm typecheck && pnpm test
 ```
 
 `pnpm typecheck` is the **only** automated check that type-checks widget `.tsx`
-code — never skip it. Widget changes additionally need a render check
+code; never skip it. Widget changes additionally need a render check
 (`pnpm dev`, then call the `show_*` tool). The widget bundle is read once at
 boot, and the root `pnpm dev` rebuilds the modules and the bundle on every
-start — the whole edit-run loop for module or widget code is: restart
+start, so the whole edit-run loop for module or widget code is: restart
 `pnpm dev` at the repo root (the server-local `dev` script rebuilds only the
 bundle and loads no `.env`).
 
@@ -128,10 +128,10 @@ the Tailwind scan in one shot.
 
 ## Reference code
 
-- `modules/mcp-notes/` — the example custom module showing the full house
+- `modules/mcp-notes/`: the example custom module showing the full house
   pattern (module definition, registrar tool, widget tool + data feed, widget,
   guard test). Copy it; don't invent a new shape.
-- The published Miragon modules ship their **sources**: read
+- The published Pulse modules ship their **sources**: read
   `node_modules/@miragon/pulse-camunda7-connector/src/` and
   `node_modules/@miragon/pulse-analytics-connector/src/` for the reference
   implementations of anything the notes module doesn't cover (toolsets,

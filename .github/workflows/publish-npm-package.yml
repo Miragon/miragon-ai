@@ -46,7 +46,7 @@ jobs:
         run: echo "name=$(node -p "require('./packages/${{ inputs.package }}/package.json').name")" >> "$GITHUB_OUTPUT"
 
       # Build the target package and its workspace dependencies only.
-      - run: pnpm --filter "${{ steps.pkg.outputs.name }}..." run build
+      - run: pnpm --fail-if-no-match --filter "${{ steps.pkg.outputs.name }}..." run build
 
       - name: Publish packages/${{ inputs.package }}
         run: |
@@ -56,5 +56,5 @@ jobs:
           if npm view "$name@$version" version > /dev/null 2>&1; then
             echo "$name@$version already published — skipping"
           else
-            pnpm publish --filter "$name" --provenance --access public --no-git-checks
+            pnpm publish --fail-if-no-match --filter "$name" --provenance --access public --no-git-checks
           fi

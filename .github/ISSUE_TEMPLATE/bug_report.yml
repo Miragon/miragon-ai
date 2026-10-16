@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug or unexpected behaviour in automation-mcp
+description: Report a bug or unexpected behaviour in Pulse
 title: "[Bug]: "
 labels:
   - bug
@@ -14,7 +14,7 @@ body:
     attributes:
       label: Description
       description: A clear and concise description of what the bug is.
-      placeholder: When calling the `getProcessInstance` tool, the MCP server returns an unexpected error instead of the process instance details...
+      placeholder: When calling the `camunda7_get_process_instance` tool, the MCP server returns an unexpected error instead of the process instance details...
     validations:
       required: true
 
@@ -24,8 +24,8 @@ body:
       label: Steps to Reproduce
       description: Step-by-step instructions to reproduce the behaviour.
       placeholder: |
-        1. Connect an MCP host (e.g. Claude) to the automation-mcp server
-        2. Call the `getProcessInstance` tool with a valid process instance ID
+        1. Connect an MCP host (e.g. Claude) to the Pulse server
+        2. Call the `camunda7_get_process_instance` tool with a valid process instance ID
         3. Observe the following error in the response...
     validations:
       required: true
@@ -73,7 +73,7 @@ body:
       label: Process Engine
       options:
         - Camunda 7
-        - CIB Seven
+        - CIB seven
         - Not applicable
     validations:
       required: false

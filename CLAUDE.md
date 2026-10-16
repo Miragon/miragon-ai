@@ -2,15 +2,19 @@
 
 Guidance for AI agents working in this repository. The repo-specific skills
 `.claude/skills/add-bpm-feature` and `.claude/skills/add-analytics-feature` contain
-step-by-step walkthroughs for the two main feature paths — read them before adding tools,
+step-by-step walkthroughs for the two main feature paths; read them before adding tools,
 queries, or widgets; `.claude/skills/add-settings-section` covers the third path,
 module-owned user settings (a `profile.modules.<module>` slice + its tool triple + its
 section on the settings page). The skills, READMEs and `docs/` are held to the code by
 `apps/mcp-server-camunda7/test/docs-refs.test.ts`: every backticked tool name must be
 registered, every repo path must exist, every identifier a house skill names must exist in
 the sources or the toolkit/mcp-use typings, and each docs page stays within its budget.
+`apps/mcp-server-camunda7/test/old-names.test.ts` fails on a pre-Pulse name (the old npm scope,
+repo, docs URL, image, starter, slug or product name; "Miragon AI" as the family and the Fly app
+names stay), on a scoped `--filter` naming no workspace package, and on a gate-path pnpm filter
+without `--fail-if-no-match`; its allowances are shrink-only.
 
-`docs/` holds the Pulse docs (Pulse is this server's product name), a VitePress site built
+`docs/` holds the Pulse docs, a VitePress site built
 with the Miragon docs kit (`docs/.vitepress/miragon/`, vendored from Miragon/corporate-identity,
 skill `miragon-brand:docs-site`) that `.github/workflows/docs.yml` publishes to
 https://miragon.github.io/pulse/: a user-visible change (env vars, tools, ports,
@@ -21,8 +25,8 @@ PR there too.
 
 ## What this repo is
 
-"Automation MCP" — a pnpm + Turbo monorepo that ships an MCP server (built on `mcp-use`
-plus the `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB Seven BPM
+Pulse (part of the Miragon AI tool family) is a pnpm + Turbo monorepo that ships an MCP server
+(built on `mcp-use` plus the `@miragon/mcp-toolkit-*` packages) for Camunda 7 / CIB seven BPM
 operations and Prometheus-backed process analytics, including interactive React widgets
 (MCP Apps).
 
@@ -31,11 +35,11 @@ operations and Prometheus-backed process analytics, including interactive React 
 | `apps/mcp-server-camunda7/`                          | The MCP host: composes plugins, bundles the widget UI, serves HTTP on `:8400`                                                                                                                                                   |
 | `packages/connectors/camunda/camunda7-connector/`    | camunda7 module: operations tools, widget tools, widgets, pipeline steps                                                                                                                                                        |
 | `packages/connectors/analytics/analytics-connector/` | analytics module: Prometheus-backed tools, dashboards, comparison widgets                                                                                                                                                       |
-| `packages/connectors/camunda/camunda7-client/`       | Generated CIB Seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                                                                                                                                            |
+| `packages/connectors/camunda/camunda7-client/`       | Generated CIB seven REST SDK (`src/generated/`) + Zod input schemas (`src/schemas/`)                                                                                                                                            |
 | `packages/connectors/analytics/analytics-client/`    | Prometheus client + PromQL query functions (`src/queries/`) + Zod schemas                                                                                                                                                       |
 | `packages/core/widget-shell/`                        | Shared widget kit: UI primitives incl. `useApplyTheme` + the host app shell `AppShellProviders` (`/widgets`), `adaptDataWidget` (`/ui`), view + data-feed builders, the `shell:*` catalogue + the host-boot helpers (`/server`) |
-| `engine-plugins/`                                    | Kotlin/Gradle: CIB Seven OTEL metrics plugin (Java 21)                                                                                                                                                                          |
-| `playground/`                                        | Demo env: CIB Seven showcase engine, Compose stack, Fly.io deploy                                                                                                                                                               |
+| `engine-plugins/`                                    | Kotlin/Gradle: CIB seven OTEL metrics plugin (Java 21)                                                                                                                                                                          |
+| `playground/`                                        | Demo env: CIB seven showcase engine, Compose stack, Fly.io deploy                                                                                                                                                               |
 | `docs/`                                              | Pulse docs, a VitePress site on GitHub Pages (getting started, usage, architecture, developer, operations)                                                                                                                      |
 
 ## Commands
@@ -48,7 +52,7 @@ pnpm typecheck                       # tsc --noEmit everywhere, incl. widget/UI 
 pnpm test                            # vitest across the workspace
 pnpm lint                            # eslint per package (`pnpm lint:fix` to autofix)
 pnpm format:check                    # prettier check (`pnpm format` to write)
-pnpm generate                        # regenerate the CIB Seven SDK from the OpenAPI spec
+pnpm generate                        # regenerate the CIB seven SDK from the OpenAPI spec
 
 # Run the server locally (needs the Docker infra + a .env file, see .env.example):
 docker compose -f playground/docker/docker-compose.yml up -d
@@ -62,13 +66,13 @@ pnpm docs:dev                        # local dev server; pnpm docs:build to buil
 ```
 
 `pnpm dev` serves the MCP endpoint at `http://localhost:8400/mcp` and the `mcp-use`
-inspector UI at `http://localhost:8400/mcp/inspector` (served by `mcp-use dev` only —
-the production entrypoint mounts no inspector) — use the inspector to call tools and
+inspector UI at `http://localhost:8400/mcp/inspector` (served by `mcp-use dev` only;
+the production entrypoint mounts no inspector). Use the inspector to call tools and
 render widgets manually.
 
 If generated SDK files look wrong (e.g. `client.gen.ts` importing `./src/hey-api.js`
 instead of `../hey-api.js`), the shared turbo cache replayed a poisoned `generate`
-output — fix with `pnpm exec turbo run generate --filter=@miragon/pulse-camunda7-client --force`.
+output. Fix it with `pnpm exec turbo run generate --filter=@miragon/pulse-camunda7-client --force`.
 
 ## Design-System (verbindlich)
 
@@ -139,7 +143,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 
 ## Architecture invariants
 
-1. **New operations tools go through the registrar — never raw `server.tool()`.** Add the
+1. **New operations tools go through the registrar, never raw `server.tool()`.** Add the
    Zod input schema in `packages/connectors/camunda/camunda7-client/src/schemas/`, then register the tool in
    `packages/connectors/camunda/camunda7-connector/src/tools/<domain>.ts` via the `register` callback created by
    `createToolRegistrar` (wired in `src/tools/index.ts`). Every registrar tool carries a
@@ -149,29 +153,29 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    See `camunda7_list_process_instances` in
    `packages/connectors/camunda/camunda7-connector/src/tools/process-instances.ts` for the canonical shape.
    Destructive/admin tools must also be listed in `src/lib/toolsets.ts` (`ADMIN_ONLY_TOOLS`)
-   so the `camunda7:read-only|operations|admin` toolset filtering stays correct —
+   so the `camunda7:read-only|operations|admin` toolset filtering stays correct;
    `src/lib/toolsets.test.ts` enforces the rule structurally over every registered tool
    (`destructiveHint` ⇒ admin-only, read-only ⇒ `readOnlyHint`, every write states
-   `destructiveHint` explicitly — MCP reads an absent hint as `true`), so get the annotations
+   `destructiveHint` explicitly, since MCP reads an absent hint as `true`), so get the annotations
    right rather than editing the test. Toolsets are FAIL-CLOSED: without a suffix a module
    runs its read-only floor on an unauthenticated boot and its standard toolset (camunda7
    `operations`, analytics `standard`) under OAuth; `admin` is never implied, and an
-   empty/unknown suffix warns and falls back to the floor — nothing ever resolves to
+   empty/unknown suffix warns and falls back to the floor; nothing ever resolves to
    "everything" (pinned by widget-shell's `toolsets.test.ts` + `composition.test.ts`).
    Admin-only by decision, each with `destructiveHint: true`: the engine-wide
    `camunda7_throw_signal` and the external-task worker protocol (`fetch_and_lock`,
-   `complete_external_task`, `handle_external_task_failure` — the read path is
+   `complete_external_task`, `handle_external_task_failure`; the read path is
    `camunda7_list_external_tasks`, recovery in `operations` is
    `camunda7_set_external_task_retries`). `camunda7_create_deployment` (`destructiveHint: true`)
    is additionally registered only with `CAMUNDA_ALLOW_DEPLOYMENTS=true`: deploying
-   BPMN/DMN is code execution inside the engine JVM (JUEL, scripts) — never relax that
+   BPMN/DMN is code execution inside the engine JVM (JUEL, scripts). Never relax that
    gate or fold it into a toolset. Tools registered outside the registrar (the
-   widget-tools path) that perform durable writes must honor the toolset themselves —
-   pattern: `camunda7_save_settings` in `src/tools/user-profile.ts`. An ESLint gate
-   (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()` — also via a
+   widget-tools path) that perform durable writes must honor the toolset themselves
+   (pattern: `camunda7_save_settings` in `src/tools/user-profile.ts`). An ESLint gate
+   (`no-restricted-syntax` in `eslint.config.mjs`) blocks raw `server.tool()`, also via a
    computed key, `.call`/`.bind`/`.apply`, destructuring (declaration or assignment, incl.
    string keys) and `Reflect.get` (string or template key), `.ts` and `.tsx`; an inline
-   `eslint-disable` of it fails `pnpm lint:ratchets` — outside exactly the widget-path files (in camunda7: `widget-tools.ts` + the
+   `eslint-disable` of it fails `pnpm lint:ratchets`, outside exactly the widget-path files (in camunda7: `widget-tools.ts` + the
    `widget-tools/` domain registrars + `tools/user-profile.ts`). `no-restricted-syntax` is
    one rule: a later flat-config block REPLACES its selectors, so a glob two gates share
    gets one block with the union; `scripts/eslint-gates.test.mjs` pins that per path.
@@ -180,55 +184,55 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `resolveEngine`/`withEngine` (`packages/connectors/camunda/camunda7-connector/src/lib/`), which implements the
    multi-engine routing precedence: per-call `engine` override > the caller's saved default
    engine (`profile.modules.camunda7.defaultEngineId`, written by `camunda7_select_engine`
-   and the settings page — resolution is single-sourced in
+   and the settings page; resolution is single-sourced in
    `lib/engine-preferences.ts`) > the single configured default. There is deliberately NO
    in-memory session selection (replica-unsafe; mcp-use 2 issues no session ids). Constructing
    or caching a client yourself breaks multi-engine routing. `resolveEngine` (async) already
-   returns `baseUrl`/`cockpitUrl` — never fish them out of `registry.engines` yourself.
+   returns `baseUrl`/`cockpitUrl`; never fish them out of `registry.engines` yourself.
 
-3. **Widget registration is a four-link chain** — a widget that misses a link is silently
+3. **Widget registration is a four-link chain**: a widget that misses a link is silently
    absent somewhere:
-   - `packages/connectors/camunda/camunda7-connector/src/widgets/registry.ts` — component → dataType via `adaptDataWidget`
-   - `packages/connectors/camunda/camunda7-connector/src/definition.ts` — widget metadata (`id`, `requires`, `size`, `propsSchema`;
+   - `packages/connectors/camunda/camunda7-connector/src/widgets/registry.ts`: component → dataType via `adaptDataWidget`
+   - `packages/connectors/camunda/camunda7-connector/src/definition.ts`: widget metadata (`id`, `requires`, `size`, `propsSchema`;
      the view builder's `title`/`summary` and each field's `x-display` for people, from the
-     `builder.*` entries of the module's catalogs via `createBuilderTexts` — `description` stays
+     `builder.*` entries of the module's catalogs via `createBuilderTexts`; `description` stays
      the model's text; each connector's `src/builder-texts.test.ts` runs `missingDisplayTexts`)
-   - `apps/mcp-server-camunda7/src/ui/widget-registry.ts` — the host bundle map (spreads
+   - `apps/mcp-server-camunda7/src/ui/widget-registry.ts`: the host bundle map (spreads
      `camunda7Widgets`/`analyticsWidgets`)
-   - `packages/connectors/camunda/camunda7-connector/src/tool-names.ts` — the tool-name constant for every
+   - `packages/connectors/camunda/camunda7-connector/src/tool-names.ts`: the tool-name constant for every
      `show_*`/`*_data` tool, so in-widget navigation stays rename-safe
 
    Links 1↔2 are guarded by `src/widgets/catalogue-sync.test.ts` (both modules have
    one), link 3 by `apps/mcp-server-camunda7/test/widget-registry.test.ts` (every
    catalogued widget id must have a host-bundle entry).
 
-4. **The `dedupe` array in `apps/mcp-server-camunda7/vite.config.ts` is load-bearing — never
+4. **The `dedupe` array in `apps/mcp-server-camunda7/vite.config.ts` is load-bearing: never
    remove or trim it.** Without it each widget package bundles its own React/toolkit
    instance, the React contexts no longer match, `useCallTool()` is undefined, and every
    in-widget query hangs on "Loading…".
 
-5. **There are three render paths — pick deliberately:**
+5. **There are three render paths; pick deliberately:**
    - Registrar tools (`src/tools/`): plain JSON data _for the model_
    - Widget tools (`widget-tools.ts`, `show_*`, spread `...showToolBinding(name, title)`
-     from `@miragon/pulse-widget-shell/server` — a `view` binding named after the tool +
+     from `@miragon/pulse-widget-shell/server`: a `view` binding named after the tool +
      `outputSchema` + the Apps-SDK `_meta` half): render a widget for the user +
      return a summary for the model
-   - `*_data` feeds (also in `widget-tools.ts`, spread `...appOnly` — the native
+   - `*_data` feeds (also in `widget-tools.ts`, spread `...appOnly`: the native
      `visibility: "app"` field + `openai/widgetAccessible`, **no** view binding):
-     app-only JSON for in-widget refresh/navigation — SEP-1865
+     app-only JSON for in-widget refresh/navigation. SEP-1865
      hosts hide them from the LLM, and a widget-tool result would be rendered by the
      host instead of returned to the in-widget `callTool()`. Feeds return
-     `buildDataFeedResult(data)` from `@miragon/pulse-widget-shell/server` — the single
+     `buildDataFeedResult(data)` from `@miragon/pulse-widget-shell/server`, the single
      implementation of this invariant
 
    All three take STRICT input: the registrars run with `strictInput: true`, raw
    `server.tool()` registrations declare `strictToolInput(…)`
-   (`@miragon/pulse-widget-shell/server`) — an unknown key is a tool error listing the valid
+   (`@miragon/pulse-widget-shell/server`): an unknown key is a tool error listing the valid
    keys, never a silently stripped filter (`test/strict-input.e2e.test.ts` in the app).
    Parameter names follow the guide in the add-bpm-feature skill.
 
 6. **Widgets compose from the shared kit (`@miragon/pulse-widget-shell/widgets`) and the
-   toolkit (`@miragon/mcp-toolkit-ui`) — never re-inline their primitives.** ONE kit: the
+   toolkit (`@miragon/mcp-toolkit-ui`); never re-inline their primitives.** ONE kit: the
    toolkit's components (`KpiGrid`/`KpiGridSkeleton`, `StatusBadge`/`LivePill`/`CountPill`,
    `FilterBar`, `WidgetHeader` with `as`, `SectionHeading`, `GroupCard`, `DrillButton`,
    `ListFooter`, `PagedListFooter`), its tone model (`TONE_*`, `resolveTone`, `MICRO_LABEL`)
@@ -368,9 +372,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    table (`HeatValuesTable`). Paged lists compose
    `usePagedListView` (search + debounce + paging scaffold; feed must accept
    `firstResult`/`maxResults` and return an honest total; a new page 0 keeps the
-   previous rows of the same list mounted until it lands — TanStack's `placeholderData` on
-   the toolkit's seeded `useViewData`, bridged past a search that failed for good —
-   `paged.stale`, so counts, filters and
+   previous rows of the same list mounted until it lands (TanStack's `placeholderData` on
+   the toolkit's seeded `useViewData`, bridged past a search that failed for good:
+   `paged.stale`), so counts, filters and
    model contexts read the payload ON SCREEN, never the request) + `ListTable` (the table
    frame; rows stay hand-composed `<tr>` + `Td`) inside `PagedRows` (marks stale rows) + the toolkit's
    `PagedListFooter` (a page-0 failure over rows on screen and a load-more failure, each an
@@ -378,11 +382,11 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    is the list's ONE polite live region, kept mounted at zero rows; its words are the
    toolkit's en/de catalog; rendered under an empty result too). Optimistic
    local state (resolved marks, variable shadows, form baselines) is dropped with
-   `useResetOnChange(data, reset)` — React's render-phase "adjust state when a prop
+   `useResetOnChange(data, reset)`, React's render-phase "adjust state when a prop
    changes"; `useEffect(reset, [data])` is the shape `react-hooks/set-state-in-effect`
    rejects, and it commits the stale shadow once before correcting it. Refs are never
    written during render (`react-hooks/refs`): a discarded render still mutates them,
-   so anything a guard reads belongs in state — see `usePagedViewData`'s generation.
+   so anything a guard reads belongs in state (see `usePagedViewData`'s generation).
    **A status is a tone, never a coloured word** (the toolkit's `TONE_*` maps, see
    "Design-System"): `ToneVariant` is `danger | warning | success | info | neutral`. There is
    no `critical` (a retired name from the wire resolves through `resolveTone`): an open incident or a failed job without retries is `danger`, a failed job
@@ -408,7 +412,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    reference (`scanColors`, below; a selected nav item is `bg-accent text-accent-foreground`,
    a link `text-link`). `src/ui/tone-contrast.test.ts` holds every `TONE_*` and role pair
    (`ROLE_CONTRAST_PAIRS`: text on every surface, each `-foreground` on its fill, the link,
-   `--focus` and `--ring`, the input edge — a role a brand may override belongs in it) to
+   `--focus` and `--ring`, the input edge; a role a brand may override belongs in it) to
    WCAG AA in light and dark over the shipped theme
    (`toolkitThemeStylesheets()` from `/testing`); the one exemption is the CI's own (§3.3:
    success green and amber as a dot, edge or icon on light reach 1.67:1 / 1.83:1, so a status
@@ -426,7 +430,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    override goes under BOTH (a light-only `:root` value shows in dark); a theme rule it cannot
    model (`html.dark`, `[data-theme="light"]`, a media query or layer around `:root`) throws.
    **Function icons are Lucide, never glyphs or emoji:** `Icon` (`currentColor`, 16 px, stroke
-   2.5 set on the icon, `dense` → 2 for tight bars and rows — lucide-react's own `strokeWidth`,
+   2.5 set on the icon, `dense` → 2 for tight bars and rows: lucide-react's own `strokeWidth`,
    the mechanism the toolkit's `LucideProvider` uses for its chrome (2.5, its toolbar 2), never
    a CSS `stroke-width` rule, which would beat the provider; 16 px in chrome and 24 px
    previews are the only sizes, `scanIconSizes` below). `lucide-react` is a
@@ -500,12 +504,12 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    (`view-title.test.ts` in each connector sweeps every show tool). `setFormatLocale` from
    `/testing` renders a widget's numbers in a language in a test.
    **Everything a widget tells the model is built by `askAiPrompt`/`modelContextText`**
-   (`widget-shell/src/ui/ask-ai-prompt.ts`) — an Ask-AI hand-off is posted as the
+   (`widget-shell/src/ui/ask-ai-prompt.ts`): an Ask-AI hand-off is posted as the
    USER's message. A spec is a short catalogue intent (`askAi.*` in the module's
-   en/de messages — static text, no tool names) or a static view `summary`, plus
+   en/de messages; static text, no tool names) or a static view `summary`, plus
    `ids` (non-id-shaped values are fenced), `toolIds` (arguments only one tool
    takes, inlined only while it is named), `facts`, `untrusted` (engine text:
-   messages, names, business keys — length-capped in a fence the text cannot
+   messages, names, business keys, length-capped in a fence the text cannot
    close) and `tools`, filtered by the live surface: camunda7's `useHandOff` reads
    `modelTools` of `camunda7_widget_actions_data` (recorded at registration) +
    `useAnalyticsActive`; analytics' reads the same feed by raw name. The surface is
@@ -522,7 +526,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 
 7. **Shared server data paths are single-sourced.** Definition name/version/instance
    lookups come from `packages/connectors/camunda/camunda7-connector/src/data/definition-info.ts`;
-   `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step — never
+   `data/bpmn-viewer-data.ts` feeds BOTH the widget tool and the pipeline step; never
    fork them. No view payload carries BPMN XML (a show tool's `structuredContent` reaches
    the model on some hosts): a view names the version it draws (`diagramDefinitionId`)
    and `BpmnDiagram` reads the XML by id from the app-only `camunda7_bpmn_xml_data`
@@ -536,23 +540,23 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    from `/count` or statistics, never a capped page or scan; a definition view spans every
    version of its key (`data/honest-numbers.test.ts` breaks every read a builder makes;
    only its declared enrichment may survive).
-   Every engine REST rule the client defaults miss — engine dates
+   Every engine REST rule the client defaults miss (engine dates
    (`toEngineDate`), paired sorting (`engineSorting`), serialized variable writes
    (`toEngineVariable(s)`), text/plain endpoints, raw variable reads, incident recovery,
-   queued batches — lives in the engine contract,
+   queued batches) lives in the engine contract,
    `packages/connectors/camunda/camunda7-client/src/engine-contract/`, used by `tools/` AND
-   `data/` (guards: `src/engine-contract.test.ts`, `src/tools/*.wire.test.ts` — every write
+   `data/` (guards: `src/engine-contract.test.ts`, `src/tools/*.wire.test.ts`: every write
    tool has a recording-fake-engine wire case). Analytics periods derive from
-   `PERIODS`/`PERIOD_RANGE` (analytics-client) — no hardcoded enum copies. The profile STORE (record schema, in-memory/
+   `PERIODS`/`PERIOD_RANGE` (analytics-client), no hardcoded enum copies. The profile STORE (record schema, in-memory/
    filesystem/postgres implementations, migrations) is core:
    `packages/core/widget-shell/src/profile-{record,store,store-postgres,migrations}.ts`
-   (`@miragon/pulse-widget-shell/server`) — the record is connector-free (language,
-   `modules.<module>` slices + metadata; no theme — a `theme` an earlier build stored stays an
+   (`@miragon/pulse-widget-shell/server`); the record is connector-free (language,
+   `modules.<module>` slices + metadata; no theme: a `theme` an earlier build stored stays an
    inert raw key; camunda7's engine/dashboard
    preferences live in ITS slice, `modules.camunda7`, projected to a flat
    `UserProfile` view in `camunda7-connector/src/lib/profile-schema.ts`).
    Records migrate on read through `parseStoredProfile` (shared by every store;
-   per-FIELD fail-soft) — a `PROFILE_SCHEMA_VERSION` bump without a matching
+   per-FIELD fail-soft); a `PROFILE_SCHEMA_VERSION` bump without a matching
    `PROFILE_MIGRATIONS` entry leaves stored preferences un-migrated (the history starts at
    `PROFILE_MIGRATION_BASELINE`; older records are adopted, not upgraded). Saves merge over
    the RAW stored document (`mergeStoredProfile`, inside each store's per-key lock),
@@ -563,22 +567,22 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
      module-local copy of that precedence would silently split one user's settings across
      two records; the app's `module-contract.ts` carries a compile-time assertion that
      camunda7's `ProfileStore` still satisfies the port. The only identity is the OAuth
-     caller (`resolveCaller` over the handler `ctx` — always pass it; ctx-less paths such
+     caller (`resolveCaller` over the handler `ctx`; always pass it, ctx-less paths such
      as pipeline steps read the ambient request info): nothing a client chooses (a session
-     id, a header) is a key, and a request without OAuth — or without any request context —
+     id, a header) is a key, and a request without OAuth (or without any request context)
      has NO identity (saves refuse), never the `anonymous` record, which only an explicitly
      declared local caller (`anonymousCaller`) reaches.
      The whole PERSISTENCE layer follows the same rule: the postgres.js client
      (`createSql`), the migration runner (`runMigrations` + the `Migration` shape) and the
      Postgres dashboard store (`createPostgresDashboardStore`, implementing the toolkit's
      `DashboardStore`) live in `packages/core/widget-shell/src/{postgres,dashboard-store-postgres}.ts`
-     next to the profile store — a composed server imports them from
+     next to the profile store; a composed server imports them from
      `@miragon/pulse-widget-shell/server` instead of reimplementing them, and the app's
      `src/persistence/index.ts` shrinks to the env→backend SELECTION (`DATABASE_URL` beats
      `MCP_PROFILE_DIR`/`MCP_DASHBOARD_DIR` beats in-memory). Migration `name`s are the keys
      recorded in `schema_migrations`: append-only, never renamed (a rename re-runs the DDL
      on every existing database), and each store owns its own array. Writes that first-create
-     a row take a per-key `pg_advisory_xact_lock` — `SELECT … FOR UPDATE` cannot lock a row
+     a row take a per-key `pg_advisory_xact_lock`: `SELECT … FOR UPDATE` cannot lock a row
      that does not exist yet, so without it two concurrent first saves both take the create
      branch and the second silently overwrites the first, ownership check included.
 
@@ -588,9 +592,10 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `packages/connectors/<family>/<name>-connector` (npm `@miragon/pulse-<name>-connector`),
    their SDK leaves at `packages/connectors/<family>/<name>-client`
    (npm `@miragon/pulse-<name>-client`), foundation packages under `packages/core/`
-   — a new package that follows the convention is covered by the dependency rules
-   without touching them; one that breaks it would silently fall OUT of the rules,
-   which is why the convention itself is gated: `scripts/check-package-naming.mjs`
+   (npm `@miragon/pulse-<name>`). The rules and the gate key on `@miragon/pulse-`, never on
+   bare `@miragon/`, which the toolkit shares. A new package that follows the convention is
+   covered by the dependency rules without touching them; one that breaks it would silently
+   fall OUT of the rules, which is why the convention itself is gated: `scripts/check-package-naming.mjs`
    (`pnpm lint:naming`, part of `pnpm lint`) fails on any workspace package whose
    directory or npm name breaks the pattern.
    The dependency edges of this invariant
@@ -599,8 +604,8 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    are machine-enforced by `.dependency-cruiser.cjs` via the root
    `pnpm lint:architecture` (part of `pnpm lint`). Each module exports its definition in
    `src/module.ts` (config schema, `configFromEnv`, `knownEnvVars`, `toolsets`,
-   `bootWarnings`, `instructions` — its slice of the MCP server instructions, where rules
-   that hold for every tool (camunda7's engine routing) live instead of 60 descriptions —
+   `bootWarnings`, `instructions` (its slice of the MCP server instructions, where rules
+   that hold for every tool, camunda7's engine routing, live instead of 60 descriptions),
    plugin factory) conforming STRUCTURALLY (no import) to the port. The
    port SHAPE (`ComposableModule<TShared>`) and the whole composition-root machinery
    (`composeModules`: `MCP_ACTIVE_MODULES` parsing incl. `module:toolset` suffix;
@@ -610,11 +615,11 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `logEffectiveToolsets`, the one boot line stating each module's toolset and why;
    env-typo warner with prefixes derived from every known var, boot warnings,
    AppConfig/plugin assembly) live in `@miragon/pulse-widget-shell/server`. The root passes
-   `authenticated` only when it actually INSTALLED OAuth — never inferred from an env var;
+   `authenticated` only when it actually INSTALLED OAuth, never inferred from an env var;
    every root builds that provider with the shared `oauthFromEnv` (`MCP_OAUTH`).
    Framework durable writes no module toolset filters (the toolkit builder's
    `get-builder-catalogue` + `save/list/load/delete-dashboard`, the shell's
-   `shell_save_settings`) are registered only when `frameworkWritesAllowed(boot)` holds —
+   `shell_save_settings`) are registered only when `frameworkWritesAllowed(boot)` holds:
    OAuth installed AND no active module on its read-only floor;
    `render-view`/`refresh-view`/`get-framework-manifest` and the shell's
    `shell_show_settings`/`shell_settings_data` stay always. The
@@ -626,7 +631,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `engineIds`, camunda7's configured engines: the ONLY engines analytics reads, else
    `ANALYTICS_ENGINE_IDS`, else every analytics tool refuses; analytics has NO
    engine-SDK dependency). Apps own no domain UI: widget catalogues and
-   components live in packages — and no boot plumbing either. The bundle root's provider
+   components live in packages, and no boot plumbing either. The bundle root's provider
    stack (`AppShellProviders`: host context + display mode → host document → host
    bridge → `ProfileGate` → host widget registry; order is load-bearing; the language
    resolves explicit profile (the shell's own `shell_settings_data`, no host names a
@@ -639,7 +644,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    the stylesheet is the toolkit's `@miragon/mcp-toolkit-ui/theme.css` after `tailwindcss`
    (never its `globals.css`, a second Tailwind entry, nor `fonts.css`, base64 Geist per view;
    Geist arrives by URL from the server's font route, `declareServedFonts` in `HostDocument`;
-   no height floor on html/body/#root — `test/ui-stylesheet.test.ts`), and the whole server
+   no height floor on html/body/#root; `test/ui-stylesheet.test.ts`), and the whole server
    boot lives in `/server`:
    `createComposedServer` owns the ORDER (env-typo warnings + HTTP edge policy + the
    OAuth/`MCP_URL` check → ONE `resolveBoot`, authenticated exactly when the root hands
@@ -655,31 +660,31 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    (readiness probes the server's OWN dependencies only, never engines or Prometheus;
    503 `draining` during shutdown) → `installFontAssets` (Geist + Geist Mono under the
    versioned `SERVED_FONT_PATH`, immutable, CORS `*`, behind the guard: a font GET passes
-   the Origin half, never a foreign Host) — metrics first, hono only counts routes registered
+   the Origin half, never a foreign Host); metrics first, hono only counts routes registered
    after its middleware) and its `listen()` serves production through
    `createBodyLimitedListener` (mcp-use's public `toNodeHandler` behind the
-   `MCP_MAX_BODY_BYTES` cap — 413 before buffering — an in-flight body budget of 4× the
-   cap — 503 — and a 30 s request timeout; a request the guard refuses is never read,
+   `MCP_MAX_BODY_BYTES` cap (413 before buffering), an in-flight body budget of 4× the
+   cap (503) and a 30 s request timeout; a request the guard refuses is never read,
    both decide by the one `edgeRejection`) with the graceful drain (stop accepting →
    in-flight finish, bounded, readiness 503 `draining` → `app.close()` → the root's
    `runtime.shutdown()`). The edge (`resolveHttpEdgePolicy`) is DNS-rebinding protection:
    Host on every request, Origin on non-GET requests that carry one, admitted only when
-   localhost-class, `MCP_URL`'s or in `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS` —
+   localhost-class, `MCP_URL`'s or in `MCP_ALLOWED_HOSTS`/`MCP_ALLOWED_ORIGINS`;
    `/health*` and `/metrics` are exempt (probes and scrapers address a container by IP);
    never swap it for mcp-use's `allowedHosts`, which guards those too. Each app owns ONE
    `createApp(env, deps?)` (`src/app.ts`: its OAuth decision, persistence, plugins) that
-   `src/index.ts` (production and `mcp-use dev`, which owns the socket — no cap, no drain —
+   `src/index.ts` (production and `mcp-use dev`, which owns the socket (no cap, no drain)
    and the Host check: the guard defers that half to the CLI, which admits its tunnel host)
-   AND the e2e suites boot — never a test-only re-implementation of the boot — so
+   AND the e2e suites boot (never a test-only re-implementation of the boot), so
    `src/ui/main.tsx` and `src/index.ts` stay composition (registry, profile-feed name,
    app-specific layers like `Camunda7StandaloneShell`) and a toolkit/mcp-use migration
    lands once instead of in every composed-server fork.
    Cross-module UI is tiered: `shell:*` widgets via
    `props.dataKey`; raw tool-name strings with graceful degradation (reference:
    `process-incidents/flow.tsx` → `analytics_bpmn_heatmap_data`); hard-composed views go in a
-   dedicated package created with the first real view — never in the app, never as
-   module-to-module imports. The host bundle is static — `MCP_ACTIVE_MODULES` changes only
-   the server's tool surface — so a widget-registry lookup cannot tell a runtime-INACTIVE
+   dedicated package created with the first real view, never in the app, never as
+   module-to-module imports. The host bundle is static (`MCP_ACTIVE_MODULES` changes only
+   the server's tool surface), so a widget-registry lookup cannot tell a runtime-INACTIVE
    module; a surface that only makes sense with another module probes one of its cheap
    feeds (reference: `useAnalyticsActive` → `analytics_settings_data`, gating camunda7's
    cross-engine view) and appears once confirmed. Graceful degradation hides a stale raw
@@ -693,18 +698,18 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `frameworkWritesAllowed(boot)`); no connector owns the language or the page, and every
    host bundle spreads widget-shell's `shellWidgets`. It follows the same tiers: each module
    owns its settings section (widget + `*_data` feed + save tool; reference:
-   `analytics:settings` + `analytics-connector/src/settings-tools.ts` — the save tool honors
+   `analytics:settings` + `analytics-connector/src/settings-tools.ts`; the save tool honors
    `analytics:read-only`), its slice persists under `profile.modules.<module>`
-   (validated fail-soft by the owning module — camunda7's save tool deliberately
+   (validated fail-soft by the owning module; camunda7's save tool deliberately
    excludes `modules`), and composed views reference foreign section widgets by raw
-   id — resolved through `HostWidgetsProvider` (host root) and dropped by
+   id, resolved through `HostWidgetsProvider` (host root) and dropped by
    `filterLayoutToWidgets` when unresolvable, so a missing module's section disappears
    instead of erroring (a bundled section whose module is inactive hides itself once its
    feed's tool answers "not found", `classifyError(…).kind === "notOnServer"`). The
    settings LAYOUT is not hand-maintained: `settingsLayout` (`@miragon/pulse-widget-shell/widgets`)
-   assembles the page from the HOST's widget registry — the shell's `shell:settings`
+   assembles the page from the HOST's widget registry: the shell's `shell:settings`
    section first, then one row per `<module>:settings` id in registration order (camunda7's
-   is `camunda7:settings`: engines and dashboards) — so a custom module in a composed
+   is `camunda7:settings`: engines and dashboards), so a custom module in a composed
    server contributes its section without an edit in any package.
    The convention (`<module>:settings`) is therefore load-bearing, and the failure mode
    stays silent (a section whose widget never reaches the host registry is simply
@@ -712,37 +717,37 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    assembled layout against both module catalogues and the shell's (the template test
    does the same for its modules). Save-input schemas at tool
    boundaries must be default-FREE (zod 4 re-applies `.default()`s through `.partial()`,
-   materializing omitted fields into silent resets — derive them with `withoutDefaults`
+   materializing omitted fields into silent resets; derive them with `withoutDefaults`
    from `@miragon/pulse-widget-shell/server`; see
    `userProfileToolSaveInput`/`analyticsSettingsSaveInput`). A durable write registered
    outside the tool registrar gates itself against the module's declared toolset names
    (`allowsDurableWrites` in `analytics-connector/src/toolsets.ts`, `isToolInToolset` in
-   camunda7) — never an ad-hoc `toolset === "read-only"` compare, which fails open for
+   camunda7), never an ad-hoc `toolset === "read-only"` compare, which fails open for
    every other name, and never a `toolset === undefined` shortcut either: an absent
    toolset no longer means "everything", the vocabulary resolves it to the read-only
-   floor — and carries that same decision into its view as `canSave`, so the
+   floor. The write carries that same decision into its view as `canSave`, so the
    section renders disabled fields instead of a Save button whose click would resolve to
    an unknown tool. In-widget engine writes follow the same rule, through ONE
    primitive: every widget write runs via `useEngineAction`
    (`camunda7-connector/src/widgets/lib/engine-action.ts`), which bundles the gate
    (`allowed`, from `camunda7_widget_actions_data` → `allowedWidgetActions` for the tools
    in `CAMUNDA7_WIDGET_ACTIONS`; the profile save passes its view's `canSave`; AND the
-   subject's current state, `available` — no write on an ended, cancelled or
+   subject's current state, `available`: no write on an ended, cancelled or
    unconfirmed instance, i.e. one whose refetch failed even once), the
    confirmation that NAMES its target, the targeted invalidation and the optimistic
    marks (`WRITE_POLICY` in `widgets/lib/write-policy.ts` says what each write changes
-   and whether it asks first) — controls are hidden, not disabled.
+   and whether it asks first); controls are hidden, not disabled.
    `src/widget-actions.test.ts` scans the widget sources structurally (no raw
-   `useToolMutation`/`useCanRun` outside the primitive, no `callTool` of a write tool —
-   renamed or aliased callers included —, every write listed, every invalidated
+   `useToolMutation`/`useCanRun` outside the primitive, no `callTool` of a write tool
+   (renamed or aliased callers included), every write listed, every invalidated
    namespace a real query key), and `widgets/action-gating.test.tsx` renders every call site
    against a feed that excludes its write. Standalone views refresh after a write
    because their tool result is the SEED of a live feed query (the toolkit's `useViewData`
    in `initialDataMode: "seed"`, also under widget-shell's `useDetailView`/`usePagedViewData`;
    `viewRefreshState` says when shown data is unconfirmed), scoped to the seed's own echoed
-   engine and target. Engine _vendors_ (CIB Seven, Operaton, Camunda 7) are
+   engine and target. Engine _vendors_ (CIB seven, Operaton, Camunda 7) are
    per-engine runtime config (`flavor` → `EngineProvider` in
-   `packages/connectors/camunda/camunda7-connector/src/providers/` — the port holds ONLY real differences:
+   `packages/connectors/camunda/camunda7-connector/src/providers/`; the port holds ONLY real differences:
    cockpit routes, branding, client hook; never an SDK mirror), never separate apps; a different _dialect_ (Flowable)
    would be a new module + client + app. Extract shared packages on the second concrete
    consumer, never speculatively.
@@ -750,14 +755,14 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 ## Contracts
 
 - **`packages/connectors/analytics/analytics-client/metrics-contract.json` is the single source of truth for
-  metric names and labels — when changing a metric, change it here first.** The Kotlin
+  metric names and labels: when changing a metric, change it here first.** The Kotlin
   plugin (`engine-plugins/cibseven-history-metrics/.../ProcessMetrics.kt`,
-  `EngineStateMetrics.kt`) emits Micrometer meters whose dotted names (`otelName` —
+  `EngineStateMetrics.kt`) emits Micrometer meters whose dotted names (`otelName`,
   also the OTLP wire name on the push path) surface in Prometheus as `camunda_*`
   series (`promName`, e.g. `camunda.activity.ended` →
   `camunda_activity_ended_total`; durations are whole milliseconds with base unit
   `milliseconds`, spelled out so every export path appends the same `_milliseconds`
-  suffix, and explicit `buckets` from 10 ms to 30 days — Micrometer rounds an observation
+  suffix, and explicit `buckets` from 10 ms to 30 days, since Micrometer rounds an observation
   UP to a whole base unit before bucketing, so seconds emptied every sub-second bucket).
   History-event meters are recorded only once the engine command COMMITTED (a rolled-back
   job attempt counts nothing; `CommitBoundaryTest.kt` runs a real in-memory engine).
@@ -766,39 +771,39 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   `increase()`/`rate()` never count a series' first sample, so the first incident at an
   activity would read 0), a gauge only folded over a clustered engine's nodes as
   `max by (<its contract labels>)` (`engineState`); `promql-reading-rules.test-support.ts`
-  checks every query, alert rule and dashboard panel against both. Consumers — the TS queries (via `METRIC_NAMES` in
+  checks every query, alert rule and dashboard panel against both. Its consumers, the TS queries (via `METRIC_NAMES` in
   `packages/connectors/analytics/analytics-client/src/metric-names.ts`, never raw strings), the alert rules
-  (`playground/docker/prometheus/alerts.yml`), and the Grafana dashboards
-  (`playground/docker/grafana/dashboards/*.json`) — are checked against the contract by tests on
-  both sides: `packages/connectors/analytics/analytics-client/src/metrics-contract.test.ts` (vitest — also
+  (`playground/docker/prometheus/alerts.yml`) and the Grafana dashboards
+  (`playground/docker/grafana/dashboards/*.json`), are checked against the contract by tests on
+  both sides: `packages/connectors/analytics/analytics-client/src/metrics-contract.test.ts` (vitest, also
   covers the Grafana dashboards incl. regex matchers, per-metric `sum by (…)` grouping
   labels, and a dead-entry check with a documented allowlist; its behavioural twin
   `src/metrics-contract-labels.test.ts` runs EVERY exported query function through a
-  recording client and checks every matcher/`by`/`on` label against the contract — alert
+  recording client and checks every matcher/`by`/`on` label against the contract, alert
   rules and dashboards included; its `SCENARIOS` map is total over `queries`, so a new
   export needs an entry, and new PromQL shapes extend the `*.test-support.ts` checker
   rather than bypass it) and
-  `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle — also
+  `engine-plugins/cibseven-history-metrics/.../MetricsContractTest.kt` (Gradle, also
   checks the label keys each instrument attaches and each histogram's bucket bounds). A rename that skips the contract or
   a consumer fails one of them; don't weaken these guards to make a change pass. Only
-  attach model-bounded labels (definition key, activity id, engine id …) — never
+  attach model-bounded labels (definition key, activity id, engine id …), never
   instance ids, business keys, or variable values.
 - **Never aggregate a RATE across engines.** Engines host different process definitions,
   so a failure rate, incident rate or duration summed per `engine_id` measures that
-  engine's process mix, not the engine — the aggregate can even invert the per-process
+  engine's process mix, not the engine; the aggregate can even invert the per-process
   truth. Cross-engine views therefore report absolute counts plus the engine-owned
   backlog gauges (`jobs_executable`, `jobs_suspended`, `jobs_due_future`,
-  `external_tasks_open` — the family whose contract labels are `engine_id` ONLY, so no
+  `external_tasks_open`, the family whose contract labels are `engine_id` ONLY, so no
   mix can confound them): `queries/engine-landscape.ts` + `analytics:engine-landscape`,
   surfaced in camunda7's cross-engine cockpit mode by raw widget id (tier-2). A
   like-for-like engine KPI comparison exists only with the process held fixed, which is
   why `engineCompare`/`analytics_engine_compare` REQUIRE a `processDefinitionKey`
-  (`sharedProcessKeys` from the landscape are its valid inputs) — don't make it optional
+  (`sharedProcessKeys` from the landscape are its valid inputs); don't make it optional
   again. The tool descriptions carry this rule to the model and are asserted in
   `src/tools/engine-{compare,landscape}.test.ts`.
 - **Pinning is split by dependency stanza.** `dependencies`/`devDependencies` stay
   EXACT (`save-exact=true` in `.npmrc`; the `Miragon/pin-npm-dependencies` CI action
-  enforces it — it deliberately ignores `peerDependencies`). The genuinely
+  enforces it and deliberately ignores `peerDependencies`). The genuinely
   consumer-shared libraries are published as RANGED `peerDependencies` so a downstream
   React + zod app dedupes them against its own copy instead of getting a second
   instance: `react`/`react-dom` `^19.2.0`, `zod` `^4.4.0`, `@miragon/mcp-toolkit-*`
@@ -806,16 +811,16 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
   appears as an EXACT `devDependency` so the in-repo build/tests resolve a concrete
   version. A published package's shipped source imports only what its `dependencies` or
   `peerDependencies` declare (`apps/mcp-server-camunda7/test/published-imports.test.ts`;
-  knip counts a devDependency as listed, so it cannot see this). **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`) — a
+  knip counts a devDependency as listed, so it cannot see this). **`mcp-use` is the exception: exactly pinned even as a peer** (`2.7.3`): a
   duplicate `mcp-use` instance breaks the React context and hangs every in-widget query
   on "Loading…" (invariant #4), so its exact pin is load-bearing. Name the required
   `mcp-use` version in each package README and the release changelog. Toolkit updates are
-  still deliberate version bumps across all packages — never bump a single package in
+  still deliberate version bumps across all packages; never bump a single package in
   isolation; the toolkit peers `mcp-use` exactly (toolkit `2.8.1` → `mcp-use@2.7.3`;
   `zod`/`react` it peers as ranges), so a toolkit MAJOR/MINOR bump is a joint toolkit + `mcp-use` bump across
-  every package incl. `templates/composed-server` — `scripts/test-template.sh` fails if
+  every package incl. `templates/composed-server`; `scripts/test-template.sh` fails if
   the template is left behind.
-- **The widget `_meta` contract is split since mcp-use 2 — never hand-write the
+- **The widget `_meta` contract is split since mcp-use 2; never hand-write the
   `ui` half.** mcp-use emits the MCP-Apps keys (`_meta.ui.resourceUri`, flat
   `ui/resourceUri`, `_meta.ui.visibility`, the view resources `ui://views/<tool>.html`)
   natively from the tool's first-class `view`/`visibility` fields and OVERWRITES the
@@ -826,13 +831,13 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   keys on purpose. Guarded by
   `apps/mcp-server-camunda7/test/widget-meta.test.ts` (unit) and
   `apps/mcp-server-camunda7/test/widget-contract.e2e.test.ts` (on the wire, **by name**: every
-  `*_show_*` tool must carry the widget `_meta`, every `*_data` feed must be app-only —
-  the naming convention is load-bearing; don't weaken the name checks).
+  `*_show_*` tool must carry the widget `_meta`, every `*_data` feed must be app-only;
+  the naming convention is load-bearing, don't weaken the name checks).
 - **The tools/list wire payload is a golden, per toolset.**
   `apps/mcp-server-camunda7/test/tools-list.golden.test.ts` boots `createApp` for
   read-only (unauthenticated default), operations (default under OAuth) and admin (full
-  surface) and compares the complete sorted tools/list — descriptions, titles, annotations,
-  `_meta` incl. `ui.visibility`, input/output schemas — against
+  surface) and compares the complete sorted tools/list (descriptions, titles, annotations,
+  `_meta` incl. `ui.visibility`, input/output schemas) against
   `test/__golden__/tools-*.json`. The ONLY update path is
   `GOLDEN_UPDATE=1 pnpm --filter @miragon/pulse-mcp-server-camunda7 test` (refused in CI);
   never hand-edit a golden. `__golden__/char-budgets.json` pins each surface's
@@ -844,19 +849,19 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   size is the cost of every render: `test/__golden__/bundle-budget.json` holds gzip ceilings
   for `mcp-app.js`/`.css`, `test-host/bundle-budget.spec.ts` checks the BUILT dist against
   them (over a ceiling fails, and so does a bundle more than 10 % under it, so the
-  headroom never piles up), and `pnpm lint:ratchets` keeps the ceilings shrink-only — growth
+  headroom never piles up), and `pnpm lint:ratchets` keeps the ceilings shrink-only; growth
   needs a `Ratchet-Exception:` trailer that says why. Every view also names itself (the
   tool title as the resource `description`) and asks the host for a border
   (`prefersBorder`, `showToolBinding`).
 - **Federation/aggregation happens in an external MCP gateway (agentgateway) IN FRONT of
   this server; this repo builds one self-contained MCP server including its UI.** No
-  upstream/proxy mechanics in the code — don't reintroduce a proxies/upstream option
+  upstream/proxy mechanics in the code; don't reintroduce a proxies/upstream option
   (federation was deliberately dropped in #162). A gateway that terminates auth in front
   is invisible to this server: without `MCP_OAUTH` it boots read-only and has no caller
   identity (no saved settings), so such a deployment must name its toolsets in
   `MCP_ACTIVE_MODULES`. The generic
   `shell:kpi-grid`/`shell:data-table` widgets (catalogue + components in
-  `@miragon/pulse-widget-shell`) are always registered — they are the standard
+  `@miragon/pulse-widget-shell`) are always registered: they are the standard
   `render-view`/builder composition targets for KPI rows/tables, fed via `props.dataKey`.
 
 ## Releases & toolkit contributions
@@ -864,20 +869,23 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
 - **Everything releases through one release-please train.** Conventional commits on
   `main` drive `release-please.yml`, which opens/updates a single Release PR (root
   component, tag `v<version>`); release-please bumps the root, the server app, all five
-  `packages/` `package.json`s, the template's `@miragon/pulse-*` pins plus
+  `packages/` `package.json`s, the template's `@miragon/pulse-*` pins, the camunda7-client
+  User-Agent line in `packages/connectors/camunda/camunda7-client/src/hey-api.ts`
+  (`x-release-please-version`, held equal to its `package.json` by `client.test.ts`) plus
   `engine-plugins/gradle.properties` in lockstep (`extra-files` in
   `release-please-config.json`). Merging the PR creates the release; the publish
   workflows then wait for manual approval of the `release` environment gate.
 - **The five packages publish to the public npm registry.** The release train's
   `publish-npm` matrix calls `publish-npm-package.yml` (OIDC trusted publishing, no
   NPM_TOKEN; provenance attached) for `@miragon/pulse-{widget-shell,camunda7-connector,
-camunda7-client,analytics-connector,analytics-client}` — matrix entries are package
+camunda7-client,analytics-connector,analytics-client}`; matrix entries are package
   DIRECTORIES under `packages/`; the npm name is read from each `package.json`.
   Afterwards `sync-template-mirror.yml` waits until the versions are visible on npm and
-  mirrors `templates/composed-server` to the `Miragon/pulse-starter` repo — the
+  mirrors `templates/composed-server` to the `Miragon/pulse-starter` repo, the
   customer-facing composition path (own server + own connector on the published
   packages), drift-gated by `scripts/test-template.sh`. Only the server app stays
-  `"private": true`.
+  `"private": true`. Up to 0.20.0 the packages, image and starter shipped under `miragon-ai`
+  names (the root README's rename note maps each); those names are retired, never reuse them.
 - **Engine plugins publish to Maven Central via `publish-to-maven.yml`** (called from the
   release train): the Vanniktech Maven Publish plugin runs
   `publishAndReleaseToMavenCentral` against the Sonatype Central Portal (thin jar +
@@ -896,28 +904,28 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
   exactly pinned (`save-exact`, currently `2.8.1`); in the published surface it is a
   ranged `peerDependency` (`~2.8.1`) so consumers dedupe it. Toolkit changes arrive here
-  as a deliberate, repo-wide version bump — since 1.0 the toolkit follows semver
+  as a deliberate, repo-wide version bump; since 1.0 the toolkit follows semver
   (breaking changes arrive as major bumps).
 - **Validating unreleased toolkit changes:** build + `pnpm pack` the toolkit packages,
   point temporary `overrides` in `pnpm-workspace.yaml` at the `file:` tarballs (park any
   `patchedDependencies` entry for the same package while doing so), run the full bar plus
   `test:host`, then revert the workspace yaml + lockfile. Never commit the overrides.
 
-## Verification — what each check actually covers
+## Verification: what each check actually covers
 
-| Check                | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`         | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `pnpm typecheck`     | **The only check that type-checks widget code** — `tsc -p tsconfig.widgets.json` in the two connector packages, `tsc -p tsconfig.ui.json` in the server app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `pnpm test`          | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests + per-toolset tools/list goldens (in-process boot, loopback HTTP); **no widget rendering**; enforces the per-package coverage ratchet (frozen thresholds in each `vitest.config.ts`); then `test:scripts` — `node --test` over `scripts/*.test.mjs` (the gate scripts' own tests + the ESLint pattern-gate self-test)                                                                                                                                                                                                                                                                           |
-| `pnpm lint`          | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then `lint:architecture` (dependency-cruiser), `lint:naming`, `lint:package-scripts` (every package with `src/` runs the canonical `eslint src` / `tsc --noEmit` (+ `tsc -p` per extra tsconfig) / `vitest run` (+ `stryker run`) — turbo silently skips a missing script, and a flag can switch a present one off), `lint:ratchets` (`scripts/check-ratchets.mjs`, below; needs the merge base — `git fetch origin`) and `lint:deadcode` — knip over files/dependencies/unlisted (unused exports are report-only for now: `pnpm exec knip`) |
-| `pnpm test:mutation` | Diff-scoped Stryker run (`scripts/mutation-diff.mjs`): changed files inside a package's `mutate` allowlist must keep the mutation score above the package's `thresholds.break` (`stryker.config.json`); runs in CI as "Mutation (changed files)". The gate bypasses the package's incremental cache, so a local run and CI agree. More than 25 in-scope files in one package FAIL the gate unless the branch carries a reviewed `Mutation-Cap-Exception: <reason>` trailer                                                                                                                                                                                                                           |
-| `pnpm fitness`       | Aggregated fitness report — architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI — the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `test:host`          | `pnpm --filter @miragon/pulse-mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle: the view document `createApp` serves (`resources/read`), sandboxed behind a SEP-1865 host shim, rendering a real camunda7 show tool against a stub engine (keep/strip, slow tool, `isError`, cancel, host theme, display modes, served fonts: Geist drawn when allowed, the host's font when the host ignores `resourceDomains` or the route is unreachable; `pinned …` scenarios = known defects, flipped when fixed); runs in CI as "Widget host simulation (test:host)" — run it locally for changes to the widget shell, `src/ui/`, or the toolkit pin                 |
-| `pnpm test:pg`       | The database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters**; runs in CI as "Postgres adapters (test:pg)" against a `postgres:` service container — run it locally for changes to `postgres.ts` or any `*-store-postgres.ts`                                                                                                                                                                                                                                                                                  |
-| Docker build         | `.github/workflows/docker-build.yml`: plain `docker build` of the root `Dockerfile` (no push) on every PR touching it, `apps/`, `packages/` or a root file the build stage copies                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only). The default boot is read-only — write paths need an explicit suffix, e.g. `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env`                                                                                                                                                                                                                                                                                                                                                                    |
+| Check                | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`         | tsc emit of server code + the server app's Vite widget bundle (`build:ui`); excludes widget `.tsx` type errors in packages                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `pnpm typecheck`     | **The only check that type-checks widget code**: `tsc -p tsconfig.widgets.json` in the two connector packages, `tsc -p tsconfig.ui.json` in the server app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `pnpm test`          | Vitest unit tests (lib + query logic) **plus** the server app e2e smoke + widget wire-contract tests + per-toolset tools/list goldens (in-process boot, loopback HTTP) + the repo-wide doc-reference and old-name guards (`docs-refs.test.ts`, `old-names.test.ts`); **no widget rendering**; enforces the per-package coverage ratchet (frozen thresholds in each `vitest.config.ts`); then `test:scripts`, `node --test` over `scripts/*.test.mjs` (the gate scripts' own tests + the ESLint pattern-gate self-test)                                                                                                                                                                            |
+| `pnpm lint`          | ESLint over each package's `src` (the server app also `test`/`test-host`) incl. the pattern gates (registrar-only tools, widget-shell date formatting), then `lint:architecture` (dependency-cruiser), `lint:naming`, `lint:package-scripts` (every package with `src/` runs the canonical `eslint src` / `tsc --noEmit` (+ `tsc -p` per extra tsconfig) / `vitest run` (+ `stryker run`); turbo silently skips a missing script, and a flag can switch a present one off), `lint:ratchets` (`scripts/check-ratchets.mjs`, below; needs the merge base, `git fetch origin`) and `lint:deadcode`: knip over files/dependencies/unlisted (unused exports are report-only for now: `pnpm exec knip`) |
+| `pnpm test:mutation` | Diff-scoped Stryker run (`scripts/mutation-diff.mjs`): changed files inside a package's `mutate` allowlist must keep the mutation score above the package's `thresholds.break` (`stryker.config.json`); runs in CI as "Mutation (changed files)". The gate bypasses the package's incremental cache, so a local run and CI agree. More than 25 in-scope files in one package FAIL the gate unless the branch carries a reviewed `Mutation-Cap-Exception: <reason>` trailer                                                                                                                                                                                                                        |
+| `pnpm fitness`       | Aggregated fitness report: architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI; the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `test:host`          | `pnpm --filter @miragon/pulse-mcp-server-camunda7 test:host`: Playwright host simulation of the **built** widget bundle: the view document `createApp` serves (`resources/read`), sandboxed behind a SEP-1865 host shim, rendering a real camunda7 show tool against a stub engine (keep/strip, slow tool, `isError`, cancel, host theme, display modes, served fonts: Geist drawn when allowed, the host's font when the host ignores `resourceDomains` or the route is unreachable; `pinned …` scenarios = known defects, flipped when fixed); runs in CI as "Widget host simulation (test:host)"; run it locally for changes to the widget shell, `src/ui/`, or the toolkit pin                |
+| `pnpm test:pg`       | The database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters**; runs in CI as "Postgres adapters (test:pg)" against a `postgres:` service container; run it locally for changes to `postgres.ts` or any `*-store-postgres.ts`                                                                                                                                                                                                                                                                                |
+| Docker build         | `.github/workflows/docker-build.yml`: plain `docker build` of the root `Dockerfile` (no push) on every PR touching it, `apps/`, `packages/` or a root file the build stage copies                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only). The default boot is read-only; write paths need an explicit suffix, e.g. `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env`                                                                                                                                                                                                                                                                                                                                                                  |
 
 A green `pnpm build && pnpm typecheck && pnpm test && pnpm lint` is the minimum bar for
 every change; widget changes additionally need `test:host` plus a manual render check via
@@ -925,17 +933,17 @@ the inspector (the host simulation renders one real view, not every widget's dat
 
 Ratchet rules are shrink-only: the complexity/max-lines offender lists in
 `eslint.config.mjs` (global budgets: complexity 15, 400 effective lines) and the coverage
-thresholds in each `vitest.config.ts` may only improve — delete a list entry or raise a
+thresholds in each `vitest.config.ts` may only improve: delete a list entry or raise a
 threshold when you better a file, never the reverse, and never add new entries. The
 mutation ratchet works the same way inverted: each package's `mutate` allowlist in
 `stryker.config.json` is the TESTED surface and may only GROW (add files when you add
 tests), and `thresholds.break` may only rise. Mutation runs use
-`vitest.stryker.config.ts` (coverage off — a coverage-threshold failure would read as a
+`vitest.stryker.config.ts` (coverage off: a coverage-threshold failure would read as a
 killed mutant); the Stryker vitest runner disables per-file isolation, so DOM widget
 suites stay out of the mutation test set (see the camunda7 connector's config). The
-Postgres adapters (`src/postgres.ts`, `src/*-store-postgres.ts`) are out of BOTH sets —
-the shared `coverage.exclude` in `vitest.shared.ts` and widget-shell's `mutate` negatives
-— because their suites only run under `pnpm test:pg`: counted in, the same commit would
+Postgres adapters (`src/postgres.ts`, `src/*-store-postgres.ts`) are out of BOTH sets
+(the shared `coverage.exclude` in `vitest.shared.ts` and widget-shell's `mutate` negatives),
+because their suites only run under `pnpm test:pg`: counted in, the same commit would
 measure ten points apart depending on whether a database happened to be reachable, and
 every mutant would survive by construction. That exclusion is scoped to those two
 patterns and is not a precedent for excluding code that the default run CAN execute. The knip ignore
@@ -944,9 +952,9 @@ the lists may only shrink; gating the unused-exports report is the next expansio
 
 These directions are machine-checked, not review-only: `scripts/check-ratchets.mjs`
 (`pnpm lint:ratchets`, part of `pnpm lint`) compares every ratchet against the MERGE BASE
-with `origin/main` (in CI always `origin/$GITHUB_BASE_REF` — a positional base ref is
+with `origin/main` (in CI always `origin/$GITHUB_BASE_REF`: a positional base ref is
 ignored there, a PR whose merge base is HEAD fails, and the job checks out with
-`fetch-depth: 0`) — never against the PR's own files — and fails on a lowered/removed
+`fetch-depth: 0`), never against the PR's own files, and fails on a lowered/removed
 coverage threshold, coverage switched off, a new coverage or test `exclude`, a coverage
 `include` that appears or a narrowed `include`, a lowered `thresholds.break`, a shrunk
 `mutate` list (unless `break` rises in the same diff or the entry's file is gone), any
@@ -956,20 +964,20 @@ budget, any new complexity/max-lines override or gate rule switched off/to warn,
 ESLint ignore (keyed by the block it exempts from) or knip ignore/exclude/`entry`, a knip
 `include`/`project`, a grown tools/list char budget, a gate dropped from the root
 `lint`/`test` chain or a chain gaining anything but a plain `pnpm <script>`, and ANY change
-to a gate command — the chained root scripts plus `build`/`typecheck`/`format:check`/
+to a gate command: the chained root scripts plus `build`/`typecheck`/`format:check`/
 `test:pg`/`test:mutation`, and each package's `lint`/`typecheck`/`test`/`test:mutation`
 (only an `--exclude` list may shrink). It fails closed on what it cannot read: a
 non-literal `rules`, a spread, a local import or `Object.entries(…)` in `eslint.config.mjs`
 is frozen, and on top of the AST reading `scripts/eslint-effective-config.mjs` asks ESLint
 itself for the effective complexity/max-lines/`no-restricted-syntax` settings of every
 source file (plus a sample path per glob) under the base and the new config. A shadowing
-config fails whenever it exists — any `eslint.config.*` besides the root `.mjs`, a
+config fails whenever it exists (any `eslint.config.*` besides the root `.mjs`, a
 `knip.json`/`.knip.json(c)`/`knip.{ts,js}`/`knip.config.*` or `package.json#knip` besides
-`knip.jsonc`, a `stryker.conf.*`/`.stryker.*` besides `stryker.config.json` — because each
+`knip.jsonc`, a `stryker.conf.*`/`.stryker.*` besides `stryker.config.json`), because each
 tool would load it INSTEAD of the ratcheted file; deleting `knip.jsonc` fails too. Inline
 suppressions are shrink-only: an `eslint-disable` naming complexity, max-lines or
 `no-restricted-syntax` (or no rule), inline gate-rule config, `v8|c8|istanbul ignore` or
 `Stryker disable` in `apps/`/`packages/` sources. The working tree is the new side, so
 uncommitted loosening fails locally too. The single escape is a commit trailer
-`Ratchet-Exception: <reason>` in the branch range — it turns the failures into loud
+`Ratchet-Exception: <reason>` in the branch range; it turns the failures into loud
 warnings for the reviewer; never weaken the checker instead.

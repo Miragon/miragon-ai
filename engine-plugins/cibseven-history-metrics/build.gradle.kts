@@ -39,7 +39,7 @@ mavenPublishing {
     pom {
         name.set("cibseven-history-metrics")
         description.set(
-            "CIB Seven history-event Micrometer metrics plugin powering the Miragon AI analytics module",
+            "CIB seven history-event Micrometer metrics plugin powering the Pulse analytics module",
         )
         inceptionYear.set("2026")
         url.set("https://github.com/Miragon/pulse")

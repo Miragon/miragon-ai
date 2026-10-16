@@ -1,12 +1,12 @@
 # @miragon/pulse-analytics-connector
 
-The **analytics module** for [Miragon AI](../../../../README.md): Prometheus-backed process analytics as
+The **analytics module** for [Pulse](../../../../README.md): Prometheus-backed process analytics as
 `analytics_*` MCP tools, plus dashboard and comparison widgets. Built on
 [`@miragon/pulse-analytics-client`](../analytics-client) and the `@miragon/mcp-toolkit-*` packages.
 
 The server loads this module as `analytics` via `analyticsModule` (`src/module.ts`), which conforms
 structurally to the app's `ModuleDefinition` port. The package is published to npm in lockstep with
-the other `@miragon-ai` packages (pin them all to one version); the
+the other `@miragon/pulse-*` packages (pin them all to one version); the
 [pulse-starter](https://github.com/Miragon/pulse-starter) template shows how to compose it
 into your own MCP server.
 
@@ -20,21 +20,21 @@ hangs every in-widget query on "Loading…".
 
 ## What it provides
 
-- **Analytics tools** (`src/tools/`) — `analyze_process_performance`, `compare_execution_periods`,
+- **Analytics tools** (`src/tools/`): `analyze_process_performance`, `compare_execution_periods`,
   `element_bottleneck`, `find_failed_instances`, `cluster_compare`, `version_compare`,
   `engine_landscape`, `engine_compare`, and `engine_health` (a live WIP / incidents / backlog /
   alerts snapshot). All carry the `analytics` category and run PromQL through
   [`@miragon/pulse-analytics-client`](../analytics-client).
-- **Widgets** (`src/widgets/`) — `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`,
+- **Widgets** (`src/widgets/`): `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`,
   `show_version_compare`, `show_engine_landscape`, `show_engine_compare`, `show_bpmn_heatmap`.
-- **Configured engines only** — analytics reads exactly the server's configured engine ids:
+- **Configured engines only:** analytics reads exactly the server's configured engine ids:
   `createPlugin({ engineIds })` (a composed server injects camunda7's engines through
   `analyticsModule`'s shared `engineIds`), else `ANALYTICS_ENGINE_IDS` for a standalone boot.
   Without either, every analytics tool refuses (fail-closed) instead of reading every `engine_id`
   a shared Prometheus holds. Every tool takes an optional `engine` filter (one configured id or a
   list); omitted, it covers all configured engines and the result's `engines` names them; any
   other id is refused. Analytics are session-independent.
-- **Toolsets** (`src/toolsets.ts`, declared as the module's `toolsets` vocabulary) — `read-only`
+- **Toolsets** (`src/toolsets.ts`, declared as the module's `toolsets` vocabulary): `read-only`
   (every analytics tool and widget, no settings save) and `standard` (adds
   `analytics_save_settings`). With no `analytics:<toolset>` suffix the module runs `read-only` on an
   unauthenticated server and `standard` under OAuth; an empty or unknown suffix falls back to
@@ -43,12 +43,12 @@ hangs every in-widget query on "Loading…".
 ### Cross-engine: overview, not scoreboard
 
 Engines host different process definitions, so a failure rate, incident rate or duration aggregated
-per engine describes that engine's **process mix**, not the engine — the same aggregation can even
+per engine describes that engine's **process mix**, not the engine. The same aggregation can even
 invert the per-process truth. Two consequences run through the module:
 
 - `engine_landscape` is the cross-engine view. It reports the process × engine inventory, absolute
   counts (running instances, open incidents, failed jobs) and the engine-owned job backlog
-  (`jobs_executable`, `jobs_suspended`, `jobs_due_future`, `external_tasks_open`) — the one metric
+  (`jobs_executable`, `jobs_suspended`, `jobs_due_future`, `external_tasks_open`), the one metric
   family whose contract labels are `engine_id` only, so no process mix can confound it. It covers
   every configured engine, so one that reports nothing still gets a row (`reporting: false`).
 - `engine_compare` **requires** a `processDefinitionKey`. Holding the process fixed on both sides is
@@ -57,7 +57,7 @@ invert the per-process truth. Two consequences run through the module:
 
 These tools read the `camunda_*` series emitted by the
 [engine metrics plugin](../../../../engine-plugins). Per-instance drill-down (search by variable) is **not**
-metric-backed — use the `camunda7_query_historic_*` tools in the [camunda7 module](../../camunda/camunda7-connector).
+metric-backed: use the `camunda7_query_historic_*` tools in the [camunda7 module](../../camunda/camunda7-connector).
 
 The BPMN heatmap gets its diagram XML via an injected `fetchBpmnXml` shared resource (wired by the
 host app from the camunda7 module), and the dashboards, the failure dashboard and the landscape read
@@ -74,7 +74,7 @@ Read the [`add-analytics-feature`](../../../../.claude/skills/add-analytics-feat
 pattern: add a PromQL query function in [`@miragon/pulse-analytics-client`](../analytics-client) (using
 `METRIC_NAMES`, never raw metric strings), then a tool here, then optionally a widget. Metric names
 and labels are governed by the
-[metrics contract](../analytics-client/metrics-contract.json) — change it there first.
+[metrics contract](../analytics-client/metrics-contract.json). Change it there first.
 
 ## Layout
 

@@ -5,7 +5,7 @@
   "clients": [
     {
       "clientId": "pulse-server",
-      "name": "Automation MCP server (pre-registered client)",
+      "name": "Pulse server (pre-registered client)",
       "description": "Pre-registered client for MCP clients without DCR (claude mcp add --client-id ... --client-secret ... / claude.ai connector advanced OAuth). Redirect URIs: claude.ai + loopback on any port (demo-grade wildcard).",
       "enabled": true,
       "protocol": "openid-connect",

@@ -30,9 +30,7 @@ describe("initRuntime (non-database path)", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
       const runtime = await initRuntime(env({ NODE_ENV: "production" }))
-      expect(log).toHaveBeenCalledWith(
-        "[miragon-ai] persistence: profiles=memory, dashboards=memory",
-      )
+      expect(log).toHaveBeenCalledWith("[pulse] persistence: profiles=memory, dashboards=memory")
       expect(warn).toHaveBeenCalledWith(
         expect.stringMatching(
           /user profiles and saved dashboards are kept IN MEMORY.*Set DATABASE_URL/,
@@ -57,7 +55,7 @@ describe("initRuntime (non-database path)", () => {
         }),
       )
       expect(log).toHaveBeenCalledWith(
-        "[miragon-ai] persistence: profiles=filesystem, dashboards=filesystem",
+        "[pulse] persistence: profiles=filesystem, dashboards=filesystem",
       )
       const dev = await initRuntime(env())
       expect(warn).not.toHaveBeenCalled()
@@ -67,7 +65,7 @@ describe("initRuntime (non-database path)", () => {
       // Without the dashboard builder no dashboard is ever saved: only the
       // profile store is announced (and warned about).
       const noBuilder = await initRuntime(env({ NODE_ENV: "production" }), { dashboards: false })
-      expect(log).toHaveBeenCalledWith("[miragon-ai] persistence: profiles=memory")
+      expect(log).toHaveBeenCalledWith("[pulse] persistence: profiles=memory")
       expect(warn).toHaveBeenCalledWith(
         expect.stringMatching(/WARNING: user profiles are kept IN MEMORY/),
       )

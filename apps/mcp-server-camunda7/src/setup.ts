@@ -19,6 +19,7 @@ import {
 } from "@miragon/pulse-widget-shell/server"
 import type { ModuleDefinition, SharedResources } from "./module-contract.js"
 import { createDefaultProfileStore } from "./persistence/index.js"
+import { SERVER_LABEL } from "./server-label.js"
 
 /**
  * The bundle definition: which modules THIS app composes. Each module brings
@@ -57,7 +58,7 @@ const APP_ENV_VARS = [
  * authenticated exactly when `createApp` installs an OAuth provider.
  */
 export const composition = composeModules<SharedResources>({
-  label: "miragon-ai",
+  label: SERVER_LABEL,
   modules: MODULES,
   appEnvVars: APP_ENV_VARS,
   envVarHint: "see docs/operations.md",

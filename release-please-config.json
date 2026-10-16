@@ -7,7 +7,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "package-name": "miragon-ai",
+      "package-name": "pulse",
       "component": "",
       "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
@@ -23,6 +23,10 @@
           "type": "json",
           "path": "packages/connectors/camunda/camunda7-client/package.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "generic",
+          "path": "packages/connectors/camunda/camunda7-client/src/hey-api.ts"
         },
         {
           "type": "json",

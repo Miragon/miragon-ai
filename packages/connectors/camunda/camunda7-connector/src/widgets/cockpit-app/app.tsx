@@ -304,7 +304,7 @@ function EngineGoneNotice({ engineId }: { engineId: string | null }) {
 /**
  * No engine to operate: loading or a failed engine list are the kit's view
  * states; an empty one is the app-level "no engines" surface (#322 U15): the
- * landing's product signature (the Komet, "Miragon AI" over the page's `h1`
+ * landing's product signature (the Komet, "Pulse" over the page's `h1`
  * "Operations Cockpit") over what is missing and what to do, in the card the
  * engine list would fill.
  */

@@ -1,4 +1,4 @@
-# Automation MCP server — the only public app of the playground stack, served
+# Pulse server, the only public app of the playground stack, served
 # WITHOUT authentication (no MCP_OAUTH): anyone on the internet can call it, so
 # it is pinned read-only below. Build context: repo root (monorepo
 # Dockerfile). Deploy via playground/fly/deploy.sh.
