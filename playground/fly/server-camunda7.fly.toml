@@ -12,7 +12,13 @@ primary_region = "fra"
 
 [env]
   PORT = "8400"
-  MCP_URL = "https://miragon-ai-playground.fly.dev"
+  # The public URL, a custom domain on this app (Cloudflare CNAME to
+  # miragon-ai-playground.fly.dev + `fly certs add`): the Host the edge admits,
+  # the advertised URLs and the origin every view loads Geist from. The old
+  # fly.dev address stays admitted, so client configs that still name it work.
+  MCP_URL = "https://pulse-playground.miragon.ai"
+  MCP_ALLOWED_HOSTS = "miragon-ai-playground.fly.dev"
+  MCP_ALLOWED_ORIGINS = "https://miragon-ai-playground.fly.dev"
   # Public + unauthenticated ⇒ read-only BY DESIGN: queries, widgets and
   # analytics, no engine or settings writes, no dashboard builder. An
   # unauthenticated boot already defaults to read-only; the explicit pin keeps

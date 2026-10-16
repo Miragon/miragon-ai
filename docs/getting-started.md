@@ -6,19 +6,19 @@ it on your own engine. Commands and configs call the server `miragon-ai`.
 
 ## Connect your Claude in 30 seconds
 
-The hosted [playground](https://miragon-ai-playground.fly.dev/mcp) runs a seeded CIB seven engine
+The hosted [playground](https://pulse-playground.miragon.ai/mcp) runs a seeded CIB seven engine
 with live demo traffic and the full analytics stack. It is read-only and needs no login. Every
 night at 22:00 UTC the engine reseeds and the metrics are wiped.
 
 ::: code-group
 
 ```sh [Claude Code]
-claude mcp add --transport http miragon-ai https://miragon-ai-playground.fly.dev/mcp
+claude mcp add --transport http miragon-ai https://pulse-playground.miragon.ai/mcp
 ```
 
 ```txt [claude.ai]
 Settings → Connectors → Add custom connector
-URL: https://miragon-ai-playground.fly.dev/mcp
+URL: https://pulse-playground.miragon.ai/mcp
 ```
 
 :::
@@ -26,7 +26,7 @@ URL: https://miragon-ai-playground.fly.dev/mcp
 Then ask _"Which processes have open incidents right now?"_ and drill into the widgets. Claude
 Desktop needs a bridge, described in [Usage](usage.md#connect-your-assistant).
 
-Without an assistant of your own, [open the playground in a browser chat](https://inspector.manufact.com/inspector?server=https%3A%2F%2Fmiragon-ai-playground.fly.dev%2Fmcp&tab=chat),
+Without an assistant of your own, [open the playground in a browser chat](https://inspector.manufact.com/inspector?server=https%3A%2F%2Fpulse-playground.miragon.ai%2Fmcp&tab=chat),
 a third-party MCP inspector connected to the same engine, with nothing to install.
 
 ## Run it on your own engine
