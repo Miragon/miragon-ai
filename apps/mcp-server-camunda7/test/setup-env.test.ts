@@ -2,7 +2,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { frameworkWritesAllowed } from "@miragon-ai/widget-shell/server"
+import { frameworkWritesAllowed } from "@miragon/pulse-widget-shell/server"
 import {
   emitBootWarnings,
   getAppConfig,
@@ -177,7 +177,7 @@ describe("setup.ts MCP_ACTIVE_MODULES module:toolset syntax", () => {
     vi.stubEnv("MCP_ACTIVE_MODULES", "camunda7:admin,analytics")
 
     expect(logEffectiveToolsets(resolveBoot())).toBe(
-      "[miragon-ai] Toolsets — camunda7:admin (suffix), analytics:read-only (default without OAuth)",
+      "[pulse] Toolsets — camunda7:admin (suffix), analytics:read-only (default without OAuth)",
     )
     expect(info).toHaveBeenCalledTimes(1)
   })

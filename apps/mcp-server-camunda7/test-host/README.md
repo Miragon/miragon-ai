@@ -1,4 +1,4 @@
-# Widget host simulation (`pnpm --filter @miragon-ai/mcp-server-camunda7 test:host`)
+# Widget host simulation (`pnpm --filter @miragon/pulse-mcp-server-camunda7 test:host`)
 
 Playwright gate for the **built** widget bundle, run in CI as "Widget host
 simulation (test:host)". It renders exactly what an MCP Apps host renders:
@@ -79,8 +79,8 @@ the expected behaviour named in their assertion message.
 Run it (after `pnpm build` — the server imports the workspace packages' dist):
 
 ```bash
-pnpm --filter @miragon-ai/mcp-server-camunda7 exec playwright install chromium   # once
-pnpm --filter @miragon-ai/mcp-server-camunda7 test:host                          # builds the UI, then tests
+pnpm --filter @miragon/pulse-mcp-server-camunda7 exec playwright install chromium   # once
+pnpm --filter @miragon/pulse-mcp-server-camunda7 test:host                          # builds the UI, then tests
 ```
 
 Not part of `pnpm test` (needs the Vite bundle and a browser). Run it locally for

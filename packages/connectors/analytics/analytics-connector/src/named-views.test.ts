@@ -3,7 +3,7 @@ import type {
   AnalyticsDashboardData,
   EngineLandscapeResult,
   FailureDashboardData,
-} from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-analytics-client"
 import { namedDashboard, namedFailureDashboard, namedLandscape } from "./named-views.js"
 import { createNameLookup, type NameLookup } from "./bpmn-name-lookup.js"
 import { elementNameOf, processNameOf } from "./bpmn-names.js"

@@ -103,10 +103,10 @@ describe("HTTP edge — default policy (no MCP_URL: localhost-class only)", () =
       fs.readFileSync(path.join(import.meta.dirname, "..", "package.json"), "utf8"),
     ) as { version: string }
     expect(server.client.getServerVersion()).toMatchObject({
-      name: "miragon-ai",
+      name: "pulse",
       version: pkg.version,
-      title: "Miragon AI",
-      websiteUrl: "https://github.com/Miragon/miragon-ai",
+      title: "Pulse",
+      websiteUrl: "https://github.com/Miragon/pulse",
     })
     // The root's preamble, then each active module's own snippet — the
     // engine routing rule lives there, not in 60-odd tool descriptions.

@@ -1,6 +1,6 @@
 import type { createToolRegistrar, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type { z } from "zod"
-import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
+import { createToolsetVocabulary } from "@miragon/pulse-widget-shell/server"
 import type { EngineRegistry } from "./resolve-engine.js"
 import {
   CAMUNDA7_SAVE_SETTINGS,

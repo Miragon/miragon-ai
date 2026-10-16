@@ -8,7 +8,7 @@ import {
   showToolBinding,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { buildClusterDetailData } from "../data/cluster-detail-data.js"
 import { buildEngineHealthData, healthVerdictRule } from "../data/health-data.js"
 import { buildIncidentsDashboardData } from "../data/incidents-dashboard-data.js"

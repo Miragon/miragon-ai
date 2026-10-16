@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { getMcpRequestInfo, runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import { getMcpRequestInfo, runWithMcpRequestInfo } from "@miragon/pulse-widget-shell/server"
 import { NO_NAMES, createNameLookup, type FetchBpmnXml } from "./bpmn-name-lookup.js"
 import { elementNameOf, processNameOf } from "./bpmn-names.js"
 

@@ -7,7 +7,7 @@ import {
   type HandOffParts,
   type ModelContextSpec,
   type ToolSurface,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import type { AnalyticsAskAiKey } from "../messages/en.ask-ai.js"
 import { translator } from "../messages/index.js"
 

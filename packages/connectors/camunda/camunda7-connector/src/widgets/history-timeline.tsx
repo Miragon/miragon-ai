@@ -19,7 +19,7 @@ import {
   formatTimestamp,
   RowsBudgeted,
   usePagedViewData,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import type { HistoryTimelineData } from "../view-models.js"
 import { useHandOff, type HandOff, type ViewContext } from "./lib/hand-off.js"
 import { durationOutliers } from "./lib/duration-outliers.js"

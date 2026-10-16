@@ -1,4 +1,4 @@
-import { adaptDataWidget } from "@miragon-ai/widget-shell/ui"
+import { adaptDataWidget } from "@miragon/pulse-widget-shell/ui"
 import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { ProcessListWidget } from "./process-list.js"
 import { IncidentOverviewKpi } from "./incidents-dashboard/overview-kpi.js"

@@ -2,7 +2,7 @@ import { readdirSync } from "node:fs"
 import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
-import { toEngineDate, type Client } from "@miragon-ai/camunda7-client"
+import { toEngineDate, type Client } from "@miragon/pulse-camunda7-client"
 import { cibsevenProvider } from "../providers/index.js"
 import {
   clientFor,

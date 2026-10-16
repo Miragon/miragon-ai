@@ -7,7 +7,7 @@ import {
   TableSkeleton,
   WidgetShell,
   usePagedListView,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { useState } from "react"
 import { FilterBar, PagedListFooter, type FilterChip } from "@miragon/mcp-toolkit-ui"
 import type { ProcessInstanceRow, ProcessInstancesData } from "../../view-models.js"

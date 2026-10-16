@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
-import type { Client } from "@miragon-ai/camunda7-client"
+import type { Client } from "@miragon/pulse-camunda7-client"
 
 // Every SDK operation becomes a mock: the structural guards below capture
 // the FULL registrar surface (every domain file), and no captured handler may
 // reach a real engine.
-vi.mock("@miragon-ai/camunda7-client/sdk", async (importOriginal) => {
+vi.mock("@miragon/pulse-camunda7-client/sdk", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>()
   return Object.fromEntries(Object.keys(actual).map((name) => [name, vi.fn()]))
 })
 
 import { z } from "zod"
-import * as sdk from "@miragon-ai/camunda7-client/sdk"
-import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
+import * as sdk from "@miragon/pulse-camunda7-client/sdk"
+import { MAX_PAGE_SIZE } from "@miragon/pulse-camunda7-client/schemas"
 import { paginatedListOutput } from "../lib/pagination.js"
 import { createEngineRegistry, type EngineRegistry } from "../lib/resolve-engine.js"
-import type { ProfileStore } from "@miragon-ai/widget-shell/server"
+import type { ProfileStore } from "@miragon/pulse-widget-shell/server"
 import { registerTools } from "./index.js"
 import { registerIncidentIssueTools } from "./incident-issue.js"
 import { registerEngineTools } from "./engines.js"

@@ -1,13 +1,13 @@
-import type { Client } from "@miragon-ai/camunda7-client"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import {
   getProcessDefinitionStatistics,
   getProcessDefinitions,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import {
   bpmnProcessNameOf,
   readBpmnNames,
   type BpmnModelNames,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { fetchDefinitionXml } from "../lib/definition-xml.js"
 import { rowsOf } from "./engine-reads.js"
 

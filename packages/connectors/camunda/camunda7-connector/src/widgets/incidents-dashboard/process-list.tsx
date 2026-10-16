@@ -36,7 +36,7 @@ import {
   countTone,
   formatNumber,
   formatTimestamp,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 
 const TYPE_ALL = "all"
 const TYPE_LAST24H = "last24h"

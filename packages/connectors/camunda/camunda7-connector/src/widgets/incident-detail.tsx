@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { Alert, AlertDescription, SectionHeading } from "@miragon/mcp-toolkit-ui"
-import { useDetailView } from "@miragon-ai/widget-shell/widgets"
+import { useDetailView } from "@miragon/pulse-widget-shell/widgets"
 
 import type { IncidentDetailData, IncidentRecovery } from "../view-models.js"
 

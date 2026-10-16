@@ -14,7 +14,7 @@ import { KNOWN_ENV_VARS } from "../src/setup.js"
 
 /**
  * Read on purpose, not in APP_ENV_VARS: `PORT` is consumed by `listen()` of
- * `createComposedServer` (`@miragon-ai/widget-shell/server`), not by a module.
+ * `createComposedServer` (`@miragon/pulse-widget-shell/server`), not by a module.
  */
 const EXTRA_ALLOWED = ["PORT"]
 

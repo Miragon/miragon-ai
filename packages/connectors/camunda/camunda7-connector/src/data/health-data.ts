@@ -3,12 +3,12 @@ import {
   latestEngineDate,
   toEngineDate,
   type Client,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import {
   getHistoricProcessInstancesCount,
   getIncidents,
   getIncidentsCount,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import type { EngineHealthCluster, EngineHealthData, EngineHealthStatus } from "../view-models.js"
 import {
   CLUSTER_SCAN_LIMIT,

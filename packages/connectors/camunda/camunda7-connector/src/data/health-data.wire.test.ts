@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { engineDateMillis, toEngineDate } from "@miragon-ai/camunda7-client"
+import { engineDateMillis, toEngineDate } from "@miragon/pulse-camunda7-client"
 import {
   clientFor,
   startFakeEngine,

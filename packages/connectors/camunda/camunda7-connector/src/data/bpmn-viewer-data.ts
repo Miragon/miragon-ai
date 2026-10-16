@@ -1,4 +1,4 @@
-import type { Client } from "@miragon-ai/camunda7-client"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import type { ActivityStat, BpmnViewerData } from "../view-models.js"
 import {
   getActivityInstanceTree,
@@ -7,13 +7,13 @@ import {
   getJobs,
   getProcessDefinitions,
   getProcessInstance,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import {
   collectActiveActivityIds,
   collectIncidentActivityIds,
   countActivityInstances,
 } from "../lib/activity-tree.js"
-import { parseBpmnNames } from "@miragon-ai/widget-shell/server"
+import { parseBpmnNames } from "@miragon/pulse-widget-shell/server"
 import { definitionKeyInId, fetchDefinitionXml, findLatestDefinition } from "./definition-info.js"
 import { optional, rowsOf } from "./engine-reads.js"
 

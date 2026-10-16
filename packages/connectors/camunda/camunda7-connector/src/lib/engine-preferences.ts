@@ -1,4 +1,4 @@
-import { readProfileAdvisory, type ProfileSource } from "@miragon-ai/widget-shell/server"
+import { readProfileAdvisory, type ProfileSource } from "@miragon/pulse-widget-shell/server"
 import { resolveProfileKey } from "./resolve-profile-key.js"
 import { parseCamunda7Settings, type Camunda7Settings } from "./profile-schema.js"
 import {

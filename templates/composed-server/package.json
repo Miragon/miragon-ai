@@ -1,8 +1,8 @@
 {
-  "name": "miragon-ai-starter",
+  "name": "pulse-starter",
   "version": "0.1.0",
   "private": true,
-  "description": "Template: compose your own MCP server from @miragon-ai modules plus your own custom modules.",
+  "description": "Template: compose your own MCP server from @miragon/pulse-* modules plus your own custom modules.",
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "pnpm --filter \"./modules/**\" build && pnpm -r typecheck",

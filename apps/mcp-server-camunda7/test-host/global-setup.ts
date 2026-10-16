@@ -1,5 +1,5 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
-import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
+import { createInMemoryProfileStore } from "@miragon/pulse-widget-shell/server"
 import { createApp } from "../src/app.js"
 import {
   BROKEN_ENGINE,

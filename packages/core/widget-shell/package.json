@@ -1,7 +1,7 @@
 {
-  "name": "@miragon-ai/widget-shell",
+  "name": "@miragon/pulse-widget-shell",
   "version": "0.20.0",
-  "description": "Shared widget kit for Miragon AI MCP Apps: UI primitives, view + data-feed builders, and the shell:* widget catalogue.",
+  "description": "Shared widget kit for Pulse MCP Apps: UI primitives, view + data-feed builders, and the shell:* widget catalogue.",
   "license": "MIT",
   "keywords": [
     "mcp",
@@ -11,14 +11,14 @@
     "ui",
     "camunda"
   ],
-  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/core/widget-shell#readme",
-  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "homepage": "https://github.com/Miragon/pulse/tree/main/packages/core/widget-shell#readme",
+  "bugs": "https://github.com/Miragon/pulse/issues",
   "engines": {
     "node": ">=22.22.2"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "url": "git+https://github.com/Miragon/pulse.git",
     "directory": "packages/core/widget-shell"
   },
   "publishConfig": {

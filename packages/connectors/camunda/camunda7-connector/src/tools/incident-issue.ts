@@ -1,21 +1,21 @@
-import { formatIncidentIssueInput } from "@miragon-ai/camunda7-client/schemas"
+import { formatIncidentIssueInput } from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   fetchExternalTaskErrorDetails,
   fetchJobStacktrace,
   incidentRecovery,
   type Client,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import {
   getIncident,
   getProcessDefinition,
   getProcessInstance,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import type {
   IncidentDto,
   ProcessDefinitionDto,
   ProcessInstanceDto,
-} from "@miragon-ai/camunda7-client/types"
+} from "@miragon/pulse-camunda7-client/types"
 import type { MCPServer } from "mcp-use"
 import { z } from "zod"
 import type { EngineRegistry } from "../lib/resolve-engine.js"

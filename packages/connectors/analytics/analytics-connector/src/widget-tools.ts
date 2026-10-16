@@ -7,14 +7,14 @@ import {
   showToolBinding,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import {
   queries,
   schemas,
   withCallerSignal,
   type AnalyticsDashboardData,
   type PrometheusClient,
-} from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-analytics-client"
 import {
   ANALYTICS_BPMN_HEATMAP_DATA,
   ANALYTICS_BPMN_XML_DATA,

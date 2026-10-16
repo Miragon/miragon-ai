@@ -1,5 +1,5 @@
-import type { PrometheusClient } from "@miragon-ai/analytics-client"
-import { ENGINE_HEALTH_STATUS_RULE, schemas, queries } from "@miragon-ai/analytics-client"
+import type { PrometheusClient } from "@miragon/pulse-analytics-client"
+import { ENGINE_HEALTH_STATUS_RULE, schemas, queries } from "@miragon/pulse-analytics-client"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { AnalyticsEngineScope } from "../engine-ids.js"
 

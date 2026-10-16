@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { saveModuleSlice, type ProfileStore } from "@miragon-ai/widget-shell/server"
+import { saveModuleSlice, type ProfileStore } from "@miragon/pulse-widget-shell/server"
 import { UnknownEngineError, type EngineRegistry, type EngineEntry } from "../lib/resolve-engine.js"
 import { environmentOf, groupEnginesByEnvironment } from "../lib/environments.js"
 import { providerForEntry } from "../providers/index.js"

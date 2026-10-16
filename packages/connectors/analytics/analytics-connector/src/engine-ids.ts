@@ -1,4 +1,4 @@
-import type { EngineFilterInput } from "@miragon-ai/analytics-client"
+import type { EngineFilterInput } from "@miragon/pulse-analytics-client"
 
 /**
  * Which engines analytics may read on this server. A Prometheus (or Thanos /

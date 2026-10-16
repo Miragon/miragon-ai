@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@miragon/mcp-toolkit-ui"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell } from "@miragon/pulse-widget-shell/widgets"
 
 /**
  * One tab of a {@link DetailPage}. `count` renders as a muted "(n)" suffix

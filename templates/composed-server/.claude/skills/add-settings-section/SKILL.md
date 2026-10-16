@@ -18,7 +18,7 @@ module's slice — and you never read another module's slice either.
 **Reference implementation** (the notes module has no settings; the published
 analytics module is the canonical one — its sources ship in `node_modules`):
 
-- `node_modules/@miragon-ai/analytics-connector/src/settings.ts` — slice schema,
+- `node_modules/@miragon/pulse-analytics-connector/src/settings.ts` — slice schema,
   fail-soft parse, "explicit arg > saved setting > default"
 - `.../src/settings-tools.ts` — the tool triple + toolset gate
 - `.../src/widgets/settings-section.tsx` — the section widget
@@ -34,7 +34,7 @@ export const mySettingsSchema = z.object({
 })
 
 /**
- * Fail-soft per FIELD (`parseModuleSlice` from `@miragon-ai/widget-shell/server`):
+ * Fail-soft per FIELD (`parseModuleSlice` from `@miragon/pulse-widget-shell/server`):
  * a missing or hand-edited slice yields the defaults, and one invalid value keeps
  * the other saved preferences.
  */
@@ -59,7 +59,7 @@ a defaulted partial materializes omitted fields at the tool boundary — a
 input instead of hand-writing it:
 
 ```ts
-import { withoutDefaults } from "@miragon-ai/widget-shell/server"
+import { withoutDefaults } from "@miragon/pulse-widget-shell/server"
 export const mySettingsSaveInput = z.object(withoutDefaults(mySettingsSchema.shape)).partial()
 ```
 
@@ -77,7 +77,7 @@ import {
   resolveProfileKey, // OAuth caller (from ctx) > declared local caller "anonymous" > undefined
   resolveAuthUserId, // the OAuth caller alone — stamped as opts.userId (the record's owner)
   type ProfileSource, // the narrow read/write port a module consumes
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 ```
 
 Always pass the handler's `ctx` (`resolveProfileKey(ctx)`): raw `server.tool`
@@ -104,14 +104,14 @@ wire-contract e2e test asserts by name):
 | `<module>_settings_data` | `...appOnly`                      | `buildDataFeedResult(view)`                          |
 | `<module>_save_settings` | none (plain model-visible tool)   | text summary + `structuredContent` = effective slice |
 
-All three declare `inputSchema: strictToolInput(…)` (`@miragon-ai/widget-shell/server`;
+All three declare `inputSchema: strictToolInput(…)` (`@miragon/pulse-widget-shell/server`;
 the save tool `strictToolInput(mySettingsSaveInput.shape)`), so an unknown key is refused
 instead of silently dropped.
 
 Rules the save tool must honor:
 
 - **Save the PATCH alone, never a slice you read first** — `requireProfileKey`
-  and `saveModuleSlice` from `@miragon-ai/widget-shell/server`:
+  and `saveModuleSlice` from `@miragon/pulse-widget-shell/server`:
 
   ```ts
   const key = requireProfileKey(ctx) // throws without an identity
@@ -141,7 +141,7 @@ Rules the save tool must honor:
 
 ## Step 5 — the section widget
 
-One self-fetching card composed from `@miragon-ai/widget-shell/widgets` —
+One self-fetching card composed from `@miragon/pulse-widget-shell/widgets` —
 `SettingsCard` / `SettingsField` / `SettingsInput` / `NativeSelect`:
 
 - Self-fetch the `*_data` feed via `useToolQuery`, `{ enabled: !initialData }`.
@@ -149,7 +149,7 @@ One self-fetching card composed from `@miragon-ai/widget-shell/widgets` —
   a missing `isError` branch is an eternal skeleton.
 - Save via `useToolMutation(SAVE_TOOL, { invalidateKeys: [[…]] })` and re-sync
   the form baseline from server truth after the refetch with
-  `useResetOnChange(stamp, reset)` from `@miragon-ai/widget-shell/widgets` (the
+  `useResetOnChange(stamp, reset)` from `@miragon/pulse-widget-shell/widgets` (the
   saved values as the stamp), never `useEffect(reset, [data])`, which commits
   the stale baseline once before correcting it. Confirm the save in a
   toast (`useActionFeedback().succeeded("Settings saved")`, a failure with

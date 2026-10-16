@@ -11,7 +11,7 @@ import { REPO_ROOT } from "./source-scan.js"
  * the skills and checks it against the repo: tool names against the full
  * surface, repo paths against the tree, the skills' identifiers against the
  * sources and the toolkit/mcp-use typings, and each page of the docs site
- * (docs/*.md, built by VitePress to https://miragon.github.io/miragon-ai/)
+ * (docs/*.md, built by VitePress to https://miragon.github.io/pulse/)
  * against its line budget (DOCS_BUDGETS below).
  *
  * The product page https://miragon.ai/tools/pulse/ is built from
@@ -21,14 +21,31 @@ import { REPO_ROOT } from "./source-scan.js"
 
 const TEMPLATE_ROOT = path.join(REPO_ROOT, "templates", "composed-server")
 
+/** A directory's entries; one that is gone (never there, or removed mid-walk) has none. */
+function entriesOf(dir: string): fs.Dirent[] {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true })
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return []
+    throw error
+  }
+}
+
+/**
+ * Every file under `dir` that `keep` accepts. It skips node_modules BEFORE
+ * descending: a recursive readdir lists every workspace symlink's target
+ * first, so a sibling package's coverage run that removed its coverage/.tmp
+ * meanwhile failed the walk with ENOENT. A folder removed mid-walk outside
+ * node_modules (a package's own coverage/.tmp) holds no doc or source to read
+ * and is skipped the same way.
+ */
 const walk = (dir: string, keep: (file: string) => boolean): string[] =>
-  fs.existsSync(dir)
-    ? fs
-        .readdirSync(dir, { recursive: true, encoding: "utf8" })
-        .filter((rel) => !rel.split(path.sep).some((part) => part === "node_modules"))
-        .map((rel) => path.join(dir, rel))
-        .filter((file) => keep(file) && fs.statSync(file).isFile())
-    : []
+  entriesOf(dir).flatMap((entry) => {
+    if (entry.name === "node_modules") return []
+    const file = path.join(dir, entry.name)
+    if (entry.isDirectory()) return walk(file, keep)
+    return keep(file) && fs.statSync(file, { throwIfNoEntry: false })?.isFile() ? [file] : []
+  })
 
 const isMarkdown = (file: string) => file.endsWith(".md")
 /** The docs pages: the Markdown in docs/, not the VitePress config, theme or build output. */

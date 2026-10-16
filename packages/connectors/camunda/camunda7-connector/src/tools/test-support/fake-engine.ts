@@ -13,7 +13,7 @@ import { createServer, type IncomingHttpHeaders, type Server, type ServerRespons
 import type { AddressInfo } from "node:net"
 import { z } from "zod"
 import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
-import type { Client } from "@miragon-ai/camunda7-client"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import { createEngineRegistry, type EngineRegistry } from "../../lib/resolve-engine.js"
 import { providerForEntry } from "../../providers/index.js"
 

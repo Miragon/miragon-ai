@@ -1,7 +1,7 @@
 /**
  * The analytics module's toolset vocabulary. Module peers own their toolset
  * NAMES; the fail-closed SEMANTICS are shared (`createToolsetVocabulary` from
- * `@miragon-ai/widget-shell/server`):
+ * `@miragon/pulse-widget-shell/server`):
  *
  * - `read-only` — the floor: every analytics read, no durable write (the
  *   settings save tool is not registered);
@@ -22,7 +22,7 @@
  * a concrete name; a direct `createPlugin` caller that passes none gets the
  * floor.
  */
-import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
+import { createToolsetVocabulary } from "@miragon/pulse-widget-shell/server"
 
 export const ANALYTICS_TOOLSETS = ["read-only", "standard"] as const
 export type AnalyticsToolset = (typeof ANALYTICS_TOOLSETS)[number]

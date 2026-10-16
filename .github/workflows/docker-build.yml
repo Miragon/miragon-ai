@@ -36,4 +36,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - run: docker build --tag miragon-ai-server:pr-${{ github.event.pull_request.number }} .
+      - run: docker build --tag pulse-server:pr-${{ github.event.pull_request.number }} .

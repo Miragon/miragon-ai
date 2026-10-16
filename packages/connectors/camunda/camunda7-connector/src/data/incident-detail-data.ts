@@ -3,7 +3,7 @@ import {
   incidentRecovery,
   readProcessInstanceVariables,
   type Client,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import type {
   ActivityTree,
   IncidentDetailData,
@@ -18,11 +18,11 @@ import {
   getJobs,
   getProcessDefinition,
   getProcessInstance,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
-import { bpmnProcessNameOf, readBpmnNames } from "@miragon-ai/widget-shell/server"
+import { bpmnProcessNameOf, readBpmnNames } from "@miragon/pulse-widget-shell/server"
 import {
   definitionKeyInId,
   fetchDefinitionXml,

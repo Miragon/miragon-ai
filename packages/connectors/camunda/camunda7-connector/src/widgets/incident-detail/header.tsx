@@ -1,4 +1,4 @@
-import { HandOffButton, OpenInCockpitLink, VersionChip } from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton, OpenInCockpitLink, VersionChip } from "@miragon/pulse-widget-shell/widgets"
 
 import { StatusBadge, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import type { IncidentDetailData } from "../../view-models.js"

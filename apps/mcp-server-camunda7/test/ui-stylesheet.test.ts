@@ -11,7 +11,7 @@ import {
   stylesheetColorFindings,
   toneContrastPairs,
   toolkitThemeStylesheets,
-} from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-widget-shell/testing"
 
 /**
  * The stylesheets every view document inlines: the app's own and the customer

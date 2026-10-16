@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { feedPayload } from "./test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
-import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import { runWithMcpRequestInfo } from "@miragon/pulse-widget-shell/server"
 import { registerUserProfileTools } from "./user-profile.js"
-import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
+import { createInMemoryProfileStore, type ProfileStore } from "@miragon/pulse-widget-shell/server"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { CAMUNDA7_TOOLSETS, resolveCamunda7Toolset, type Camunda7Toolset } from "../lib/toolsets.js"
 import {

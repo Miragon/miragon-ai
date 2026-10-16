@@ -20,8 +20,8 @@ import {
   formatNumber,
   type ListTableColumn,
   type ListTableGroup,
-} from "@miragon-ai/widget-shell/widgets"
-import type { EngineLandscapeEngine, EngineLandscapeResult } from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-widget-shell/widgets"
+import type { EngineLandscapeEngine, EngineLandscapeResult } from "@miragon/pulse-analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { QueryGate } from "./query-gate.js"
 import { useT, type T } from "../messages/use-t.js"

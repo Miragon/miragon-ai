@@ -6,7 +6,7 @@ import {
   glossaryFindings,
   PRODUCT_GLOSSARY,
   unnamedGlossaryTerms,
-} from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-widget-shell/testing"
 import { deAskAi } from "./de.ask-ai.js"
 import { deBuilder } from "./de.builder.js"
 import { deServer } from "./de.server.js"

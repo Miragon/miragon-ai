@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import { runWithMcpRequestInfo } from "@miragon/pulse-widget-shell/server"
 import {
   clientFor,
   startFakeEngine,

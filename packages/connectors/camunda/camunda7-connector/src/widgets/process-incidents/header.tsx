@@ -5,7 +5,7 @@ import {
   WidgetShell,
   formatNumber,
   formatTimestamp,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { StatusBadge, WidgetHeader, DrillButton } from "@miragon/mcp-toolkit-ui"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"

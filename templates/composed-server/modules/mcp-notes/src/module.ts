@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { AppPlugin } from "@miragon/mcp-toolkit-core"
 import type { MCPServer } from "mcp-use"
-import type { ProfileSource } from "@miragon-ai/widget-shell/server"
+import type { ProfileSource } from "@miragon/pulse-widget-shell/server"
 import { createNotesStore } from "./notes-store.js"
 import { registerTools } from "./tools.js"
 import { registerWidgetTools } from "./widget-tools.js"

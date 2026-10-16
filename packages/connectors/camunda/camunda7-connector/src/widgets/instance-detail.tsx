@@ -1,4 +1,4 @@
-import { useDetailView } from "@miragon-ai/widget-shell/widgets"
+import { useDetailView } from "@miragon/pulse-widget-shell/widgets"
 
 import type { InstanceDetailData } from "../view-models.js"
 import { CAMUNDA7_INSTANCE_DETAIL_DATA } from "../tool-names.js"

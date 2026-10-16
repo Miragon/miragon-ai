@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { createSql, runMigrations } from "@miragon-ai/widget-shell/server"
+import { createSql, runMigrations } from "@miragon/pulse-widget-shell/server"
 import { initRuntime } from "../src/persistence/index.js"
 
 // Only the two Postgres entry points are replaced; everything else
 // `initRuntime` uses (the stores, the announcement) stays real.
-vi.mock("@miragon-ai/widget-shell/server", async (importOriginal) => ({
+vi.mock("@miragon/pulse-widget-shell/server", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   createSql: vi.fn(),
   runMigrations: vi.fn(),

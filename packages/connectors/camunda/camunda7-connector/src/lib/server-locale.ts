@@ -3,8 +3,8 @@ import {
   createLocalizeViewFor,
   createViewLocaleOf,
   resolveProfileLocale,
-} from "@miragon-ai/widget-shell/server"
-import type { ProfileSource, ServerT, ViewLocale } from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
+import type { ProfileSource, ServerT, ViewLocale } from "@miragon/pulse-widget-shell/server"
 import { translator } from "../messages/index.js"
 
 /**

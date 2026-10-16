@@ -4,7 +4,7 @@ import {
   useHostActions,
   type HostActions,
 } from "@miragon/mcp-toolkit-ui/app"
-import { SHELL_SHOW_SETTINGS } from "@miragon-ai/widget-shell/widgets"
+import { SHELL_SHOW_SETTINGS } from "@miragon/pulse-widget-shell/widgets"
 import {
   CAMUNDA7_SHOW_CLUSTER_DETAIL,
   CAMUNDA7_SHOW_ENGINE_HEALTH,

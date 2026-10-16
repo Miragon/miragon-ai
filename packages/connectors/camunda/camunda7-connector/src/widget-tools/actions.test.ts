@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { feedPayload } from "../tools/test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
-import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
+import { createInMemoryProfileStore } from "@miragon/pulse-widget-shell/server"
 import { DEFAULT_HEALTH_THRESHOLDS } from "../data/health-data.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { resolveCamunda7Toolset, type Camunda7Toolset } from "../lib/toolsets.js"

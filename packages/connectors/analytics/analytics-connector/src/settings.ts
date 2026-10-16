@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { PERIODS } from "@miragon-ai/analytics-client"
-import { parseModuleSlice } from "@miragon-ai/widget-shell/server"
+import { PERIODS } from "@miragon/pulse-analytics-client"
+import { parseModuleSlice } from "@miragon/pulse-widget-shell/server"
 import type { ProfileSource } from "./server-locale.js"
 import { resolveSettingsKey } from "./server-locale.js"
 
@@ -39,7 +39,7 @@ export type AnalyticsSettings = z.infer<typeof analyticsSettingsSchema>
  * ("Omitted → unchanged" is what the model needs at a write boundary). When the
  * descriptions can be shared, derive it instead:
  * `z.object(withoutDefaults(analyticsSettingsSchema.shape)).partial()`
- * (`withoutDefaults` from `@miragon-ai/widget-shell/server`) — which is what
+ * (`withoutDefaults` from `@miragon/pulse-widget-shell/server`) — which is what
  * camunda7's `userProfileSaveInput` does.
  */
 export const analyticsSettingsSaveInput = z.object({

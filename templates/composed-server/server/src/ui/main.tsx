@@ -4,8 +4,8 @@ import {
   AppShellProviders,
   LocalizedAppView,
   SHELL_VIEW_CONFIG,
-} from "@miragon-ai/widget-shell/widgets"
-import { Camunda7StandaloneShell } from "@miragon-ai/camunda7-connector/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
+import { Camunda7StandaloneShell } from "@miragon/pulse-camunda7-connector/widgets"
 import { widgetRegistry } from "./widget-registry.js"
 import "./globals.css"
 

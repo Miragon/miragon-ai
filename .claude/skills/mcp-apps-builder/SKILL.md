@@ -30,6 +30,6 @@ mcp-use skill this file used to vendor taught 1.x APIs (`server.uiResource()`, t
 Where an mcp-use example and the house skills disagree, the house skills win.
 
 A user-visible change (env vars, tools, ports, getting-started steps) updates the Pulse docs
-in `docs/` in the same PR; they build into the site https://miragon.github.io/miragon-ai/
+in `docs/` in the same PR; they build into the site https://miragon.github.io/pulse/
 (`pnpm docs:build` fails on a dead link). The product page https://miragon.ai/tools/pulse/ is
 built from Miragon/miragon-ai-docs; a change it shows needs a PR there too.

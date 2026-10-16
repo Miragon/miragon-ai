@@ -1,13 +1,14 @@
-# Miragon AI
+# Pulse
 
-[![Docker Hub](https://img.shields.io/docker/v/miragon/miragon-ai-server?style=flat-square&label=docker%20hub&logo=docker&logoColor=white&color=2496ED&sort=semver)](https://hub.docker.com/r/miragon/miragon-ai-server)
-[![Docker Pulls](https://img.shields.io/docker/pulls/miragon/miragon-ai-server?style=flat-square&logo=docker&logoColor=white&color=2496ED)](https://hub.docker.com/r/miragon/miragon-ai-server)
-[![Release](https://img.shields.io/github/v/release/Miragon/miragon-ai?style=flat-square&label=release)](https://github.com/Miragon/miragon-ai/releases)
-[![CI](https://img.shields.io/github/actions/workflow/status/Miragon/miragon-ai/ci.yml?style=flat-square&label=ci)](https://github.com/Miragon/miragon-ai/actions/workflows/ci.yml)
+[![Docker Hub](https://img.shields.io/docker/v/miragon/pulse-server?style=flat-square&label=docker%20hub&logo=docker&logoColor=white&color=2496ED&sort=semver)](https://hub.docker.com/r/miragon/pulse-server)
+[![Docker Pulls](https://img.shields.io/docker/pulls/miragon/pulse-server?style=flat-square&logo=docker&logoColor=white&color=2496ED)](https://hub.docker.com/r/miragon/pulse-server)
+[![Release](https://img.shields.io/github/v/release/Miragon/pulse?style=flat-square&label=release)](https://github.com/Miragon/pulse/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/Miragon/pulse/ci.yml?style=flat-square&label=ci)](https://github.com/Miragon/pulse/actions/workflows/ci.yml)
 [![MCP](https://img.shields.io/badge/Model%20Context%20Protocol-server-blue?style=flat-square)](https://modelcontextprotocol.io/)
 
 Drive **Camunda 7 / CIB seven** from any AI assistant: process operations and analytics over the
-[Model Context Protocol](https://modelcontextprotocol.io/).
+[Model Context Protocol](https://modelcontextprotocol.io/). Pulse is part of
+[Miragon AI](https://miragon.ai/), the family of Miragon's AI tools.
 
 One MCP server, two modules (**operations** + **analytics**), and a fleet of interactive
 [MCP App](https://modelcontextprotocol.io/) widgets that render dashboards, BPMN diagrams and incident
@@ -17,7 +18,7 @@ panels straight into the chat. Built on [mcp-use](https://github.com/mcp-use/mcp
 > opens the incident panel, reads the metrics and pinpoints the failing step. Once you grant the
 > `operations` toolset, it also retries the failed jobs. No cockpit tab-hunting, no PromQL.
 
-**[🐳 Pull the server image from Docker Hub →](https://hub.docker.com/r/miragon/miragon-ai-server)**
+**[🐳 Pull the server image from Docker Hub →](https://hub.docker.com/r/miragon/pulse-server)**
 
 ## What you get
 
@@ -48,7 +49,7 @@ docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_USERNAME=demo \
   -e CAMUNDA_PASSWORD=demo \
   -e PROMETHEUS_URL=http://host.docker.internal:9090 \
-  docker.io/miragon/miragon-ai-server:latest
+  docker.io/miragon/pulse-server:latest
 ```
 
 Without `MCP_OAUTH` the endpoint is unauthenticated, so this boots **read-only**: queries, widgets
@@ -61,14 +62,14 @@ until `MCP_URL` or `MCP_ALLOWED_HOSTS` names it: `Host`/`Origin` validation is i
 protection.
 
 The server speaks the streamable-HTTP MCP transport on `http://localhost:8400/mcp`. Add it to your
-MCP host as an HTTP/streamable server: `claude mcp add --transport http miragon-ai
+MCP host as an HTTP/streamable server: `claude mcp add --transport http pulse
 http://localhost:8400/mcp` for Claude Code, a custom connector on your public URL for claude.ai /
 ChatGPT. Claude Desktop takes stdio servers only, so bridge it there:
 
 ```json
 {
   "mcpServers": {
-    "miragon-ai": {
+    "pulse": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "http://127.0.0.1:8400/mcp", "--transport", "http-only"]
     }
@@ -78,11 +79,11 @@ ChatGPT. Claude Desktop takes stdio servers only, so bridge it there:
 
 See [How to use it](docs/usage.md) for the full connection matrix and what to ask once connected.
 
-**Prefer to build the image yourself?** No credentials needed: build it and run `miragon-ai-server`
+**Prefer to build the image yourself?** No credentials needed: build it and run `pulse-server`
 in place of the Docker Hub image above.
 
 ```bash
-docker build -t miragon-ai-server .
+docker build -t pulse-server .
 ```
 
 **Want the whole stack on your machine?** The repo ships a Compose file with CIB seven, the OTEL
@@ -95,7 +96,7 @@ Collector, Prometheus and Grafana wired together. See
 ┌─────────────────────────────────────────────────────┐
 │            MCP Host (Claude, ChatGPT, ...)          │
 │  ┌──────────────────────────────────────────────┐   │
-│  │              miragon-ai-server               │   │
+│  │                 pulse-server                 │   │
 │  │  ┌─────────────────┐  ┌──────────────────┐   │   │
 │  │  │ camunda7 module │  │ analytics module │   │   │
 │  │  │  BPM ops tools  │  │  analytics tools │   │   │
@@ -131,15 +132,15 @@ A pnpm + Turbo monorepo. The server composes the two modules and serves them as 
 
 | Path                                                                                                      | Package                                   | Role                                                                    |
 | --------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
-| [`apps/mcp-server-camunda7/`](apps/mcp-server-camunda7)                                                   | `@miragon-ai/mcp-server-camunda7`         | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
-| [`packages/connectors/camunda/camunda7-connector/`](packages/connectors/camunda/camunda7-connector)       | `@miragon-ai/camunda7-connector`          | Camunda 7 operations tools, widget tools, and React widgets             |
-| [`packages/connectors/analytics/analytics-connector/`](packages/connectors/analytics/analytics-connector) | `@miragon-ai/analytics-connector`         | Prometheus-backed analytics tools and dashboard widgets                 |
-| [`packages/connectors/camunda/camunda7-client/`](packages/connectors/camunda/camunda7-client)             | `@miragon-ai/camunda7-client`             | Generated CIB seven REST SDK + MCP-oriented Zod schemas                 |
-| [`packages/connectors/analytics/analytics-client/`](packages/connectors/analytics/analytics-client)       | `@miragon-ai/analytics-client`            | Prometheus client, PromQL query functions + metrics contract            |
-| [`packages/core/widget-shell/`](packages/core/widget-shell)                                               | `@miragon-ai/widget-shell`                | Shared widget plumbing (`adaptDataWidget`, view builders)               |
+| [`apps/mcp-server-camunda7/`](apps/mcp-server-camunda7)                                                   | `@miragon/pulse-mcp-server-camunda7`      | The MCP host: composes modules, bundles widgets, serves HTTP on `:8400` |
+| [`packages/connectors/camunda/camunda7-connector/`](packages/connectors/camunda/camunda7-connector)       | `@miragon/pulse-camunda7-connector`       | Camunda 7 operations tools, widget tools, and React widgets             |
+| [`packages/connectors/analytics/analytics-connector/`](packages/connectors/analytics/analytics-connector) | `@miragon/pulse-analytics-connector`      | Prometheus-backed analytics tools and dashboard widgets                 |
+| [`packages/connectors/camunda/camunda7-client/`](packages/connectors/camunda/camunda7-client)             | `@miragon/pulse-camunda7-client`          | Generated CIB seven REST SDK + MCP-oriented Zod schemas                 |
+| [`packages/connectors/analytics/analytics-client/`](packages/connectors/analytics/analytics-client)       | `@miragon/pulse-analytics-client`         | Prometheus client, PromQL query functions + metrics contract            |
+| [`packages/core/widget-shell/`](packages/core/widget-shell)                                               | `@miragon/pulse-widget-shell`             | Shared widget plumbing (`adaptDataWidget`, view builders)               |
 | [`engine-plugins/`](engine-plugins)                                                                       | `io.miragon.mcp:cibseven-history-metrics` | Kotlin Micrometer metrics plugin for CIB seven (Java 21)                |
 | [`playground/`](playground)                                                                               | —                                         | Demo env: CIB seven showcase, Compose stack, Fly.io deploy              |
-| [`docs/`](docs/README.md)                                                                                 | `@miragon-ai/docs`                        | Pulse docs, a VitePress site on GitHub Pages                            |
+| [`docs/`](docs/README.md)                                                                                 | `@miragon/pulse-docs`                     | Pulse docs, a VitePress site on GitHub Pages                            |
 
 ## Tools
 
@@ -308,8 +309,8 @@ invariants and house patterns.
 
 ## Documentation
 
-The docs live in [`docs/`](docs/README.md), where this server is called Pulse, and are published
-as a VitePress site at [miragon.github.io/miragon-ai](https://miragon.github.io/miragon-ai/):
+The docs live in [`docs/`](docs/README.md) and are published as a VitePress site at
+[miragon.github.io/pulse](https://miragon.github.io/pulse/):
 
 - [Getting started](docs/getting-started.md): connect your Claude to the playground, then run it on your own engine
 - [Usage](docs/usage.md): connect an assistant and operate your processes
@@ -324,17 +325,44 @@ The website [miragon.ai](https://miragon.ai/tools/pulse/) is built from
 (env vars, tools, ports, getting-started steps) updates `docs/` in the same PR, and needs a PR
 there when the product page shows it.
 
+## Renamed from miragon-ai
+
+Up to 0.20.0 this server shipped as "Miragon AI" from `Miragon/miragon-ai`. From 0.21.0 on,
+everything it ships carries the Pulse name:
+
+- npm: `@miragon-ai/<name>` becomes `@miragon/pulse-<name>` for `widget-shell`,
+  `camunda7-client`, `camunda7-connector`, `analytics-client` and `analytics-connector`; subpaths
+  (`/server`, `/widgets` …) stay. Rename the dependencies and the import specifiers, one version
+  across all five. The old packages are deprecated with a pointer to the new name, and update bots
+  do not follow a rename, so switch by hand.
+- Docker image: `miragon/miragon-ai-server` becomes `miragon/pulse-server`; the old image stays
+  frozen at 0.20.0.
+- Starter: `Miragon/miragon-ai-starter` becomes
+  [`Miragon/pulse-starter`](https://github.com/Miragon/pulse-starter).
+- Playground: `https://pulse-playground.miragon.ai/mcp`; the old `fly.dev` URL keeps answering.
+- MCP client key: the examples register the server as `pulse` (was `miragon-ai`; this repo's
+  `.mcp.json` used `automation-mcp`), and it introduces itself as `pulse`; its log lines start
+  with `[pulse]`. In Claude Code the key is the tool prefix: allowlists and hooks on
+  `mcp__miragon-ai__*` or `mcp__automation-mcp__*` need `mcp__pulse__*`.
+- Engine access logs: the client's User-Agent is `@miragon/pulse-camunda7-client/<version>` (was
+  `@miragon-ai/camunda7-client/0.1.0`).
+- Local Keycloak (`--profile auth`): the pre-registered client is `pulse-server` with secret
+  `pulse-secret`; recreate the container to re-import the realm.
+- Repo: GitHub redirects the old URL; `git remote set-url origin git@github.com:Miragon/pulse.git`
+  updates a clone. The local Compose stack runs as project `pulse` now, so stop an old one first
+  ([`playground/`](playground/README.md#run-locally)).
+
 ## Releases
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please): semantic
 commits on `main` open a Release PR; merging it tags the repo and publishes the
-[server image](https://hub.docker.com/r/miragon/miragon-ai-server) to Docker Hub and the engine
+[server image](https://hub.docker.com/r/miragon/pulse-server) to Docker Hub and the engine
 plugin to Maven Central.
 
 ## Contributing
 
 Issues, pull requests and discussions are welcome on
-[GitHub](https://github.com/Miragon/miragon-ai). Use [semantic commit messages](https://www.conventionalcommits.org/)
+[GitHub](https://github.com/Miragon/pulse). Use [semantic commit messages](https://www.conventionalcommits.org/)
 (they drive the release), and make sure `pnpm build && pnpm typecheck && pnpm test && pnpm lint`
 passes. The repo-specific skills under `.claude/skills/` document the two main feature paths.
 

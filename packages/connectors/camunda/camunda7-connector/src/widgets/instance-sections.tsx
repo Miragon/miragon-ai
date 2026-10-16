@@ -6,7 +6,7 @@ import {
   TableEmptyState,
   Td,
   useResetOnChange,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { X } from "lucide-react"
 
 import type { ActivityTree, VariableValue } from "../view-models.js"

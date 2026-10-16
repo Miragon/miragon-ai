@@ -782,7 +782,7 @@ describe("root scripts (no gate unhooked)", () => {
       "lint:deadcode": "knip --exclude exports,types",
       "test:scripts": 'node --test "scripts/*.test.mjs"',
       "test:pg":
-        "TEST_DATABASE_URL=${TEST_DATABASE_URL:-x} pnpm --filter @miragon-ai/widget-shell --filter @miragon-ai/camunda7-connector run test",
+        "TEST_DATABASE_URL=${TEST_DATABASE_URL:-x} pnpm --filter @miragon/pulse-widget-shell --filter @miragon/pulse-camunda7-connector run test",
       typecheck: "turbo run typecheck",
       "format:check": "prettier --check .",
     }
@@ -819,9 +819,9 @@ describe("root scripts (no gate unhooked)", () => {
         // widget-shell is the only package with Postgres suites
         {
           "test:pg":
-            "TEST_DATABASE_URL=${TEST_DATABASE_URL:-x} pnpm --filter @miragon-ai/camunda7-connector run test",
+            "TEST_DATABASE_URL=${TEST_DATABASE_URL:-x} pnpm --filter @miragon/pulse-camunda7-connector run test",
         },
-        { typecheck: "turbo run typecheck --filter=!@miragon-ai/widget-shell" },
+        { typecheck: "turbo run typecheck --filter=!@miragon/pulse-widget-shell" },
         { "format:check": "prettier --check . || true" },
       ]) {
         const violations = checkRatchetFile("package.json", old, withScripts(scripts))
@@ -881,7 +881,7 @@ describe("package gate scripts are pinned to the merge base", () => {
     "test:mutation": "stryker run",
   }
   const pkg = (scripts) =>
-    JSON.stringify({ name: "@miragon-ai/x", scripts: { ...BASE, ...scripts } })
+    JSON.stringify({ name: "@miragon/pulse-x", scripts: { ...BASE, ...scripts } })
 
   it("flags lint/typecheck/test/test:mutation changed in any way", () => {
     for (const scripts of [

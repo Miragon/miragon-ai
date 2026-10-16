@@ -1,4 +1,4 @@
-import { createBuilderTexts } from "@miragon-ai/widget-shell/server"
+import { createBuilderTexts } from "@miragon/pulse-widget-shell/server"
 import { catalogs } from "./messages/index.js"
 
 /**

@@ -1,4 +1,4 @@
-import { badgeSwatch, markerSwatch } from "@miragon-ai/widget-shell/widgets"
+import { badgeSwatch, markerSwatch } from "@miragon/pulse-widget-shell/widgets"
 import type { BpmnViewerData } from "../../view-models.js"
 import { useT } from "../../messages/use-t.js"
 import { HIGHLIGHT_COLORS } from "../bpmn-highlights.js"

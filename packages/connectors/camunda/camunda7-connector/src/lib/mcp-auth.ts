@@ -1,4 +1,4 @@
-import { getMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import { getMcpRequestInfo } from "@miragon/pulse-widget-shell/server"
 
 /**
  * Resolves the bearer token of the MCP request currently being handled — the
@@ -9,7 +9,7 @@ import { getMcpRequestInfo } from "@miragon-ai/widget-shell/server"
  * anyone reading it there) could replay it against this server.
  *
  * Reads the raw `Authorization` header off the repo-owned ambient request
- * info (`getMcpRequestInfo`, `@miragon-ai/widget-shell/server`) — the
+ * info (`getMcpRequestInfo`, `@miragon/pulse-widget-shell/server`) — the
  * AsyncLocalStorage installed once per server via `installMcpRequestContext`
  * (the host and this plugin's `registerTools` both install it): this
  * interceptor runs deep inside a hey-api call chain, with no handler `ctx` in

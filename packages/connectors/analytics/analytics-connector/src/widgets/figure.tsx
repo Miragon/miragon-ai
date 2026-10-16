@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { CountPill } from "@miragon/mcp-toolkit-ui"
-import { countTone, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { countTone, formatNumber } from "@miragon/pulse-widget-shell/widgets"
 
 /**
  * One figure in an analytics table (U17). "—" means one thing in every

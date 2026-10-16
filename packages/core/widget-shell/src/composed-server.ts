@@ -98,7 +98,7 @@ export type BootComposition = Pick<
 >
 
 export interface ComposedServerOptions {
-  /** Log prefix, e.g. `miragon-ai`. */
+  /** Log prefix, e.g. `pulse`. */
   label: string
   info: ComposedServerInfo
   composition: BootComposition

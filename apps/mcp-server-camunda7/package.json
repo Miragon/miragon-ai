@@ -1,11 +1,11 @@
 {
-  "name": "@miragon-ai/mcp-server-camunda7",
+  "name": "@miragon/pulse-mcp-server-camunda7",
   "version": "0.20.0",
   "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "url": "git+https://github.com/Miragon/pulse.git",
     "directory": "apps/mcp-server-camunda7"
   },
   "type": "module",
@@ -31,9 +31,9 @@
     "start": "cross-env NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
-    "@miragon-ai/analytics-connector": "workspace:*",
-    "@miragon-ai/camunda7-connector": "workspace:*",
-    "@miragon-ai/widget-shell": "workspace:*",
+    "@miragon/pulse-analytics-connector": "workspace:*",
+    "@miragon/pulse-camunda7-connector": "workspace:*",
+    "@miragon/pulse-widget-shell": "workspace:*",
     "@miragon/mcp-toolkit-core": "2.8.1",
     "mcp-use": "2.7.3",
     "postgres": "3.4.9",

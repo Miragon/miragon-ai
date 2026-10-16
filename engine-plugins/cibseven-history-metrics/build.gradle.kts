@@ -39,10 +39,10 @@ mavenPublishing {
     pom {
         name.set("cibseven-history-metrics")
         description.set(
-            "CIB Seven history-event Micrometer metrics plugin powering the Miragon AI analytics module",
+            "CIB seven history-event Micrometer metrics plugin powering the Pulse analytics module",
         )
         inceptionYear.set("2026")
-        url.set("https://github.com/Miragon/miragon-ai")
+        url.set("https://github.com/Miragon/pulse")
         licenses {
             license {
                 name.set("MIT License")
@@ -60,9 +60,9 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("https://github.com/Miragon/miragon-ai")
-            connection.set("scm:git:git://github.com/Miragon/miragon-ai.git")
-            developerConnection.set("scm:git:ssh://git@github.com/Miragon/miragon-ai.git")
+            url.set("https://github.com/Miragon/pulse")
+            connection.set("scm:git:git://github.com/Miragon/pulse.git")
+            developerConnection.set("scm:git:ssh://git@github.com/Miragon/pulse.git")
         }
     }
 }

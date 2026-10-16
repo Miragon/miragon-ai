@@ -9,7 +9,7 @@ describe("createDeploymentInput", () => {
       deploymentName: "orders",
       enableDuplicateFiltering: true,
       deployChangedOnly: false,
-      deploymentSource: "miragon-ai",
+      deploymentSource: "pulse",
       tenantId: "tenant-a",
       resources: [
         { name: "order.bpmn", content: BPMN },

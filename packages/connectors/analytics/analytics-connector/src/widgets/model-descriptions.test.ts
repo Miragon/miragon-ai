@@ -12,7 +12,7 @@ import type {
   FailureDashboardData,
   VersionCompareKpi,
   VersionCompareResult,
-} from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-analytics-client"
 
 // The dashboard, comparison and heatmap descriptions: model-descriptions.dashboard.test.ts.
 

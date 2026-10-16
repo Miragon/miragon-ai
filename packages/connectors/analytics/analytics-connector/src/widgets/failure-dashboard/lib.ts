@@ -1,5 +1,5 @@
 import { useToolQuery } from "@miragon/mcp-toolkit-ui"
-import type { EngineFilterInput, FailureDashboardData } from "@miragon-ai/analytics-client"
+import type { EngineFilterInput, FailureDashboardData } from "@miragon/pulse-analytics-client"
 import type { Named } from "../../bpmn-names.js"
 import { ANALYTICS_FAILURE_DASHBOARD_DATA } from "../../tool-names.js"
 

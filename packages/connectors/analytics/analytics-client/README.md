@@ -1,11 +1,11 @@
-# @miragon-ai/analytics-client
+# @miragon/pulse-analytics-client
 
 Prometheus client and PromQL query layer for Camunda 7 / CIB Seven process analytics. It pairs a thin
 HTTP client for the Prometheus query API with a set of typed, purpose-built query functions and the
 **metrics contract** — the single source of truth for the `camunda_*` metric names and labels the
 [engine plugin](../../../../engine-plugins) emits.
 
-Used by [`@miragon-ai/analytics-connector`](../analytics-connector) to power the `analytics_*` MCP tools, but
+Used by [`@miragon/pulse-analytics-connector`](../analytics-connector) to power the `analytics_*` MCP tools, but
 usable by any project that reads Camunda process metrics from Prometheus.
 
 ## Exports
@@ -30,8 +30,8 @@ than a raw Prometheus matrix:
 - `dashboard` — the aggregate feed behind the analytics dashboard widget
 
 ```ts
-import { createPrometheusClient } from "@miragon-ai/analytics-client"
-import { analyzePerformance } from "@miragon-ai/analytics-client/queries"
+import { createPrometheusClient } from "@miragon/pulse-analytics-client"
+import { analyzePerformance } from "@miragon/pulse-analytics-client/queries"
 
 const prom = createPrometheusClient({ url: "http://localhost:9090" })
 const perf = await analyzePerformance(prom, {

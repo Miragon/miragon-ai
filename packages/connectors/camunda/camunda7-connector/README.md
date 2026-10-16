@@ -1,13 +1,13 @@
-# @miragon-ai/camunda7-connector
+# @miragon/pulse-camunda7-connector
 
-The **camunda7 module** for [Miragon AI](../../../../README.md): Camunda 7 / CIB Seven BPM operations as
+The **camunda7 module** for [Pulse](../../../../README.md): Camunda 7 / CIB Seven BPM operations as
 `camunda7_*` MCP tools, plus the interactive cockpit widgets (MCP Apps). Built on
-[`@miragon-ai/camunda7-client`](../camunda7-client) and the `@miragon/mcp-toolkit-*` packages.
+[`@miragon/pulse-camunda7-client`](../camunda7-client) and the `@miragon/mcp-toolkit-*` packages.
 
 The server loads this module as `camunda7` via `camunda7Module` (`src/module.ts`), which conforms
 structurally to the app's `ModuleDefinition` port. The package is published to npm in lockstep with
-the other `@miragon-ai` packages (pin them all to one version); the
-[miragon-ai-starter](https://github.com/Miragon/miragon-ai-starter) template shows how to compose it
+the other `@miragon/pulse-*` packages (pin them all to one version); the
+[pulse-starter](https://github.com/Miragon/pulse-starter) template shows how to compose it
 into your own MCP server.
 
 The consumer-shared libraries are ranged **peer dependencies** so they dedupe against your app's
@@ -20,39 +20,39 @@ hangs every in-widget query on "Loading…".
 
 ## What it provides
 
-- **Operations tools** (`src/tools/`) — one file per domain (`process-instances`, `tasks`,
+- **Operations tools** (`src/tools/`): one file per domain (`process-instances`, `tasks`,
   `incidents`, `jobs`, `history`, …), registered through `createToolRegistrar`. Plain JSON for the
   model.
-- **Widget tools** (`src/widget-tools.ts`) — `show_*` tools that render a cockpit widget for the user
+- **Widget tools** (`src/widget-tools.ts`): `show_*` tools that render a cockpit widget for the user
   and return a compact summary for the model, plus app-only `*_data` feeds for in-widget refresh and
   navigation.
-- **Widgets** (`src/widgets/`) — React components (cockpit dashboard, process & incident panels, BPMN
+- **Widgets** (`src/widgets/`): React components (cockpit dashboard, process & incident panels, BPMN
   viewer, history timeline, job panel) wired in `registry.ts` via `adaptDataWidget`.
-- **Multi-engine routing** — every tool resolves its engine through `withEngine` / `resolveEngine`
+- **Multi-engine routing:** every tool resolves its engine through `withEngine` / `resolveEngine`
   (`src/lib/`): per-call override → saved default engine (profile) → single configured default.
-- **Engine providers** (`src/engine-provider.ts`, `src/providers/`) — each engine entry carries a
+- **Engine providers** (`src/engine-provider.ts`, `src/providers/`): each engine entry carries a
   vendor `flavor` (`cibseven` | `operaton` | `camunda7`, default `cibseven`) resolved to an
   `EngineProvider` holding only the real vendor differences: cockpit routes, branding, client hook.
   Mixed-vendor fleets run in one server.
-- **Toolsets, fail-closed** — `src/lib/toolsets.ts` declares `read-only` / `operations` / `admin` as
+- **Toolsets, fail-closed:** `src/lib/toolsets.ts` declares `read-only` / `operations` / `admin` as
   the module's `toolsets` vocabulary. With no `camunda7:<toolset>` suffix the module runs
   `read-only` on an unauthenticated server and `operations` under OAuth; an empty or unknown suffix
-  falls back to `read-only`. `admin` — delete/modify/suspension, migrations, batch retries,
+  falls back to `read-only`. `admin` (delete/modify/suspension, migrations, batch retries,
   `throw_signal` (engine-wide), the external-task worker protocol (`fetch_and_lock`,
-  `complete_external_task`, `handle_external_task_failure`) and deployments — is never implied;
+  `complete_external_task`, `handle_external_task_failure`) and deployments) is never implied;
   `camunda7_list_external_tasks` is the read-only view of external tasks. Widget action buttons
   render only for tools the toolset registers.
-- **Deployments are opt-in** — `camunda7_create_deployment` is registered only with
+- **Deployments are opt-in:** `camunda7_create_deployment` is registered only with
   `CAMUNDA_ALLOW_DEPLOYMENTS=true` (strict `true`/`false` after trimming, empty = unset, anything else fails the boot) on top of
   `camunda7:admin`: deploying a BPMN/DMN is code execution inside the engine JVM (JUEL expressions,
   scripts). The full camunda7 surface of earlier releases is `camunda7:admin` plus that flag.
 
 ## Adding a tool or widget
 
-This module has strict house patterns — read the
+This module has strict house patterns: read the
 [`add-bpm-feature`](../../../../.claude/skills/add-bpm-feature) skill and the architecture invariants in
 [`CLAUDE.md`](../../../../CLAUDE.md) before adding tools, schemas, or widgets. In short: input schemas live
-in [`@miragon-ai/camunda7-client`](../camunda7-client), tools register via the registrar (never raw
+in [`@miragon/pulse-camunda7-client`](../camunda7-client), tools register via the registrar (never raw
 `server.tool()`), and a widget must be wired across all four registration links.
 
 ## Layout
@@ -73,4 +73,4 @@ in [`@miragon-ai/camunda7-client`](../camunda7-client), tools register via the r
 ## Verify
 
 `pnpm typecheck` is the **only** check that type-checks the widget `.tsx` (via
-`tsconfig.widgets.json`). Widgets render only manually through the inspector — see the root README.
+`tsconfig.widgets.json`). Widgets render only manually through the inspector; see the root README.

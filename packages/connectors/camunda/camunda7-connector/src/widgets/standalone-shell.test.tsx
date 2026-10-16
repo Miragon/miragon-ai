@@ -9,7 +9,7 @@ import {
   HostWidgetsProvider,
   SettingsPageWidget,
   SHELL_SETTINGS_PAGE_WIDGET,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { useNav } from "./navigation.js"
 import { Camunda7StandaloneShell, findStepEngineId } from "./standalone-shell.js"
 

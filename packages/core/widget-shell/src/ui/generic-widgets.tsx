@@ -13,7 +13,7 @@ import { TableEmptyState, Td } from "./table.js"
  * data table.
  *
  * Registered by the server app under the `shell:` namespace (see
- * `../shell-catalogue.ts`, exported via `@miragon-ai/widget-shell/server`). Their texts arrive via
+ * `../shell-catalogue.ts`, exported via `@miragon/pulse-widget-shell/server`). Their texts arrive via
  * props; what they say themselves (the empty state, a Boolean's "Yes"/"No",
  * the table's name) follows the active locale through `kitLabels`.
  */

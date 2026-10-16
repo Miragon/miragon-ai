@@ -1,5 +1,5 @@
 {
-  "name": "@miragon-ai/analytics-connector",
+  "name": "@miragon/pulse-analytics-connector",
   "version": "0.20.0",
   "description": "Prometheus-backed process-analytics MCP module: tools, dashboards, and comparison widgets.",
   "license": "MIT",
@@ -11,14 +11,14 @@
     "prometheus",
     "widgets"
   ],
-  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/connectors/analytics/analytics-connector#readme",
-  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "homepage": "https://github.com/Miragon/pulse/tree/main/packages/connectors/analytics/analytics-connector#readme",
+  "bugs": "https://github.com/Miragon/pulse/issues",
   "engines": {
     "node": ">=22.22.2"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "url": "git+https://github.com/Miragon/pulse.git",
     "directory": "packages/connectors/analytics/analytics-connector"
   },
   "publishConfig": {
@@ -48,8 +48,8 @@
     "test:mutation": "stryker run"
   },
   "dependencies": {
-    "@miragon-ai/analytics-client": "workspace:*",
-    "@miragon-ai/widget-shell": "workspace:*"
+    "@miragon/pulse-analytics-client": "workspace:*",
+    "@miragon/pulse-widget-shell": "workspace:*"
   },
   "peerDependencies": {
     "@miragon/mcp-toolkit-core": "~2.8.1",

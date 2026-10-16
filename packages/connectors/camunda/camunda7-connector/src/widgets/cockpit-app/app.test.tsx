@@ -269,9 +269,9 @@ describe("CockpitApp head", () => {
     expect(
       await screen.findByRole("heading", { level: 2, name: "No engines configured" }),
     ).toBeTruthy()
-    // The landing's signature: the Komet, "Miragon AI" over the page's h1.
+    // The landing's signature: the Komet, "Pulse" over the page's h1.
     expect(screen.getByRole("heading", { level: 1, name: "Operations Cockpit" })).toBeTruthy()
-    expect(screen.getByText("Miragon AI")).toBeTruthy()
+    expect(screen.getByText("Pulse")).toBeTruthy()
     expect(document.querySelectorAll("[data-brand-mark='komet']")).toHaveLength(1)
   })
 })

@@ -16,7 +16,7 @@ import {
   WidgetShell,
   formatNumber,
   viewRefreshState,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { RefreshCw, TriangleAlert } from "lucide-react"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"

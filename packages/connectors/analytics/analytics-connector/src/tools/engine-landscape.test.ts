@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import type { PrometheusClient, PromSample } from "@miragon-ai/analytics-client"
+import type { PrometheusClient, PromSample } from "@miragon/pulse-analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import { createEngineScope } from "../engine-ids.js"
 import { registerEngineLandscapeTools } from "./engine-landscape.js"

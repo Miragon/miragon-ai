@@ -46,7 +46,7 @@
  * Keep every pair readable: text and each -foreground on its fill 4.5:1;
  * edges, dots, icons and the focus ring 3:1. server/test/brand.test.ts
  * measures those pairs (the role and tone pairs of
- * @miragon-ai/widget-shell/testing) in light and dark over the Miragon
+ * @miragon/pulse-widget-shell/testing) in light and dark over the Miragon
  * neutrals, the example at the end of this file included. It does not
  * measure charts, the sidebar, radii, shadows or fonts.
  */

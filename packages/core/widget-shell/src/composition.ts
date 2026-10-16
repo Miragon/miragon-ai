@@ -138,7 +138,7 @@ export interface ModuleComposition<TShared> {
 }
 
 export function composeModules<TShared>(options: {
-  /** Log prefix for every warning, e.g. `miragon-ai`. */
+  /** Log prefix for every warning, e.g. `pulse`. */
   label: string
   modules: readonly ComposableModule<TShared>[]
   /** The root's own env vars (module vars come from each module's `knownEnvVars`). */

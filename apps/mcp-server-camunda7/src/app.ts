@@ -6,11 +6,10 @@ import {
   frameworkWritesAllowed,
   oauthFromEnv,
   type ComposedServer,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { initRuntime, type RuntimeBackends } from "./persistence/index.js"
+import { SERVER_LABEL } from "./server-label.js"
 import { composition, getPlugins } from "./setup.js"
-
-const LABEL = "miragon-ai"
 
 /** `src/` under tsx/vitest, `dist/` when compiled — the package root is one level up either way. */
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..")
@@ -54,7 +53,7 @@ export interface AppDeps {
  * (`initRuntime`) and the plugins with their cross-module wiring
  * (`setup.ts`); the OAuth provider comes from the shared `oauthFromEnv` and
  * the order of everything else lives in the shared `createComposedServer`
- * (both `@miragon-ai/widget-shell/server`) — wired exactly like the
+ * (both `@miragon/pulse-widget-shell/server`) — wired exactly like the
  * composed-server template.
  */
 export async function createApp(
@@ -64,16 +63,16 @@ export async function createApp(
   // MCP_OAUTH → the provider (the only caller-identity source). Whether one
   // was BUILT decides every module's default toolset, and a bad MCP_OAUTH
   // fails the boot before migrations.
-  const oauth = "oauth" in deps ? deps.oauth : oauthFromEnv({ env, label: LABEL })
+  const oauth = "oauth" in deps ? deps.oauth : oauthFromEnv({ env, label: SERVER_LABEL })
 
   return createComposedServer({
-    label: LABEL,
+    label: SERVER_LABEL,
     info: {
-      name: "miragon-ai",
+      name: SERVER_LABEL,
       version: packageVersion(),
-      title: "Miragon AI",
-      description: "Camunda 7 / CIB Seven operations and process analytics",
-      websiteUrl: "https://github.com/Miragon/miragon-ai",
+      title: "Pulse",
+      description: "Camunda 7 / CIB seven operations and process analytics",
+      websiteUrl: "https://github.com/Miragon/pulse",
       instructions: SERVER_INSTRUCTIONS,
     },
     composition,

@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { PERIODS, queries } from "@miragon-ai/analytics-client"
+import { PERIODS, queries } from "@miragon/pulse-analytics-client"
 import { analyticsSettingsSchema, settingsFor } from "../settings.js"
 import { NO_NAMES } from "../bpmn-name-lookup.js"
 import { namedDashboard } from "../named-views.js"

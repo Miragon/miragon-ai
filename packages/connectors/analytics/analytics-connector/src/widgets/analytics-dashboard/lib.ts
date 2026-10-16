@@ -3,7 +3,7 @@ import type {
   AnalyticsDashboardData,
   EngineFilterInput,
   Period,
-} from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-analytics-client"
 import { ANALYTICS_DASHBOARD_DATA } from "../../tool-names.js"
 import type { Named } from "../../bpmn-names.js"
 

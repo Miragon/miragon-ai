@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { QueryFallback, WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { QueryFallback, WidgetShell } from "@miragon/pulse-widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 
 /** The slice of a self-fetch query result the gate needs (tanstack-shaped). */

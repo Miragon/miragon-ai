@@ -1,4 +1,4 @@
-import { formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { formatNumber } from "@miragon/pulse-widget-shell/widgets"
 import type { EngineHealthData } from "../../view-models.js"
 import type { T } from "../../messages/use-t.js"
 

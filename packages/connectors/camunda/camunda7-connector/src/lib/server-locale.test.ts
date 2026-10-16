@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
+import { createInMemoryProfileStore, type ProfileStore } from "@miragon/pulse-widget-shell/server"
 import { localizeFor, localizeViewFor, resolveLocale, viewLocaleOf } from "./server-locale.js"
 
 /** A signed-in caller's handler ctx — whose record the lookup reads. */

@@ -39,7 +39,7 @@ permissions:
 
 env:
   MIRROR_OWNER: Miragon
-  MIRROR_NAME: miragon-ai-starter
+  MIRROR_NAME: pulse-starter
 
 jobs:
   sync:
@@ -65,12 +65,12 @@ jobs:
           version="${TAG#v}"
           deadline=$((SECONDS + 600))
           for p in camunda7-client analytics-client widget-shell camunda7-connector analytics-connector; do
-            until npm view "@miragon-ai/$p@$version" version >/dev/null 2>&1; do
+            until npm view "@miragon/pulse-$p@$version" version >/dev/null 2>&1; do
               if ((SECONDS >= deadline)); then
-                echo "::error::@miragon-ai/$p@$version not visible on npm after 10 minutes"
+                echo "::error::@miragon/pulse-$p@$version not visible on npm after 10 minutes"
                 exit 1
               fi
-              echo "waiting for @miragon-ai/$p@$version ..."
+              echo "waiting for @miragon/pulse-$p@$version ..."
               sleep 15
             done
           done
@@ -117,8 +117,8 @@ jobs:
           cp LICENSE mirror/LICENSE
           {
             echo "> [!NOTE]"
-            echo "> Read-only mirror of [\`templates/composed-server\`](https://github.com/Miragon/miragon-ai/tree/main/templates/composed-server)"
-            echo "> in [Miragon/miragon-ai](https://github.com/Miragon/miragon-ai), synced on every release (currently ${TAG})."
+            echo "> Read-only mirror of [\`templates/composed-server\`](https://github.com/Miragon/pulse/tree/main/templates/composed-server)"
+            echo "> in [Miragon/pulse](https://github.com/Miragon/pulse), synced on every release (currently ${TAG})."
             echo "> Please open issues and pull requests there."
             echo ""
             cat mirror/README.md
@@ -137,5 +137,5 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: sync from Miragon/miragon-ai ${TAG}"
+          git commit -m "chore: sync from Miragon/pulse ${TAG}"
           git push

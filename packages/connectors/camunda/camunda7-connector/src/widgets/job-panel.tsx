@@ -25,7 +25,7 @@ import {
   usePagedViewData,
   ViewDataState,
   WidgetShell,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { Check } from "lucide-react"
 import { CAMUNDA7_JOBS_DATA } from "../tool-names.js"
 import { useEngineAction, type EngineAction } from "./lib/engine-action.js"

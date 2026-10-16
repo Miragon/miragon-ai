@@ -128,12 +128,12 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-shell
 
       - if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @miragon-ai/mcp-server-camunda7 exec playwright install --with-deps --only-shell chromium
+        run: pnpm --fail-if-no-match --filter @miragon/pulse-mcp-server-camunda7 exec playwright install --with-deps --only-shell chromium
 
       - if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm --filter @miragon-ai/mcp-server-camunda7 exec playwright install-deps chromium
+        run: pnpm --fail-if-no-match --filter @miragon/pulse-mcp-server-camunda7 exec playwright install-deps chromium
 
-      - run: pnpm --filter @miragon-ai/mcp-server-camunda7 test:host
+      - run: pnpm --fail-if-no-match --filter @miragon/pulse-mcp-server-camunda7 test:host
 
       # Traces + failure screenshots of the failed scenarios.
       - if: failure()

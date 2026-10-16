@@ -80,8 +80,8 @@ describe("KometMark (app-level signature only)", () => {
   })
 
   it("stands alone as an image when labelled", () => {
-    render(<KometMark label="Miragon AI" />)
-    expect(screen.getByRole("img", { name: "Miragon AI" })).toBeTruthy()
+    render(<KometMark label="Miragon" />)
+    expect(screen.getByRole("img", { name: "Miragon" })).toBeTruthy()
   })
 })
 

@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest"
 import { collectLayoutWidgets } from "@miragon/mcp-toolkit-core"
-import { definition as camunda7Definition } from "@miragon-ai/camunda7-connector/definition"
-import { definition as analyticsDefinition } from "@miragon-ai/analytics-connector/definition"
+import { definition as camunda7Definition } from "@miragon/pulse-camunda7-connector/definition"
+import { definition as analyticsDefinition } from "@miragon/pulse-analytics-connector/definition"
 import { definition as notesDefinition } from "@acme/mcp-notes/definition"
-import { cockpitViews } from "@miragon-ai/camunda7-connector/widgets"
-import { shellDefinition } from "@miragon-ai/widget-shell/server"
+import { cockpitViews } from "@miragon/pulse-camunda7-connector/widgets"
+import { shellDefinition } from "@miragon/pulse-widget-shell/server"
 import {
   filterLayoutToWidgets,
   settingsLayout,
   SHELL_SETTINGS_PAGE_WIDGET,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { widgetRegistry } from "../src/ui/widget-registry.js"
 
 /**

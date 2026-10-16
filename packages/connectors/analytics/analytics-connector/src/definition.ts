@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { AppDefinition } from "@miragon/mcp-toolkit-core"
-import { PERIODS } from "@miragon-ai/analytics-client"
+import { PERIODS } from "@miragon/pulse-analytics-client"
 import { loadDashboardStep, loadFailureDashboardStep } from "./steps/index.js"
 import { builderAppTitle, builderText, fieldText } from "./builder-texts.js"
 

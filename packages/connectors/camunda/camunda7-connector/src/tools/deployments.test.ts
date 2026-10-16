@@ -7,7 +7,7 @@ import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type {
   CreateDeploymentResponse,
   MultiFormDeploymentDto,
-} from "@miragon-ai/camunda7-client/types"
+} from "@miragon/pulse-camunda7-client/types"
 import {
   createEngineRegistry,
   type EngineEntry,
@@ -138,7 +138,7 @@ async function engineView(request: RecordedRequest) {
 const DEPLOYMENT: CreateDeploymentResponse = {
   id: "dep-1",
   name: "orders",
-  source: "miragon-ai",
+  source: "pulse",
   deploymentTime: "2026-10-08T12:00:00.000+0200",
   tenantId: null,
   deployedProcessDefinitions: {
@@ -227,7 +227,7 @@ describe("camunda7_create_deployment on the wire (recording fake engine)", () =>
       deploymentName: "orders",
       enableDuplicateFiltering: true,
       deployChangedOnly: false,
-      deploymentSource: "miragon-ai",
+      deploymentSource: "pulse",
       tenantId: "tenant-a",
       resources: [{ name: "order.bpmn", content: ORDER_BPMN }],
     })
@@ -245,7 +245,7 @@ describe("camunda7_create_deployment on the wire (recording fake engine)", () =>
         "deployment-name": "orders",
         "enable-duplicate-filtering": "true",
         "deploy-changed-only": "false",
-        "deployment-source": "miragon-ai",
+        "deployment-source": "pulse",
         "tenant-id": "tenant-a",
       },
       resources: [{ filename: "order.bpmn", content: ORDER_BPMN }],

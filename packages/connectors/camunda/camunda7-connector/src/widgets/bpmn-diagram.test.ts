@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BPMN_OVERLAY_CSS, BPMN_TOKENS, cdVar } from "@miragon-ai/widget-shell/widgets"
+import { BPMN_OVERLAY_CSS, BPMN_TOKENS, cdVar } from "@miragon/pulse-widget-shell/widgets"
 import { applyHighlights, dedupe, HIGHLIGHT_COLORS } from "./bpmn-highlights.js"
 
 interface MarkerCall {

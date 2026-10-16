@@ -79,10 +79,10 @@ function renderLanding(
 
 // #322 U15: the landing is the product signature over a dense engine list.
 describe("LandingChooser", () => {
-  it("signs the app: Miragon AI over Operations Cockpit, with the Komet", () => {
+  it("signs the app: Pulse over Operations Cockpit, with the Komet", () => {
     renderLanding()
     expect(screen.getByRole("heading", { level: 1, name: "Operations Cockpit" })).toBeTruthy()
-    expect(screen.getByText("Miragon AI")).toBeTruthy()
+    expect(screen.getByText("Pulse")).toBeTruthy()
     expect(document.querySelector("[data-brand-mark='komet']")).toBeTruthy()
   })
 

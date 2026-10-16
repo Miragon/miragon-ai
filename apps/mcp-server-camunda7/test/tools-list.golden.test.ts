@@ -19,7 +19,7 @@ import { assertCharBudget, assertGolden, modelVisibleChars } from "./golden.js"
  * sees the exact wire change. A per-golden character budget (shrink-only via
  * `pnpm lint`) keeps the model-visible text from growing silently.
  *
- * Intended change: `GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test`,
+ * Intended change: `GOLDEN_UPDATE=1 pnpm --filter @miragon/pulse-mcp-server-camunda7 test`,
  * then commit the JSON diff (refused in CI).
  */
 

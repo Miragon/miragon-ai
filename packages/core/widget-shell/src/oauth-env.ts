@@ -20,7 +20,7 @@
  * that terminates auth in front of the server is invisible here — identity
  * reaches the server only through this OAuth.
  *
- * Server path only (`@miragon-ai/widget-shell/server`).
+ * Server path only (`@miragon/pulse-widget-shell/server`).
  */
 import type { OAuthProvider } from "mcp-use/oauth"
 import { oauthAuth0Provider } from "mcp-use/oauth/auth0"
@@ -58,7 +58,7 @@ const oauthConfigSchema = z.discriminatedUnion("provider", [keycloakSchema, auth
 export interface OAuthFromEnvOptions {
   /** Defaults to `process.env`. */
   env?: NodeJS.ProcessEnv
-  /** Log prefix, e.g. `miragon-ai`. */
+  /** Log prefix, e.g. `pulse`. */
   label?: string
 }
 

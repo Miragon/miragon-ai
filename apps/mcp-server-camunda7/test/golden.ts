@@ -21,7 +21,7 @@ import { expect } from "vitest"
 export const GOLDEN_DIR = path.join(import.meta.dirname, "__golden__")
 const BUDGETS_FILE = "char-budgets.json"
 
-const UPDATE_COMMAND = "GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test"
+const UPDATE_COMMAND = "GOLDEN_UPDATE=1 pnpm --filter @miragon/pulse-mcp-server-camunda7 test"
 
 /** The agent-facing instruction attached to every golden assertion. */
 export const GOLDEN_HINT =

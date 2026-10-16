@@ -1,6 +1,6 @@
 # Playground
 
-A self-contained demo environment for the Miragon AI Platform: a seeded
+A self-contained demo environment for Pulse: a seeded
 CIB seven engine with live traffic, the full metric-first analytics stack,
 and the MCP server on top. Run it locally with Docker Compose, or deploy
 the whole stack to Fly.io with one workflow.
@@ -34,6 +34,10 @@ pnpm dev                                                       # MCP server on :
   `--profile full` (containerized server on :8400), `--profile dev` (plain
   CIB seven image, no analytics), `--profile auth` (Keycloak on :8480 for
   trying `MCP_OAUTH` locally, see the commented block in `.env.example`)
+- The Compose project is `pulse`. A stack started before the rename still
+  runs as `miragon-ai` and holds the ports: stop it once with
+  `docker compose -p miragon-ai -f playground/docker/docker-compose.yml down`
+  (`down -v` drops its volumes as well).
 
 ## Deploy to Fly.io
 

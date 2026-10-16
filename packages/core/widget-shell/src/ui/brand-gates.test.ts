@@ -71,7 +71,7 @@ describe("the error words are rendered branch by branch", () => {
 
 /**
  * The kit's own copy and icons under the brand gates every widget package
- * runs (`@miragon-ai/widget-shell/testing`): the catalog text test over
+ * runs (`@miragon/pulse-widget-shell/testing`): the catalog text test over
  * every string the kit renders or posts to the chat, and the glyph gate
  * over the kit's widget code. brand-lint cannot see either (it reads
  * Markdown, not strings in `.ts`/`.tsx`).

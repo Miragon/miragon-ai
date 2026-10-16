@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "automation-mcp": {
+    "pulse": {
       "type": "http",
       "url": "http://localhost:8400/mcp"
     }

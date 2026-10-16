@@ -1,5 +1,5 @@
 {
-  "name": "@miragon-ai/analytics-client",
+  "name": "@miragon/pulse-analytics-client",
   "version": "0.20.0",
   "description": "Prometheus client and PromQL query functions for Camunda process analytics, with Zod schemas.",
   "license": "MIT",
@@ -11,14 +11,14 @@
     "metrics",
     "mcp"
   ],
-  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/connectors/analytics/analytics-client#readme",
-  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "homepage": "https://github.com/Miragon/pulse/tree/main/packages/connectors/analytics/analytics-client#readme",
+  "bugs": "https://github.com/Miragon/pulse/issues",
   "engines": {
     "node": ">=22"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "url": "git+https://github.com/Miragon/pulse.git",
     "directory": "packages/connectors/analytics/analytics-client"
   },
   "publishConfig": {

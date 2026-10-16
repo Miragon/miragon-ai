@@ -25,9 +25,14 @@ PACKAGES=(
 
 pkg_name() { node -p "require('$ROOT/packages/$1/package.json').name"; }
 
-# The template's committed @miragon-ai pins must match the workspace versions —
+# The template's committed @miragon/pulse-* pins must match the workspace versions:
 # release-please bumps both together via extra-files; a drifted pin means an
 # extra-files entry is missing and customers would install a stale release.
+# A dependency the check does not know would slip past it: one under the old
+# @miragon-ai scope (renamed in #415) or a @miragon/pulse-* name the workspace
+# does not publish would install whatever npm holds under that name (the old
+# scope's last release, 0.20.0) and stay green. Both fail, in every
+# package.json of the template (server, modules, root).
 # The toolkit family and mcp-use are checked too, but the pin SHAPE differs by
 # stanza: toolkit-core (and react/react-dom/zod) are ranged peerDependencies so
 # consumers dedupe them, while the exact devDependency copy stays pinned
@@ -66,15 +71,44 @@ for (const deps of [camunda7.dependencies, camunda7.devDependencies]) {
     if (tracked(name)) exactPins[name] = pin
   }
 }
+// Every package.json of the template, found on disk: a module added later is
+// checked without an edit here.
+const templateRoot = `${root}/templates/composed-server`
+const SKIP_DIRS = new Set(["node_modules", "dist", ".mcp-use"])
+const templateManifests = (dir, rel = "") =>
+  fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = rel ? `${rel}/${entry.name}` : entry.name
+    if (entry.isDirectory()) {
+      return SKIP_DIRS.has(entry.name) ? [] : templateManifests(`${dir}/${entry.name}`, path)
+    }
+    return entry.name === "package.json" ? [path] : []
+  })
+const manifests = templateManifests(templateRoot).sort()
+if (!manifests.includes("server/package.json")) {
+  console.error(`No server/package.json under ${templateRoot}: is the template still there?`)
+  process.exit(1)
+}
+const OLD_SCOPE = "@miragon-ai/"
+const PRODUCT_SCOPE = "@miragon/pulse-"
 const bad = []
-for (const file of ["server/package.json", "modules/mcp-notes/package.json"]) {
-  const pj = read(`${root}/templates/composed-server/${file}`)
+const unknown = []
+for (const file of manifests) {
+  const pj = read(`${templateRoot}/${file}`)
   for (const [stanza, pins] of [
     ["dependencies", exactPins],
     ["devDependencies", exactPins],
     ["peerDependencies", peerPins],
+    ["optionalDependencies", exactPins],
   ]) {
     for (const [name, pin] of Object.entries(pj[stanza] ?? {})) {
+      if (name.startsWith(OLD_SCOPE)) {
+        unknown.push(`${file} (${stanza}): ${name} is the old scope, renamed to ${PRODUCT_SCOPE}*`)
+        continue
+      }
+      if (name.startsWith(PRODUCT_SCOPE) && !(name in versions)) {
+        unknown.push(`${file} (${stanza}): ${name} is no package of this workspace`)
+        continue
+      }
       const expected = versions[name] ?? pins[name]
       if (expected && pin !== expected) {
         bad.push(`${file} (${stanza}): ${name} pinned ${pin}, workspace is ${expected}`)
@@ -82,14 +116,23 @@ for (const file of ["server/package.json", "modules/mcp-notes/package.json"]) {
     }
   }
 }
+if (unknown.length) {
+  console.error(
+    "Template depends on packages this workspace does not publish (pnpm would install " +
+      "whatever npm holds under that name; known: " +
+      Object.keys(versions).join(", ") +
+      "):\n" +
+      unknown.join("\n"),
+  )
+}
 if (bad.length) {
   console.error(
     "Template pins drifted from the workspace versions (missing release-please extra-files " +
       "entry, or a toolkit/mcp-use bump that skipped the template?):\n" +
       bad.join("\n"),
   )
-  process.exit(1)
 }
+if (unknown.length || bad.length) process.exit(1)
 EOF
 
 # Build what the tarballs ship (files: dist [+ src]).
@@ -106,7 +149,7 @@ done
 rsync -a --exclude node_modules --exclude dist --exclude .mcp-use "$TEMPLATE/" "$WORK/"
 
 # Overrides beat both the template's direct pins and the transitive
-# @miragon-ai/* ranges inside the packed packages.
+# @miragon/pulse-* ranges inside the packed packages.
 {
   echo ""
   echo "overrides:"

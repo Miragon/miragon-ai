@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test"
-import { SERVED_FONT_PATH } from "@miragon-ai/widget-shell/server"
+import { SERVED_FONT_PATH } from "@miragon/pulse-widget-shell/server"
 import { BROKEN_ENGINE, ENGINE_CONTROL_ENV, HEALTHY_ENGINE } from "./engines.js"
 
 /**
@@ -34,7 +34,7 @@ const RECOVERY_GRACE_MS = 2_500
 const OUTLAST_GRACE_MS = RECOVERY_GRACE_MS + 1_000
 const TOOLKIT_LIFECYCLE_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/176"
 const TOOLKIT_HOST_CONTEXT_ISSUE = "https://github.com/Miragon/mcp-toolkit/issues/178"
-const HOST_THEME_ISSUE = "https://github.com/Miragon/miragon-ai/issues/339"
+const HOST_THEME_ISSUE = "https://github.com/Miragon/pulse/issues/339"
 /** The toolkit's English view chrome (its en catalog, toolkit 2.8). */
 const CHROME = {
   loading: "Loading view…",

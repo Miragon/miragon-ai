@@ -1,11 +1,11 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
-import type { ClusterCompareKpi, ClusterCompareResult } from "@miragon-ai/analytics-client"
+import type { ClusterCompareKpi, ClusterCompareResult } from "@miragon/pulse-analytics-client"
 import {
   HandOffButton,
   ViewMeta,
   formatNumber,
   formatTimestamp,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { useT, type T } from "../messages/use-t.js"
 import {
   ComparisonCard,

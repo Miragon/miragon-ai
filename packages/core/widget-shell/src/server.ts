@@ -1,5 +1,5 @@
 /**
- * Server-side surface of the widget shell (`@miragon-ai/widget-shell/server`):
+ * Server-side surface of the widget shell (`@miragon/pulse-widget-shell/server`):
  * the one import path for module tools and composition roots — the eager view
  * builders for `*_show_*` tools (the toolkit core's, re-typed below), the
  * shared error wrapper for raw `server.tool()` registrations, module

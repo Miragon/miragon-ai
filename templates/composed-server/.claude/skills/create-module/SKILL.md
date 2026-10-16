@@ -10,13 +10,13 @@ A module is a workspace package that exports a module-definition object
 conforming **structurally** to the server's port (the `ModuleDefinition` type
 in `server/src/setup.ts` — your module never imports the server, the server
 never reaches into your module). Modules are peers: they never import each other; anything shared goes
-through `@miragon-ai/widget-shell` or the app-wired `SharedResources`.
+through `@miragon/pulse-widget-shell` or the app-wired `SharedResources`.
 
 **Reference implementation: `modules/mcp-notes`.** Copy it rather than
 inventing a new shape — every step below points at the file that shows the
 pattern. For patterns the notes module doesn't cover (toolsets, settings,
 paged lists), the published Miragon modules ship their sources under
-`node_modules/@miragon-ai/{camunda7,analytics}-connector/src/`.
+`node_modules/@miragon/pulse-{camunda7,analytics}-connector/src/`.
 
 ## Step 1 — scaffold the package
 
@@ -104,7 +104,7 @@ on the module definition — the composition resolves ONE concrete toolset per
 boot, logs it, and hands it to `createPlugin` as `config.toolset`:
 
 ```ts
-import { createToolsetVocabulary } from "@miragon-ai/widget-shell/server"
+import { createToolsetVocabulary } from "@miragon/pulse-widget-shell/server"
 
 export const MY_TOOLSETS = ["read-only", "standard"] as const
 export const myToolsets = createToolsetVocabulary("<name>", MY_TOOLSETS, "read-only", {
@@ -129,7 +129,7 @@ export const myToolsets = createToolsetVocabulary("<name>", MY_TOOLSETS, "read-o
   — never a `toolset === "read-only"` compare (fails open for every name you
   add later) or a `toolset === undefined` shortcut (an absent toolset is the
   floor, not "everything"). Reference:
-  `node_modules/@miragon-ai/analytics-connector/src/toolsets.ts`.
+  `node_modules/@miragon/pulse-analytics-connector/src/toolsets.ts`.
 
 ## Step 6 — wire the module into the server
 

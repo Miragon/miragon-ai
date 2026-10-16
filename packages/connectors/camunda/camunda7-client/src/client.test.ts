@@ -1,5 +1,17 @@
+import { readFileSync } from "node:fs"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createCamunda7Client } from "./client.js"
+
+/**
+ * The User-Agent the engine logs: the package's name and the version
+ * release-please keeps in `package.json` (and bumps on the annotated line in
+ * `hey-api.ts`), so a stale copy fails here instead of in an operator's
+ * access-log filter.
+ */
+const { version } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string }
+const USER_AGENT = `@miragon/pulse-camunda7-client/${version}`
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -147,7 +159,7 @@ describe("createCamunda7Client", () => {
     })
     await client.get({ url: "/engine", fetch: fetchStub })
     expect(seen?.get("Accept")).toBe("application/json")
-    expect(seen?.get("User-Agent")).toContain("@miragon-ai/camunda7-client")
+    expect(seen?.get("User-Agent")).toBe(USER_AGENT)
   })
 
   it("always sends the JSON content negotiation headers and identifies itself", () => {
@@ -155,7 +167,7 @@ describe("createCamunda7Client", () => {
     const h = headers(client)
     expect(h.get("Content-Type")).toBe("application/json")
     expect(h.get("Accept")).toBe("application/json")
-    expect(h.get("User-Agent")).toContain("@miragon-ai/camunda7-client")
+    expect(h.get("User-Agent")).toBe(USER_AGENT)
   })
 
   it("normalizes a trailing slash off the base URL", () => {

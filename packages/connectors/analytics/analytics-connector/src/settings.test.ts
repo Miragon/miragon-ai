@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { parseToolResult } from "@miragon/mcp-toolkit-ui"
 import type { MCPServer } from "mcp-use"
-import { createInMemoryProfileStore, runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import {
+  createInMemoryProfileStore,
+  runWithMcpRequestInfo,
+} from "@miragon/pulse-widget-shell/server"
 import {
   analyticsSettingsSaveInput,
   analyticsSettingsSchema,

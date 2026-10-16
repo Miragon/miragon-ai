@@ -2,7 +2,7 @@ import type {
   AnalyticsDashboardData,
   EngineLandscapeResult,
   FailureDashboardData,
-} from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-analytics-client"
 import type { NameLookup } from "./bpmn-name-lookup.js"
 import type { Named } from "./bpmn-names.js"
 

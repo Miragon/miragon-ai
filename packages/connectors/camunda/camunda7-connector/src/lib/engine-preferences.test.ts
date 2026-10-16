@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { Client } from "@miragon-ai/camunda7-client"
-import { createInMemoryProfileStore } from "@miragon-ai/widget-shell/server"
+import type { Client } from "@miragon/pulse-camunda7-client"
+import { createInMemoryProfileStore } from "@miragon/pulse-widget-shell/server"
 import { cockpitEngineScope, EngineNotAvailableError } from "./engine-preferences.js"
 import { createEngineRegistry, type EngineEntry } from "./resolve-engine.js"
 

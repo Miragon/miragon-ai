@@ -4,7 +4,7 @@
  * on regex over machine-generated XML, which is reliable enough for the
  * data shapes we need (activity counts). Display NAMES are not read here:
  * every module reads them by the one rule, the kit's `readBpmnNames` /
- * `parseBpmnNames` (`@miragon-ai/widget-shell/server`), so camunda7 and
+ * `parseBpmnNames` (`@miragon/pulse-widget-shell/server`), so camunda7 and
  * analytics never name the same process or activity differently.
  */
 

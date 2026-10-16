@@ -140,7 +140,7 @@ describe("sparkle gate (invariant 6, CI U4) in every widget tree", () => {
 describe("hand-off gate (invariant 6, CI U4) in both connectors' widgets", () => {
   const isHandOffHit = (m) => m.includes("HandOffButton") && m.includes("not AskAiButton")
   const HAND_OFF_PATHS = [`${C7}/widgets/__probe__.tsx`, `${AN}/widgets/__probe__.tsx`]
-  const KIT = '"@miragon-ai/widget-shell/widgets"'
+  const KIT = '"@miragon/pulse-widget-shell/widgets"'
 
   it("bans AskAiButton in every spelling: import, renamed import, element, namespace", async () => {
     const cases = [

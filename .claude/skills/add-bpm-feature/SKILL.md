@@ -41,13 +41,13 @@ Every field gets a `.describe()`. A list/query tool pages with the shared params
 hand-rolled `maxResults`: `src/tools/list-tools.test.ts` treats every registrar tool that
 takes `maxResults` as a list and fails it without the cap or the envelope (Step 2). The
 REST calls themselves use the generated SDK (imported from
-`@miragon-ai/camunda7-client/sdk`) — if the endpoint is missing there, the OpenAPI spec
+`@miragon/pulse-camunda7-client/sdk`) — if the endpoint is missing there, the OpenAPI spec
 changed and you need `pnpm generate`, not a hand-written fetch.
 
 ### Parameter naming guide
 
 Inputs are STRICT (the registrar runs with `strictInput: true`; raw `server.tool()`
-registrations use `strictToolInput(...)` from `@miragon-ai/widget-shell/server`): an
+registrations use `strictToolInput(...)` from `@miragon/pulse-widget-shell/server`): an
 unknown key is a tool error listing the valid keys. So one name per concept across every
 tool — a model that learned `assignee` on one tool must not be refused it on the next.
 Renames ship without aliases.
@@ -81,10 +81,10 @@ Add the tool in `packages/connectors/camunda/camunda7-connector/src/tools/<domai
 `camunda7_list_process_instances` from `src/tools/process-instances.ts`:
 
 ```ts
-import { listProcessInstancesInput } from "@miragon-ai/camunda7-client/schemas"
+import { listProcessInstancesInput } from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { complementaryFlags, engineLike, engineSorting } from "@miragon-ai/camunda7-client"
-import { getProcessInstances, getProcessInstancesCount } from "@miragon-ai/camunda7-client/sdk"
+import { complementaryFlags, engineLike, engineSorting } from "@miragon/pulse-camunda7-client"
+import { getProcessInstances, getProcessInstancesCount } from "@miragon/pulse-camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
@@ -179,7 +179,7 @@ Only when you created a new `src/tools/<domain>.ts`: add
 ## Step 4 — widget path (only for UI features)
 
 Widget components live in `packages/connectors/camunda/camunda7-connector/src/widgets/` and receive their data as
-a `data` prop. Compose them from the shared kit `@miragon-ai/widget-shell/widgets` and the
+a `data` prop. Compose them from the shared kit `@miragon/pulse-widget-shell/widgets` and the
 toolkit `@miragon/mcp-toolkit-ui` (its components, tone maps and `cn` come from the toolkit
 itself; widget-shell neither forks nor re-exports them) — never re-inline these primitives:
 
@@ -239,7 +239,7 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   environment as a text chip, "PROD", and the engine through the kit's `ViewMeta`; inside
   the cockpit, whose head names the engine, only the time); a write confirmation adds
   `engineTargetLines(t, engineId, useEngineEnvironment(engineId))`. Names before ids: the
-  kit's `NamedId` (`@miragon-ai/widget-shell/widgets`: an activity's or process's name, the
+  kit's `NamedId` (`@miragon/pulse-widget-shell/widgets`: an activity's or process's name, the
   id a quiet mono line; the same look analytics uses), `InstanceLabel`
   (`widgets/lib/identity.tsx`: the business key, the UUID a copyable `IdText` chip; the
   words of `instanceName`); a drill passes the target's `label` so its breadcrumb reads
@@ -254,7 +254,7 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   `instanceTargetLines` (business key, then short id)
 - Status: a `ToneVariant` (`danger`/`warning`/`success`/`info`/`neutral`; open incident or
   failed job without retries = `danger` — `severityTone`/`countTone` from
-  `@miragon-ai/widget-shell/widgets` is the one ladder for incident and job counts in every
+  `@miragon/pulse-widget-shell/widgets` is the one ladder for incident and job counts in every
   module, a count without a state stays neutral —, retries left or degraded = `warning`) shown via
   the toolkit's `StatusBadge` (tone and words required)/`CountPill`/`KpiCell.tone` or its
   `TONE_DOT`/`TONE_BORDER`/`TONE_ICON`/`TONE_TINT`/`TONE_SOFT`/`TONE_INK` maps (a tone
@@ -265,7 +265,7 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   devDependency `lucide-react` `0.562.0`, see CLAUDE.md invariant 6), never a Unicode glyph
   or emoji, at 16 px (`dense` in rows; `scanIconSizes` allows 16 and 24 only); a chat
   hand-off is the kit's `<HandOffButton action="explainError" prompt={ask(…)} />`
-  (`@miragon-ai/widget-shell/widgets`: the product's one table of functions, each with its
+  (`@miragon/pulse-widget-shell/widgets`: the product's one table of functions, each with its
   Lucide icon and a label that names the chat, "Fehler im Chat erklären" / "Explain error in
   chat", the same in every module; `AskAiButton` is banned in connector widgets, so a new
   function gets its entry and both labels in the kit), placed after the deterministic action; `OpenInCockpitLink` gets `vendor={data.engineVendor}` (the
@@ -276,7 +276,7 @@ itself; widget-shell neither forks nor re-exports them) — never re-inline thes
   the noun's number (`countOf` from `messages/plural.ts`). The gates: `catalogTextFindings`
   over every catalog and en/de key parity (`messages/catalog-text.test.ts`), the glossary
   (`messages/glossary.test.ts`), `scanGlyphs` over all of `src` and `scanColors` over
-  `src/widgets` (`src/brand-gates.test.ts`, `@miragon-ai/widget-shell/testing`)
+  `src/widgets` (`src/brand-gates.test.ts`, `@miragon/pulse-widget-shell/testing`)
 - BPMN: viewer lifecycle and the fixed light canvas via `useBpmnViewer` (the container
   is a forced-light island, `data-theme-mode="light"`, on the paper token) +
   `BpmnZoomControls` (light in every theme, Lucide). The frame height comes from the
@@ -320,7 +320,7 @@ somewhere**:
 
 1. `src/widgets/registry.ts` — map the component to its dataType:
    `"camunda7:my-widget": adaptDataWidget(MyWidget, "camunda7:myData")`
-   (`adaptDataWidget` comes from `@miragon-ai/widget-shell/ui`).
+   (`adaptDataWidget` comes from `@miragon/pulse-widget-shell/ui`).
 2. `src/definition.ts` — add the widget entry (`id`, `requires`, `size`, optional
    `propsSchema`) to the `widgets` array, with `...builderText("widget.<slug>")` (the view
    builder's title and summary for people: `builder.widget.<slug>.title|summary` in
@@ -346,12 +346,12 @@ Then register the widget tool in its area's file under `src/widget-tools/` (`coc
 wires them; these files are the documented exception that uses `server.tool()` directly:
 
 - Every widget-path tool (show tool AND feed) declares
-  `inputSchema: strictToolInput({ … })` (from `@miragon-ai/widget-shell/server`) — never
+  `inputSchema: strictToolInput({ … })` (from `@miragon/pulse-widget-shell/server`) — never
   a bare `z.object`, which strips an unknown key silently;
   `apps/mcp-server-camunda7/test/strict-input.e2e.test.ts` refuses any module tool that
   accepts one.
 - `show_*` tools: spread `...showToolBinding(TOOL_NAME_CONST, "Title")` (from
-  `@miragon-ai/widget-shell/server`) into the definition and use `inputSchema:` (mcp-use 2
+  `@miragon/pulse-widget-shell/server`) into the definition and use `inputSchema:` (mcp-use 2
   field name) — the helper binds a native mcp-use view named after the tool
   (`view: { name }`, mcp-use then emits all `_meta.ui.*` keys and the
   `ui://views/<tool>.html` resource itself), adds the required passthrough
@@ -360,15 +360,15 @@ wires them; these files are the documented exception that uses `server.tool()` d
   `await resolveEngine(args.engine, registry)` — it already returns `baseUrl`/`cockpitUrl`;
   never fish them out of `registry.engines`. Return
   `buildSingleWidgetView({ widget, app: "camunda7", dataType, data, title, summary })` or
-  `buildComposedView(...)` (both from `@miragon-ai/widget-shell/server`). The
+  `buildComposedView(...)` (both from `@miragon/pulse-widget-shell/server`). The
   `summary` is the model-facing text channel (1-2 sentences, key figures, no raw
   data) — the full payload travels only in `structuredContent`.
-- `*_data` feeds: spread `...appOnly` (from `@miragon-ai/widget-shell/server` — the native
+- `*_data` feeds: spread `...appOnly` (from `@miragon/pulse-widget-shell/server` — the native
   `visibility: "app"` field, emitted as SEP-1865 `_meta.ui.visibility: ["app"]`, plus
   `openai/widgetAccessible`; **no** view binding) — return `buildDataFeedResult(data)` (from
-  `@miragon-ai/widget-shell/server`, aliased `rawData` in `src/widget-tools/`) so the
+  `@miragon/pulse-widget-shell/server`, aliased `rawData` in `src/widget-tools/`) so the
   in-widget `callTool()` gets JSON back instead of the host rendering a new widget.
-  Wrap every handler in `withToolErrors` (from `@miragon-ai/widget-shell/server`).
+  Wrap every handler in `withToolErrors` (from `@miragon/pulse-widget-shell/server`).
 - Shared data paths: every number a view shows comes from ONE builder in `src/data/`
   that its show tool, its `*_data` feed AND its pipeline step call — never fork one.
   Definition lookups (id parsers, the key lookup, the per-KEY fold of the per-version
@@ -398,7 +398,7 @@ wires them; these files are the documented exception that uses `server.tool()` d
   a process definition KEY spans every deployed version (key-scoped `/count`, statistics
   summed per key); only a diagram is one version, and it is labelled. Engine timestamps
   compare by instant (`engineDateMillis`/`latestEngineDate`/`earliestEngineDate` from
-  `@miragon-ai/camunda7-client`), never as strings. A new builder adds its case to the
+  `@miragon/pulse-camunda7-client`), never as strings. A new builder adds its case to the
   rejection table in `src/data/honest-numbers.test.ts` — the table fails without it. The
   table breaks EVERY read the healthy build makes (method + path + query names), so a
   case declares only its enrichment reads; any other read whose failure is swallowed fails.
@@ -452,12 +452,12 @@ businessKey))` …; add an entry and its `feedback.*` keys in `messages/{en,de}.
 ```bash
 pnpm build && pnpm typecheck && pnpm test && pnpm lint
 # for widget/shell changes additionally:
-pnpm --filter @miragon-ai/mcp-server-camunda7 test:host
+pnpm --filter @miragon/pulse-mcp-server-camunda7 test:host
 ```
 
 A new or changed tool changes the wire surface: add its name to
 `apps/mcp-server-camunda7/test/expected-tools.ts`, then refresh the per-toolset goldens with
-`GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test` and commit the
+`GOLDEN_UPDATE=1 pnpm --filter @miragon/pulse-mcp-server-camunda7 test` and commit the
 `test/__golden__/` diff (descriptions and schemas are what the model reads — review them).
 If `char-budgets.json` grew, `pnpm lint` fails until the commit carries a
 `Ratchet-Exception: <why the model must read more>` trailer — trim wording first.

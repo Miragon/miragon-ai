@@ -2,7 +2,7 @@
 /**
  * Naming-convention gate: the dependency-cruiser rules key on layout + naming
  * (`packages/connectors/<family>/<name>-connector|-client`, npm
- * `@miragon-ai/<basename>`; foundation packages under `packages/core/`), so a
+ * `@miragon/pulse-<basename>`; foundation packages under `packages/core/`), so a
  * package at the right depth with the WRONG suffix would silently fall out of
  * the peer-isolation/client rules while still being built and published. This
  * check closes that fail-open: every directory the workspace globs pick up
@@ -41,9 +41,9 @@ for (const dir of childDirs("packages/connectors").flatMap(childDirs)) {
     )
   }
   const name = packageName(dir)
-  if (name !== undefined && name !== `@miragon-ai/${base}`) {
+  if (name !== undefined && name !== `@miragon/pulse-${base}`) {
     errors.push(
-      `${dir}: npm name "${name}" must be @miragon-ai/${base} ` +
+      `${dir}: npm name "${name}" must be @miragon/pulse-${base} ` +
         `(directory and npm name carry the same convention the rules match on)`,
     )
   }
@@ -53,8 +53,8 @@ for (const dir of childDirs("packages/connectors").flatMap(childDirs)) {
 for (const dir of childDirs("packages/core")) {
   const base = basename(dir)
   const name = packageName(dir)
-  if (name !== undefined && name !== `@miragon-ai/${base}`) {
-    errors.push(`${dir}: npm name "${name}" must be @miragon-ai/${base}`)
+  if (name !== undefined && name !== `@miragon/pulse-${base}`) {
+    errors.push(`${dir}: npm name "${name}" must be @miragon/pulse-${base}`)
   }
 }
 

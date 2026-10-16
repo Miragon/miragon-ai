@@ -8,8 +8,8 @@ import {
   Td,
   WidgetShell,
   type ListTableColumn,
-} from "@miragon-ai/widget-shell/widgets"
-import type { ErrorPatternItem, FailureDashboardData } from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-widget-shell/widgets"
+import type { ErrorPatternItem, FailureDashboardData } from "@miragon/pulse-analytics-client"
 import { useFailureDashboardSelfFetch, type FailureScopeProps, type FailureView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { parseToolResult } from "@miragon/mcp-toolkit-ui"
 import type { MCPServer } from "mcp-use"
-import type { PrometheusClient } from "@miragon-ai/analytics-client"
+import type { PrometheusClient } from "@miragon/pulse-analytics-client"
 import { registerWidgetTools } from "./widget-tools.js"
 import { createEngineScope } from "./engine-ids.js"
 import type { ProfileSource } from "./server-locale.js"

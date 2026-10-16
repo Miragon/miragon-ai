@@ -22,7 +22,7 @@ const toolsetsOf = (composed: Awaited<ReturnType<typeof createApp>>) =>
 
 /**
  * `MCP_OAUTH` reaches this server through the SAME shared helper the stock
- * server uses (`oauthFromEnv`, `@miragon-ai/widget-shell/server`): it is the
+ * server uses (`oauthFromEnv`, `@miragon/pulse-widget-shell/server`): it is the
  * only caller identity — per-user settings exist only with it — and it raises
  * the no-suffix toolsets above the read-only floor.
  */

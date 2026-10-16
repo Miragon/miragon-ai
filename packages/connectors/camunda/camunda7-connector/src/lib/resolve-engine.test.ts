@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import type { Client } from "@miragon-ai/camunda7-client"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import {
   createEngineRegistry,
   resolveEngine,

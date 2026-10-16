@@ -3,7 +3,7 @@ import {
   parseModuleSlice,
   withoutDefaults,
   type ProfileRecord,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 
 /** Slice key under `profile.modules.<module>` — this module's name. */
 export const CAMUNDA7_MODULE_KEY = "camunda7"
@@ -12,7 +12,7 @@ export const CAMUNDA7_MODULE_KEY = "camunda7"
  * The camunda7-owned slice of the shared profile record
  * (`profile.modules.camunda7`) — everything this connector persists per user.
  * The cross-module preference (`language`) lives on the record itself and
- * belongs to the shell (`shell_save_settings`, `@miragon-ai/widget-shell`);
+ * belongs to the shell (`shell_save_settings`, `@miragon/pulse-widget-shell`);
  * this module validates its slice fail-soft on read and writes it through
  * its own save tool, mirroring analytics' settings slice.
  */
@@ -83,7 +83,7 @@ export function defaultUserProfile(): UserProfile {
  * slice fields (the UI language is the shell's, `shell_save_settings`).
  * Default-FREE on purpose — zod 4 re-applies `.default()`s through
  * `.partial()`, materializing omitted fields into silent resets (see
- * `withoutDefaults` in `@miragon-ai/widget-shell/server`). Deliberately
+ * `withoutDefaults` in `@miragon/pulse-widget-shell/server`). Deliberately
  * WITHOUT a `modules` passthrough: foreign module slices are written through
  * their owning module's save tool.
  */

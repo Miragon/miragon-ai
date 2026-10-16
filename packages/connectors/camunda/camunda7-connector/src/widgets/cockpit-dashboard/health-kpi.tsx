@@ -3,7 +3,7 @@ import {
   ViewDataState,
   WidgetShell,
   formatNumber,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { KpiGrid, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { CockpitDashboardData } from "../../view-models.js"

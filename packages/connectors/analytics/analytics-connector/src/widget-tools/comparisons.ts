@@ -5,8 +5,8 @@ import {
   showToolBinding,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
-import { queries, schemas, withCallerSignal } from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-widget-shell/server"
+import { queries, schemas, withCallerSignal } from "@miragon/pulse-analytics-client"
 import { ANALYTICS_ENGINE_LANDSCAPE_DATA } from "../tool-names.js"
 import { localizeViewFor } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"

@@ -1,4 +1,4 @@
-import { callerCacheKey, parseBpmnNames } from "@miragon-ai/widget-shell/server"
+import { callerCacheKey, parseBpmnNames } from "@miragon/pulse-widget-shell/server"
 import type { NameIndex, ProcessNames } from "./bpmn-names.js"
 
 /**

@@ -4,7 +4,7 @@ import { cibsevenProvider } from "../providers/index.js"
 // The instance-detail builder with a mocked SDK: the form wiring and the
 // enrichment fallbacks. Its primary reads failing (engine down, unknown id)
 // is the rejection table in `honest-numbers.test.ts`.
-vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
+vi.mock("@miragon/pulse-camunda7-client/sdk", () => ({
   getActivityInstanceTree: vi.fn(),
   getIncidents: vi.fn(),
   getIncidentsCount: vi.fn(),
@@ -29,7 +29,7 @@ import {
   getProcessInstanceVariables,
   getTasks,
   getTasksCount,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { buildTaskFormSchema } from "../tools/task-form.js"
 
 import { buildInstanceDetailData } from "./instance-detail-data.js"

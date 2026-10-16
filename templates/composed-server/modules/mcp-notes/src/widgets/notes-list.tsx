@@ -7,7 +7,7 @@ import {
   Td,
   WidgetShell,
   formatTimestamp,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { NOTES_LIST_DATA } from "../tool-names.js"
 import type { NotesListData } from "../notes-store.js"
 

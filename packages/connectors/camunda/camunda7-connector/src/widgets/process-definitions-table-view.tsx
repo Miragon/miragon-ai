@@ -7,7 +7,7 @@ import {
   countTone,
   formatNumber,
   type ListTableColumn,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { CountPill, TONE_DOT, cn, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 import { useT } from "../messages/use-t.js"
 

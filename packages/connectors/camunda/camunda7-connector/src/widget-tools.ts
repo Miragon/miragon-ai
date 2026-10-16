@@ -3,7 +3,7 @@ import { DEFAULT_HEALTH_THRESHOLDS, type EngineHealthThresholds } from "./data/h
 import type { EngineRegistry } from "./lib/resolve-engine.js"
 import { engineParamShapeFor } from "./lib/with-engine.js"
 import type { Camunda7Toolset } from "./lib/toolsets.js"
-import { createInMemoryProfileStore, type ProfileStore } from "@miragon-ai/widget-shell/server"
+import { createInMemoryProfileStore, type ProfileStore } from "@miragon/pulse-widget-shell/server"
 import type { WidgetToolsContext } from "./widget-tools/shared.js"
 import { registerCockpitWidgetTools } from "./widget-tools/cockpit.js"
 import { registerInstanceWidgetTools } from "./widget-tools/instances.js"

@@ -4,13 +4,13 @@
   "registrationAllowed": false,
   "clients": [
     {
-      "clientId": "miragon-ai-server",
-      "name": "Automation MCP server (pre-registered client)",
+      "clientId": "pulse-server",
+      "name": "Pulse server (pre-registered client)",
       "description": "Pre-registered client for MCP clients without DCR (claude mcp add --client-id ... --client-secret ... / claude.ai connector advanced OAuth). Redirect URIs: claude.ai + loopback on any port (demo-grade wildcard).",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
-      "secret": "miragon-ai-secret",
+      "secret": "pulse-secret",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
@@ -30,7 +30,7 @@
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
           "config": {
-            "included.client.audience": "miragon-ai-server",
+            "included.client.audience": "pulse-server",
             "access.token.claim": "true",
             "id.token.claim": "false"
           }

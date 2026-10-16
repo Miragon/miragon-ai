@@ -1,9 +1,9 @@
 {
-  "name": "@miragon-ai/docs",
+  "name": "@miragon/pulse-docs",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "description": "VitePress site with the Pulse docs, published to https://miragon.github.io/miragon-ai/, built with the Miragon docs kit. The pages are the Markdown files next to this package.json.",
+  "description": "VitePress site with the Pulse docs, published to https://miragon.github.io/pulse/, built with the Miragon docs kit. The pages are the Markdown files next to this package.json.",
   "type": "module",
   "scripts": {
     "dev": "vitepress dev",

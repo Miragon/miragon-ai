@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Section } from "@miragon-ai/widget-shell/widgets"
+import { Section } from "@miragon/pulse-widget-shell/widgets"
 
 import { SectionHeading } from "@miragon/mcp-toolkit-ui"
 import type { InstanceDetailData, OpenUserTask } from "../../view-models.js"

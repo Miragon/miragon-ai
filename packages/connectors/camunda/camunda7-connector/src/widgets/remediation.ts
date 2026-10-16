@@ -7,7 +7,7 @@
  * in the module's server instructions (`instructions.ts`), gated by the same
  * toolset. A widget never one-clicks a destructive batch.
  */
-import type { ToolSurface } from "@miragon-ai/widget-shell/widgets"
+import type { ToolSurface } from "@miragon/pulse-widget-shell/widgets"
 import type { HandOff } from "./lib/hand-off.js"
 
 import type { ClusterCounts } from "../view-models.js"

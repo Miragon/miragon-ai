@@ -1,4 +1,4 @@
-import { ViewDataState, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { ViewDataState, WidgetShell, formatNumber } from "@miragon/pulse-widget-shell/widgets"
 import { KpiGrid, type KpiCell } from "@miragon/mcp-toolkit-ui"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { useNav } from "../navigation.js"

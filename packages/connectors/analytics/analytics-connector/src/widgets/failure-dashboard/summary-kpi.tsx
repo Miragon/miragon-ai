@@ -3,8 +3,8 @@ import {
   ViewMeta,
   WidgetShell,
   formatNumber,
-} from "@miragon-ai/widget-shell/widgets"
-import type { FailureDashboardData } from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-widget-shell/widgets"
+import type { FailureDashboardData } from "@miragon/pulse-analytics-client"
 import { KpiGrid, KpiGridSkeleton, WidgetHeader, cn, type KpiCell } from "@miragon/mcp-toolkit-ui"
 import { useFailureDashboardSelfFetch, type FailureScopeProps, type FailureView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"

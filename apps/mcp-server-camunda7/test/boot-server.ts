@@ -7,7 +7,7 @@ import {
   createInMemoryProfileStore,
   type ComposedServer,
   type RunningServer,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { createApp } from "../src/app.js"
 import type { RuntimeBackends } from "../src/persistence/index.js"
 

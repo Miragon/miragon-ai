@@ -1,10 +1,14 @@
-import type { ComposableModule, ProfileSource, ProfileStore } from "@miragon-ai/widget-shell/server"
-import type { FetchBpmnXml } from "@miragon-ai/analytics-connector"
+import type {
+  ComposableModule,
+  ProfileSource,
+  ProfileStore,
+} from "@miragon/pulse-widget-shell/server"
+import type { FetchBpmnXml } from "@miragon/pulse-analytics-connector"
 
 /**
  * Compile-time proof that the concrete profile store this app wires still
  * satisfies the narrow port foreign modules consume
- * (`@miragon-ai/widget-shell/server`). Modules take the store structurally and
+ * (`@miragon/pulse-widget-shell/server`). Modules take the store structurally and
  * never import each other, so nothing else would catch a `ProfileStore` change
  * that breaks e.g. the analytics settings section — it would surface as a
  * runtime failure in a module the change never touched. Both types live in
@@ -50,7 +54,7 @@ export interface SharedResources {
 /**
  * The port every mounted module satisfies (structurally — modules do not
  * import this file). The port SHAPE (`ComposableModule`) and the selection
- * machinery live in `@miragon-ai/widget-shell/server`; what stays app-owned
+ * machinery live in `@miragon/pulse-widget-shell/server`; what stays app-owned
  * is this instantiation with THIS app's `SharedResources` plus the module
  * list and cross-module wiring in `setup.ts`. A module brings its whole
  * config surface itself: schema validation inside `createPlugin`, env

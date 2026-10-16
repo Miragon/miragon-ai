@@ -7,8 +7,8 @@ import {
   runWithMcpRequestInfo,
   type McpRequestInfo,
   type ProfileStore,
-} from "@miragon-ai/widget-shell/server"
-import type { Client } from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-widget-shell/server"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import type { MCPServer } from "mcp-use"
 import { registerEngineTools } from "./engines.js"
 import { registerUserProfileTools } from "./user-profile.js"

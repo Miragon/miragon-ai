@@ -5,7 +5,7 @@ import {
   formatNumber,
   HandOffButton,
   Icon,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { ArrowRight } from "lucide-react"
 import { CountPill, FOCUS_RING, SectionHeading, TONE_DOT, cn } from "@miragon/mcp-toolkit-ui"
 import type { CockpitDashboardData } from "../../view-models.js"
