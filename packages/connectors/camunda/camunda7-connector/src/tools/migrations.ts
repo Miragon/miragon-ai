@@ -1,11 +1,14 @@
 import {
   createMigrationPlanInput,
   migrateProcessInstancesAsyncInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { queuedBatch, type Client } from "@miragon-ai/camunda7-client"
-import { generateMigrationPlan, executeMigrationPlanAsync } from "@miragon-ai/camunda7-client/sdk"
-import type { MigrationInstructionDto } from "@miragon-ai/camunda7-client/types"
+import { queuedBatch, type Client } from "@miragon/pulse-camunda7-client"
+import {
+  generateMigrationPlan,
+  executeMigrationPlanAsync,
+} from "@miragon/pulse-camunda7-client/sdk"
+import type { MigrationInstructionDto } from "@miragon/pulse-camunda7-client/types"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 

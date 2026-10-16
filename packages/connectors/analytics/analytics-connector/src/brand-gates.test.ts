@@ -6,7 +6,7 @@ import {
   scanGlyphs,
   scanIconSizes,
   scanTypeScale,
-} from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-widget-shell/testing"
 import { deAskAi } from "./messages/de.ask-ai.js"
 import { deBuilder } from "./messages/de.builder.js"
 import { deServer } from "./messages/de.server.js"
@@ -18,7 +18,7 @@ import { enSweep } from "./messages/en.sweep.js"
 
 /**
  * The analytics module under the brand gates every widget package runs
- * (`@miragon-ai/widget-shell/testing`, CLAUDE.md invariant 6): brand-lint
+ * (`@miragon/pulse-widget-shell/testing`, CLAUDE.md invariant 6): brand-lint
  * reads Markdown, not the strings inside `.ts`/`.tsx`, so these hold the
  * catalogs to the voice rules and the widget code to Lucide icons and role
  * colours. The terms themselves are `messages/glossary.test.ts`.

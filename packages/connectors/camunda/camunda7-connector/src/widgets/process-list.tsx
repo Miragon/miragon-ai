@@ -13,7 +13,7 @@ import {
   WidgetShell,
   formatNumber,
   usePagedListView,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { useNav } from "./navigation.js"
 import { useHandOff, type HandOff } from "./lib/hand-off.js"
 import { EngineMeta } from "./lib/engine-context.js"

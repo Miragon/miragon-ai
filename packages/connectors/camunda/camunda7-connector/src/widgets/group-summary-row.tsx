@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Icon } from "@miragon-ai/widget-shell/widgets"
+import { Icon } from "@miragon/pulse-widget-shell/widgets"
 import { ChevronRight, TriangleAlert } from "lucide-react"
 import { cn, CountPill, TONE_DOT, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 

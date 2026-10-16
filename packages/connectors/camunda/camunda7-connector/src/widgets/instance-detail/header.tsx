@@ -5,7 +5,12 @@ import {
   WidgetHeader,
   type ToneVariant,
 } from "@miragon/mcp-toolkit-ui"
-import { HandOffButton, IdText, VersionChip, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import {
+  HandOffButton,
+  IdText,
+  VersionChip,
+  formatNumber,
+} from "@miragon/pulse-widget-shell/widgets"
 
 import type { InstanceDetailData } from "../../view-models.js"
 import { type T, useT } from "../../messages/use-t.js"

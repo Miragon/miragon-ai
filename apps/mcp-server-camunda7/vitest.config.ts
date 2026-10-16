@@ -19,11 +19,11 @@ export default mergeConfig(
         // coverage up; never lower. Documented re-baseline 2026-08-13: the
         // composition-root machinery (module selection, env warner, boot
         // warnings — the app's best-tested surface) moved to
-        // @miragon-ai/widget-shell, where the SAME code is covered by
+        // @miragon/pulse-widget-shell, where the SAME code is covered by
         // composition.test.ts at that package's higher thresholds; the app's
         // percentages shifted without a single line losing tests.
         // Re-baselined UP 2026-08-17: the Postgres persistence (client,
-        // migration runner, dashboard store) moved to @miragon-ai/widget-shell
+        // migration runner, dashboard store) moved to @miragon/pulse-widget-shell
         // too, and what remains here — the env→backend selection — is covered
         // by persistence-runtime.test.ts; measured statements 82.89 /
         // branches 77.27 / functions 94.44 / lines 83.33. Raised 2026-10-08

@@ -1,10 +1,13 @@
 import {
   listProcessDefinitionsInput,
   getProcessDefinitionXmlInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineLike, engineSorting, trueOnly } from "@miragon-ai/camunda7-client"
-import { getProcessDefinitions, getProcessDefinitionsCount } from "@miragon-ai/camunda7-client/sdk"
+import { engineLike, engineSorting, trueOnly } from "@miragon/pulse-camunda7-client"
+import {
+  getProcessDefinitions,
+  getProcessDefinitionsCount,
+} from "@miragon/pulse-camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"

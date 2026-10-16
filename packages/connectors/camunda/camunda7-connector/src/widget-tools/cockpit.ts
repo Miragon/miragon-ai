@@ -8,9 +8,9 @@ import {
   showToolBinding,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import type { CockpitAppData, CockpitEngineInfo } from "../view-models.js"
-import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
+import { MAX_PAGE_SIZE } from "@miragon/pulse-camunda7-client/schemas"
 import { buildProcessInstancesData, buildProcessListData } from "../data/cockpit-data.js"
 import { buildHistoryTimelineData } from "../data/history-timeline-data.js"
 import { buildProcessIncidentsData } from "../data/process-incidents-data.js"

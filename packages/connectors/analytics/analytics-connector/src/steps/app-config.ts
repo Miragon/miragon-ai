@@ -1,4 +1,4 @@
-import { PERIODS, type PrometheusClient, type Period } from "@miragon-ai/analytics-client"
+import { PERIODS, type PrometheusClient, type Period } from "@miragon/pulse-analytics-client"
 import type { AnalyticsEngineScope } from "../engine-ids.js"
 import type { ProfileSource } from "../server-locale.js"
 import { settingsFor } from "../settings.js"

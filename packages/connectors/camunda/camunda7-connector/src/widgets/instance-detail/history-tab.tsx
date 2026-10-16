@@ -1,4 +1,4 @@
-import { HandOffButton } from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton } from "@miragon/pulse-widget-shell/widgets"
 import { PagedHistoryView } from "../history-timeline.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"
 

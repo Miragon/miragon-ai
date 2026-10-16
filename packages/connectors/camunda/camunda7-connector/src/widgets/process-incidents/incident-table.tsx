@@ -13,7 +13,7 @@ import {
   Td,
   usePagedViewData,
   ViewDataState,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { Check } from "lucide-react"
 
 import type { ActivityIncidentsData, IncidentInstance } from "../../view-models.js"

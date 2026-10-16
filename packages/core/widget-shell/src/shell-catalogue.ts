@@ -20,7 +20,7 @@ import { registerShellSettingsTools, type ShellSettingsToolsOptions } from "./sh
  *   layout: { widget: "shell:kpi-grid", props: { dataKey: "camunda7:kpis" } }
  *
  * Components live next door in `src/ui/generic-widgets.tsx` and
- * `src/ui/shell-settings.tsx` (exported via `@miragon-ai/widget-shell/widgets`,
+ * `src/ui/shell-settings.tsx` (exported via `@miragon/pulse-widget-shell/widgets`,
  * all four in `shellWidgets`); this file carries their catalogue metadata so
  * host apps register the plugin without owning any domain UI. Its only tools
  * are the settings triple (`shell-settings.ts`), and no step.

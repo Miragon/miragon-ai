@@ -64,17 +64,17 @@ const widgetDateGate = [
     selector:
       ":matches(NewExpression, CallExpression)[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
     message:
-      "Use formatTimestamp/formatDate/formatTime from @miragon-ai/widget-shell/widgets — the single source for timestamp rendering (CLAUDE.md invariant 6).",
+      "Use formatTimestamp/formatDate/formatTime from @miragon/pulse-widget-shell/widgets — the single source for timestamp rendering (CLAUDE.md invariant 6).",
   },
   {
     selector: "CallExpression[callee.property.name='toLocaleDateString']",
     message:
-      "Use formatDate from @miragon-ai/widget-shell/widgets instead of Date#toLocaleDateString (CLAUDE.md invariant 6).",
+      "Use formatDate from @miragon/pulse-widget-shell/widgets instead of Date#toLocaleDateString (CLAUDE.md invariant 6).",
   },
   {
     selector: "CallExpression[callee.property.name='toLocaleTimeString']",
     message:
-      "Use formatTime from @miragon-ai/widget-shell/widgets instead of Date#toLocaleTimeString (CLAUDE.md invariant 6).",
+      "Use formatTime from @miragon/pulse-widget-shell/widgets instead of Date#toLocaleTimeString (CLAUDE.md invariant 6).",
   },
 ]
 

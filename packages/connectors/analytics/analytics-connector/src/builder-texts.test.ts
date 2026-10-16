@@ -3,7 +3,7 @@ import {
   displayTextCatalog,
   displayTextsSentToModel,
   missingDisplayTexts,
-} from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-widget-shell/testing"
 import { definition } from "./definition.js"
 import { catalogs } from "./messages/index.js"
 

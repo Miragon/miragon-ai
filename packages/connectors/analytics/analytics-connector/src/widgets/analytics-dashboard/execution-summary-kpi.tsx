@@ -4,8 +4,8 @@ import {
   WidgetShell,
   formatLookback,
   formatNumber,
-} from "@miragon-ai/widget-shell/widgets"
-import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-widget-shell/widgets"
+import type { AnalyticsDashboardData } from "@miragon/pulse-analytics-client"
 import { KpiGrid, KpiGridSkeleton, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import { useDashboardSelfFetch, type DashboardScopeProps, type DashboardView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"

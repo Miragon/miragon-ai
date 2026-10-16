@@ -1,5 +1,5 @@
 import { type ToneVariant } from "@miragon/mcp-toolkit-ui"
-import { severityTone } from "@miragon-ai/widget-shell/widgets"
+import { severityTone } from "@miragon/pulse-widget-shell/widgets"
 import type { CockpitDashboardData, DefinitionStat } from "../../view-models.js"
 
 export interface DefinitionRow extends DefinitionStat {

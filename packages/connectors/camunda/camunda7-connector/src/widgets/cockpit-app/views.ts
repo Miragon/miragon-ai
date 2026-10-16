@@ -1,5 +1,5 @@
 import type { LayoutConfig } from "@miragon/mcp-toolkit-core"
-import { SHELL_SETTINGS_PAGE_WIDGET } from "@miragon-ai/widget-shell/widgets"
+import { SHELL_SETTINGS_PAGE_WIDGET } from "@miragon/pulse-widget-shell/widgets"
 
 /**
  * Route parameters available to a cockpit view. Each field is optional; a given

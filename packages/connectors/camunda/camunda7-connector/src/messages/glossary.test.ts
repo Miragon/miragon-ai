@@ -6,7 +6,7 @@ import {
   PRODUCT_GLOSSARY,
   unnamedGlossaryTerms,
   type GlossaryRule,
-} from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-widget-shell/testing"
 import { catalogs } from "./index.js"
 
 /**

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import type { PrometheusClient, VersionCompareResult } from "@miragon-ai/analytics-client"
+import type { PrometheusClient, VersionCompareResult } from "@miragon/pulse-analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import { createEngineScope } from "../engine-ids.js"
 import { registerVersionCompareTools } from "./version-compare.js"

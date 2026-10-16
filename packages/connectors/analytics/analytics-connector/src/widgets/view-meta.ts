@@ -1,4 +1,4 @@
-import type { ViewMetaEngines } from "@miragon-ai/widget-shell/widgets"
+import type { ViewMetaEngines } from "@miragon/pulse-widget-shell/widgets"
 
 /**
  * The engine part of an analytics view's meta line (U7) from the result's

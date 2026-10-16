@@ -3,7 +3,7 @@ import {
   buildDataFeedResult as rawData,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { allowedWidgetActions } from "../lib/toolsets.js"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../tool-names.js"
 import type { WidgetToolsContext } from "./shared.js"

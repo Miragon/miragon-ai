@@ -85,16 +85,16 @@ describe("buildIncidentIssuePayload", () => {
       processDefinition: baseDefinition,
       processInstance: { id: "pi-42" },
       engine: engineWithCockpit("http://localhost:8080/webapp"),
-      repository: "Miragon/miragon-ai",
+      repository: "Miragon/pulse",
     })
 
     expect(result.title).toBe("[Bug]: Engine incident (failedJob) in invoice")
     expect(result.labels).toEqual(["bug", "incident"])
-    expect(result.suggestedRepository).toBe("Miragon/miragon-ai")
+    expect(result.suggestedRepository).toBe("Miragon/pulse")
     // The draft is the deliverable: nextStep must keep the agent from filing
     // on its own and may only mention GitHub as the preconfigured convenience.
     expect(result.nextStep).toMatch(/Do NOT file it anywhere on your own/)
-    expect(result.nextStep).toContain('repository "Miragon/miragon-ai"')
+    expect(result.nextStep).toContain('repository "Miragon/pulse"')
 
     for (const section of [
       "### Description",
@@ -148,11 +148,11 @@ describe("buildIncidentIssuePayload", () => {
       incident: baseIncident,
       processDefinition: baseDefinition,
       engine: engineWithoutCockpit,
-      repository: "Miragon/miragon-ai",
+      repository: "Miragon/pulse",
     })
     expect(result.prefilledUrl).not.toBeNull()
     const url = new URL(result.prefilledUrl!)
-    expect(url.origin + url.pathname).toBe("https://github.com/Miragon/miragon-ai/issues/new")
+    expect(url.origin + url.pathname).toBe("https://github.com/Miragon/pulse/issues/new")
     expect(url.searchParams.get("title")).toBe(result.title)
     expect(url.searchParams.get("labels")).toBe("bug,incident")
     expect(url.searchParams.get("body")).toContain("Boom: NullPointerException")

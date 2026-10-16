@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { SERVED_FONT_FILES, SERVED_FONT_PATH } from "@miragon-ai/widget-shell/server"
+import { SERVED_FONT_FILES, SERVED_FONT_PATH } from "@miragon/pulse-widget-shell/server"
 import { bootServer, type BootedServer } from "./boot-server.js"
 import { rawRequest } from "./raw-http.js"
 

@@ -4,8 +4,8 @@ import {
   incidentRecovery,
   latestEngineDate,
   type Client,
-} from "@miragon-ai/camunda7-client"
-import { getIncidents, getProcessInstances } from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client"
+import { getIncidents, getProcessInstances } from "@miragon/pulse-camunda7-client/sdk"
 import type { IncidentInstance } from "../view-models.js"
 import type { EngineProvider } from "../engine-provider.js"
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"

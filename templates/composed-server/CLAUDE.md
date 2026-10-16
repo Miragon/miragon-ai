@@ -53,7 +53,7 @@ external infrastructure.
    `_meta` contract by name across ALL composed modules, including yours.
    All three take **strict input** — the registrar with `{ strictInput: true }`,
    raw `server.tool()` with `strictToolInput(shape)` from
-   `@miragon-ai/widget-shell/server` — so an unknown key is a tool error naming
+   `@miragon/pulse-widget-shell/server` — so an unknown key is a tool error naming
    the valid keys, never a silently dropped filter
    (`server/test/strict-input.e2e.test.ts` probes every tool of every module
    on every toolset it declares).
@@ -65,7 +65,7 @@ external infrastructure.
    it.** Without it every in-widget query hangs on "Loading…" (duplicate React
    contexts).
 5. **Exact version pins** (`save-exact` in `.npmrc`) for `dependencies`/
-   `devDependencies`: upgrade all `@miragon-ai/*` packages together to one
+   `devDependencies`: upgrade all `@miragon/pulse-*` packages together to one
    version. The consumer-shared libraries are ranged `peerDependencies`
    instead — `react`/`react-dom` (`^19.2.0`), `zod` (`^4.4.0`) and
    `@miragon/mcp-toolkit-*` (`~2.8.1`) — so they dedupe against your app's
@@ -80,7 +80,7 @@ external infrastructure.
    accepts.
 6. **Never hand-write `_meta.ui.*` keys** — spread `showToolBinding(...)` for
    widget tools and `appOnly` for data feeds (both from
-   `@miragon-ai/widget-shell/server`); mcp-use owns and overwrites the `ui`
+   `@miragon/pulse-widget-shell/server`); mcp-use owns and overwrites the `ui`
    namespace.
 7. **`.env.example` documents every env var the server reads** — both drift
    directions are guarded by `server/test/env-example.test.ts`; add your
@@ -132,7 +132,7 @@ the Tailwind scan in one shot.
   pattern (module definition, registrar tool, widget tool + data feed, widget,
   guard test). Copy it; don't invent a new shape.
 - The published Miragon modules ship their **sources**: read
-  `node_modules/@miragon-ai/camunda7-connector/src/` and
-  `node_modules/@miragon-ai/analytics-connector/src/` for the reference
+  `node_modules/@miragon/pulse-camunda7-connector/src/` and
+  `node_modules/@miragon/pulse-analytics-connector/src/` for the reference
   implementations of anything the notes module doesn't cover (toolsets,
   settings sections, paged lists, BPMN widgets).

@@ -21,10 +21,10 @@ import {
   modelContextText,
   useActionFeedback,
   useResetOnChange,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 // The leaf, not the barrel: the barrel's value graph carries every tool's zod
 // input schema, which a widget never needs (#344 K50).
-import { PERIODS, type Period } from "@miragon-ai/analytics-client/prometheus"
+import { PERIODS, type Period } from "@miragon/pulse-analytics-client/prometheus"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "../tool-names.js"
 import { useT } from "../messages/use-t.js"
 import { describeAnalyticsSettings } from "./model-descriptions.js"

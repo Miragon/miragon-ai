@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { toEngineDate } from "@miragon-ai/camunda7-client"
+import { toEngineDate } from "@miragon/pulse-camunda7-client"
 import { cibsevenProvider } from "../providers/index.js"
 import {
   clientFor,

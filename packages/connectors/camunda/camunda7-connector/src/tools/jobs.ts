@@ -3,7 +3,7 @@ import {
   getJobStacktraceInput,
   setJobRetriesInput,
   setJobRetriesBatchInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   complementaryFlags,
@@ -11,13 +11,13 @@ import {
   fetchJobStacktrace,
   queuedBatch,
   toOptionalEngineDate,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import {
   getJobs,
   getJobsCount,
   setJobRetries,
   setJobRetriesAsyncOperation,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"

@@ -4,9 +4,9 @@ import { clusterDetailFilterShape, pagingShape } from "../feed-contracts.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import type { Camunda7Toolset } from "../lib/toolsets.js"
 import type { EngineParamShape } from "../lib/with-engine.js"
-import type { ProfileStore } from "@miragon-ai/widget-shell/server"
+import type { ProfileStore } from "@miragon/pulse-widget-shell/server"
 
-// showToolBinding / appOnly live in @miragon-ai/widget-shell/server — the one
+// showToolBinding / appOnly live in @miragon/pulse-widget-shell/server — the one
 // implementation of the invariant-5 wire-contract spreads for all modules.
 
 /** One-line truncation for summaries (incident messages can be stacktrace-sized). */

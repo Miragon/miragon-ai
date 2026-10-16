@@ -1,4 +1,4 @@
-import { WidgetShell, formatDuration, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell, formatDuration, formatNumber } from "@miragon/pulse-widget-shell/widgets"
 import { KpiGrid, KpiGridSkeleton, type KpiCell } from "@miragon/mcp-toolkit-ui"
 import { useDashboardSelfFetch, type DashboardScopeProps, type DashboardView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"

@@ -1,7 +1,7 @@
 import { vi } from "vitest"
 import { feedPayload } from "../../tools/test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
-import type { ToolSurface } from "@miragon-ai/widget-shell/widgets"
+import type { ToolSurface } from "@miragon/pulse-widget-shell/widgets"
 import { createPlugin } from "../../plugin.js"
 import type { Camunda7Toolset } from "../../lib/toolsets.js"
 import { CAMUNDA7_WIDGET_ACTIONS_DATA } from "../../tool-names.js"

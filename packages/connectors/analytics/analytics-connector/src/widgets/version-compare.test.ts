@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { VersionCompareKpi, VersionCompareResult } from "@miragon-ai/analytics-client"
+import type { VersionCompareKpi, VersionCompareResult } from "@miragon/pulse-analytics-client"
 import { versionCompareHandOff } from "./version-compare.js"
 import { ANALYTICS_ONLY_SURFACE, bindHandOff } from "./hand-off.js"
 

@@ -1,5 +1,5 @@
 {
-  "name": "@miragon-ai/camunda7-client",
+  "name": "@miragon/pulse-camunda7-client",
   "version": "0.20.0",
   "description": "Generated CIB Seven / Camunda 7 REST SDK plus Zod input schemas.",
   "license": "MIT",
@@ -12,14 +12,14 @@
     "sdk",
     "mcp"
   ],
-  "homepage": "https://github.com/Miragon/miragon-ai/tree/main/packages/connectors/camunda/camunda7-client#readme",
-  "bugs": "https://github.com/Miragon/miragon-ai/issues",
+  "homepage": "https://github.com/Miragon/pulse/tree/main/packages/connectors/camunda/camunda7-client#readme",
+  "bugs": "https://github.com/Miragon/pulse/issues",
   "engines": {
     "node": ">=22"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Miragon/miragon-ai.git",
+    "url": "git+https://github.com/Miragon/pulse.git",
     "directory": "packages/connectors/camunda/camunda7-client"
   },
   "publishConfig": {

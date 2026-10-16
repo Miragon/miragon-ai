@@ -11,7 +11,7 @@ import { REPO_ROOT } from "./source-scan.js"
  * the skills and checks it against the repo: tool names against the full
  * surface, repo paths against the tree, the skills' identifiers against the
  * sources and the toolkit/mcp-use typings, and each page of the docs site
- * (docs/*.md, built by VitePress to https://miragon.github.io/miragon-ai/)
+ * (docs/*.md, built by VitePress to https://miragon.github.io/pulse/)
  * against its line budget (DOCS_BUDGETS below).
  *
  * The product page https://miragon.ai/tools/pulse/ is built from

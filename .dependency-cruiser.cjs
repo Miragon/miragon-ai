@@ -8,19 +8,19 @@
  *
  * Layout + naming carry the layer semantics: connector modules live at
  * `packages/connectors/<family>/<name>-connector` (npm
- * `@miragon-ai/<name>-connector`), their SDK leaves at
+ * `@miragon/pulse-<name>-connector`), their SDK leaves at
  * `packages/connectors/<family>/<name>-client` (npm
- * `@miragon-ai/<name>-client`), and the foundation packages under
+ * `@miragon/pulse-<name>-client`), and the foundation packages under
  * `packages/core/` (npm names without a role suffix, e.g.
- * `@miragon-ai/widget-shell`). The rules below key on exactly these
+ * `@miragon/pulse-widget-shell`). The rules below key on exactly these
  * conventions — a new package that follows them is covered without touching
  * this file; one that breaks them falls OUT of the rules, so don't.
  *
- * Workspace imports (`@miragon-ai/*`) resolve through pnpm's node_modules
+ * Workspace imports (`@miragon/pulse-*`) resolve through pnpm's node_modules
  * symlinks; `preserveSymlinks: true` below keeps them as `node_modules/...`
  * paths so the rules can distinguish a package-entry import from a relative
  * escape into a sibling's source tree. Rule patterns therefore match both shapes:
- * `^packages/...` (relative escape) and `@miragon-ai/...` (package entry).
+ * `^packages/...` (relative escape) and `@miragon/pulse-...` (package entry).
  */
 module.exports = {
   forbidden: [
@@ -34,8 +34,8 @@ module.exports = {
         "(props.dataKey) or raw tool-name strings with graceful degradation.",
       from: { path: "^packages/connectors/[^/]+/([^/]+)-connector/" },
       to: {
-        path: ["^packages/connectors/.+-connector/", "@miragon-ai/[^/]+-connector(/|$)"],
-        pathNot: ["^packages/connectors/[^/]+/$1-connector/", "@miragon-ai/$1-connector(/|$)"],
+        path: ["^packages/connectors/.+-connector/", "@miragon/pulse-[^/]+-connector(/|$)"],
+        pathNot: ["^packages/connectors/[^/]+/$1-connector/", "@miragon/pulse-$1-connector(/|$)"],
       },
     },
     {
@@ -48,8 +48,8 @@ module.exports = {
         "giving the analytics connector an engine-SDK dependency (CLAUDE.md invariant 8).",
       from: { path: "^packages/connectors/[^/]+/([^/]+)-connector/" },
       to: {
-        path: ["^packages/connectors/.+-client/", "@miragon-ai/[^/]+-client(/|$)"],
-        pathNot: ["^packages/connectors/[^/]+/$1-client/", "@miragon-ai/$1-client(/|$)"],
+        path: ["^packages/connectors/.+-client/", "@miragon/pulse-[^/]+-client(/|$)"],
+        pathNot: ["^packages/connectors/[^/]+/$1-client/", "@miragon/pulse-$1-client(/|$)"],
       },
     },
     {
@@ -61,8 +61,8 @@ module.exports = {
         "logic that grows here belongs in the connector layer or a core package, not in a client.",
       from: { path: "^packages/connectors/[^/]+/([^/]+)-client/" },
       to: {
-        path: ["^packages/(core|connectors)/", "^apps/", "@miragon-ai/"],
-        pathNot: ["^packages/connectors/[^/]+/$1-client/", "@miragon-ai/$1-client(/|$)"],
+        path: ["^packages/(core|connectors)/", "^apps/", "@miragon/pulse-"],
+        pathNot: ["^packages/connectors/[^/]+/$1-client/", "@miragon/pulse-$1-client(/|$)"],
       },
     },
     {
@@ -78,8 +78,8 @@ module.exports = {
         path: [
           "^packages/connectors/",
           "^apps/",
-          "@miragon-ai/[^/]+-(connector|client)(/|$)",
-          "@miragon-ai/mcp-server-camunda7",
+          "@miragon/pulse-[^/]+-(connector|client)(/|$)",
+          "@miragon/pulse-mcp-server-camunda7",
         ],
       },
     },
@@ -91,14 +91,14 @@ module.exports = {
         "Anything a package needs from the app must be inverted into an injected port — " +
         "see SharedResources in apps/mcp-server-camunda7/src/module-contract.ts.",
       from: { path: "^packages/" },
-      to: { path: ["^apps/", "@miragon-ai/mcp-server-camunda7"] },
+      to: { path: ["^apps/", "@miragon/pulse-mcp-server-camunda7"] },
     },
     {
       name: "no-cross-package-deep-imports",
       severity: "error",
       comment:
         "Never reach into a sibling package's source tree by relative path — import its public " +
-        "entry (@miragon-ai/<pkg>, or a subpath like @miragon-ai/widget-shell/widgets) so the " +
+        "entry (@miragon/pulse-<pkg>, or a subpath like @miragon/pulse-widget-shell/widgets) so the " +
         "exports map stays the contract between packages.",
       from: { path: "^(apps/[^/]+|packages/core/[^/]+|packages/connectors/[^/]+/[^/]+)/" },
       to: { path: "^(packages|apps)/", pathNot: "^$1/" },
@@ -118,7 +118,7 @@ module.exports = {
     exclude: { path: ["/generated/"] },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: "tsconfig.base.json" },
-    // Keep workspace imports as node_modules/@miragon-ai/* paths instead of
+    // Keep workspace imports as node_modules/@miragon/pulse-* paths instead of
     // resolving the pnpm symlink to the sibling package's real path — the
     // rules above rely on the two shapes staying distinguishable.
     preserveSymlinks: true,

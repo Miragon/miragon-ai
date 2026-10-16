@@ -106,7 +106,7 @@ describe("HTTP edge — default policy (no MCP_URL: localhost-class only)", () =
       name: "miragon-ai",
       version: pkg.version,
       title: "Miragon AI",
-      websiteUrl: "https://github.com/Miragon/miragon-ai",
+      websiteUrl: "https://github.com/Miragon/pulse",
     })
     // The root's preamble, then each active module's own snippet — the
     // engine routing rule lives there, not in 60-odd tool descriptions.

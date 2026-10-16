@@ -3,7 +3,7 @@ import {
   listIncidentsInput,
   listProcessInstancesInput,
   MAX_PAGE_SIZE,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 
 /**
  * SINGLE SOURCE for the feeds' filter contracts. Each filter set used to

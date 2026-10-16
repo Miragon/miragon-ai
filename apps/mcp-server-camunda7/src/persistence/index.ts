@@ -14,7 +14,7 @@ import {
   type PersistenceSelection,
   type ProfileStore,
   type ReadinessCheck,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 
 /**
  * Everything the composition root wires that depends on the deployment's
@@ -23,7 +23,7 @@ import {
  * that needs a different mix (other database) either sets different env vars
  * or replaces this one module. The backends themselves are NOT app code: the
  * Postgres client, the migration runner and both Postgres stores live in
- * `@miragon-ai/widget-shell/server`, so a composed server gets the same
+ * `@miragon/pulse-widget-shell/server`, so a composed server gets the same
  * persistence by importing them instead of forking this file.
  */
 export interface RuntimeBackends {

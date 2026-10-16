@@ -4,7 +4,7 @@ import {
   WidgetShell,
   formatNumber,
   formatTimestamp,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { KpiGrid, LivePill, WidgetHeader } from "@miragon/mcp-toolkit-ui"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { IncidentsDashboardData } from "../../view-models.js"

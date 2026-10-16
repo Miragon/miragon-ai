@@ -26,9 +26,9 @@ RUN pnpm install --frozen-lockfile --offline
 
 # Turbo's cache is a pure accelerator — an empty one only means a slower build.
 RUN --mount=type=cache,id=turbo-server,target=/app/.turbo \
-    pnpm turbo build --filter=@miragon-ai/mcp-server-camunda7...
+    pnpm turbo build --filter=@miragon/pulse-mcp-server-camunda7...
 
-RUN pnpm --filter @miragon-ai/mcp-server-camunda7 deploy --prod --legacy /app/deployed
+RUN pnpm --filter @miragon/pulse-mcp-server-camunda7 deploy --prod --legacy /app/deployed
 
 FROM base AS runtime
 WORKDIR /app

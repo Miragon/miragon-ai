@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 Settings live in ONE profile record per signed-in user, shared by all modules. The record
 and its store are CORE (`packages/core/widget-shell/src/profile-record.ts` +
-`profile-store*.ts`, exported from `@miragon-ai/widget-shell/server`) and connector-free:
+`profile-store*.ts`, exported from `@miragon/pulse-widget-shell/server`) and connector-free:
 `language`, metadata, and the `profile.modules.<module>` transport. Each module
 owns a **slice** under `profile.modules.<module>`: the record only transports it, the
 module owns its schema, validates it fail-soft on read, and writes it through its own
@@ -41,7 +41,7 @@ export const mySettingsSchema = z.object({
 })
 
 /**
- * Fail-soft per FIELD (`parseModuleSlice` from `@miragon-ai/widget-shell/server`):
+ * Fail-soft per FIELD (`parseModuleSlice` from `@miragon/pulse-widget-shell/server`):
  * a missing or hand-edited slice yields the defaults, and one invalid value keeps
  * the other saved preferences.
  */
@@ -89,7 +89,7 @@ Derive it instead of hand-writing it whenever the schema's own descriptions work
 write boundary:
 
 ```ts
-import { withoutDefaults } from "@miragon-ai/widget-shell/server"
+import { withoutDefaults } from "@miragon/pulse-widget-shell/server"
 export const mySettingsSaveInput = z.object(withoutDefaults(mySettingsSchema.shape)).partial()
 ```
 
@@ -109,12 +109,12 @@ import {
   resolveProfileKey,
   resolveAuthUserId,
   type ProfileSource,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 ```
 
 `ProfileSource` is the narrow read/write view a module gets: the locale plus its own
 slice, and `save?` for a `modules` patch. The full `ProfileStore`
-(`@miragon-ai/widget-shell/server`) satisfies it structurally (asserted at compile time
+(`@miragon/pulse-widget-shell/server`) satisfies it structurally (asserted at compile time
 in the app's `module-contract.ts`) — modules stick to the narrow port, composition roots
 wire the full store. Alias them to your module's vocabulary if the call sites read
 better that way (`export const resolveSettingsKey = resolveProfileKey`).
@@ -145,7 +145,7 @@ Three render paths, three tools — model them on `registerSettingsTools`:
 | `<module>_settings_data` | `...appOnly` (`visibility: "app"` + `openai/widgetAccessible`, no view) | `buildDataFeedResult(view)`                          |
 | `<module>_save_settings` | none (plain model-visible tool)                                         | text summary + `structuredContent` = effective slice |
 
-All three declare `inputSchema: strictToolInput(…)` (`@miragon-ai/widget-shell/server`;
+All three declare `inputSchema: strictToolInput(…)` (`@miragon/pulse-widget-shell/server`;
 the save tool: `strictToolInput(mySettingsSaveInput.shape)`) — a bare `z.object` would
 strip a misnamed setting and report a save that changed nothing.
 
@@ -156,7 +156,7 @@ Two rules the save tool must honor:
   module's **declared** toolset names, never an `toolset === "read-only"` compare (that
   fails open for every other name the day a second restrictive toolset appears). Copy
   `packages/connectors/analytics/analytics-connector/src/toolsets.ts`: a `<MODULE>_TOOLSETS`
-  list, ONE vocabulary from `@miragon-ai/widget-shell/server` —
+  list, ONE vocabulary from `@miragon/pulse-widget-shell/server` —
 
   ```ts
   export const myToolsets = createToolsetVocabulary("<module>", MY_TOOLSETS, "read-only", {
@@ -172,7 +172,7 @@ Two rules the save tool must honor:
   and the widget hides its Save button — the tool surface stays honest.
 
 - **Save the PATCH alone** (`requireProfileKey` + `saveModuleSlice` from
-  `@miragon-ai/widget-shell/server`), never a slice you read first:
+  `@miragon/pulse-widget-shell/server`), never a slice you read first:
 
   ```ts
   const key = requireProfileKey(ctx)
@@ -194,7 +194,7 @@ Two rules the save tool must honor:
 
 ## Step 5 — the section widget
 
-One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
+One self-fetching card, composed from `@miragon/pulse-widget-shell/widgets` —
 `SettingsCard` / `SettingsField` / `SettingsInput` / `NativeSelect`, never re-inlined:
 
 - Self-fetch the `*_data` feed via `useToolQuery`, skipped when `data` props arrive from
@@ -238,7 +238,7 @@ One self-fetching card, composed from `@miragon-ai/widget-shell/widgets` —
 
 **The `<module>:settings` id IS the registration on the settings page.** The page is the
 shell's (`shell_show_settings`, also the cockpit's settings tab): `settingsLayout`
-(`@miragon-ai/widget-shell/widgets`) assembles it from the HOST's widget registry — the
+(`@miragon/pulse-widget-shell/widgets`) assembles it from the HOST's widget registry — the
 shell's language section (`shell:settings`) first, then one row per id ending in
 `:settings`, in registration order (the composition root's module order in
 `widget-registry.ts`). Nothing lists your module — which is exactly why a custom module in
@@ -258,10 +258,10 @@ emptied row when one resolves nowhere, so a host without your module degrades to
 absent" instead of erroring.
 
 Also add the three tool names to `apps/mcp-server-camunda7/test/expected-tools.ts`, refresh
-the tools/list goldens (`GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test`,
+the tools/list goldens (`GOLDEN_UPDATE=1 pnpm --filter @miragon/pulse-mcp-server-camunda7 test`,
 commit `test/__golden__/`; a grown char budget needs a `Ratchet-Exception:` trailer), and
 document any new env var in `docs/operations.md` (the page
-https://miragon.github.io/miragon-ai/operations of the docs site).
+https://miragon.github.io/pulse/operations of the docs site).
 
 ## Step 7 — tests
 
@@ -288,7 +288,7 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 ```
 
 `pnpm typecheck` is the **only** check covering widget `.tsx` code. Widget changes also
-need `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` plus a manual render:
+need `pnpm --filter @miragon/pulse-mcp-server-camunda7 test:host` plus a manual render:
 `docker compose -f playground/docker/docker-compose.yml up -d`, `pnpm dev`, open your
 section via `<module>_show_settings` (the whole page via `shell_show_settings`) in the inspector at
 `http://localhost:8400/mcp/inspector`. Exercise Save and reload — a value that doesn't survive
@@ -305,7 +305,7 @@ the standard toolsets). Run `pnpm format:check` before committing.
 - Parsing the slice before merging in the save path (loses newer builds' fields).
 - Reading `profile.modules.<other>` — foreign slices are their owner's business.
 - Importing another connector package to reach its settings; share via
-  `@miragon-ai/widget-shell` or a structural port instead.
+  `@miragon/pulse-widget-shell` or a structural port instead.
 - Re-deriving the profile key or the anonymous fallback locally instead of importing
   them — the drift is invisible until a user's settings sit in two records.
 - A save tool that ignores the toolset, or a widget that shows Save when `canSave` is false.

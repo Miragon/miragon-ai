@@ -1,6 +1,6 @@
-import { adaptDataWidget } from "@miragon-ai/widget-shell/ui"
+import { adaptDataWidget } from "@miragon/pulse-widget-shell/ui"
 import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
-import type { AnalyticsDashboardData, FailureDashboardData } from "@miragon-ai/analytics-client"
+import type { AnalyticsDashboardData, FailureDashboardData } from "@miragon/pulse-analytics-client"
 import { ExecutionSummaryKpi } from "./analytics-dashboard/execution-summary-kpi.js"
 import { ExecutionPerformanceKpi } from "./analytics-dashboard/execution-performance-kpi.js"
 import { ProcessDefinitionBreakdown } from "./analytics-dashboard/definition-breakdown.js"
@@ -12,7 +12,7 @@ import { ClusterCompareWidget, type ClusterCompareData } from "./cluster-compare
 import { VersionCompareWidget, type VersionCompareData } from "./version-compare.js"
 import { EngineCompareWidget, type EngineCompareData } from "./engine-compare.js"
 import { EngineLandscapeWidget, type EngineLandscapeData } from "./engine-landscape.js"
-import { type BpmnHeatmapData } from "@miragon-ai/widget-shell/widgets"
+import { type BpmnHeatmapData } from "@miragon/pulse-widget-shell/widgets"
 import { AnalyticsBpmnHeatmap, type AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
 import { AnalyticsSettingsWidget, type AnalyticsSettingsViewData } from "./settings-section.js"
 import {

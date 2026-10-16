@@ -1,4 +1,4 @@
-import { adaptDataWidget, type DescribeForModel } from "@miragon-ai/widget-shell/ui"
+import { adaptDataWidget, type DescribeForModel } from "@miragon/pulse-widget-shell/ui"
 import type { WidgetComponent } from "@miragon/mcp-toolkit-ui/app"
 import { NotesListWidget } from "./notes-list.js"
 import type { NotesListData } from "../notes-store.js"

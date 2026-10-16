@@ -1,13 +1,13 @@
-# @miragon-ai/analytics-connector
+# @miragon/pulse-analytics-connector
 
 The **analytics module** for [Miragon AI](../../../../README.md): Prometheus-backed process analytics as
 `analytics_*` MCP tools, plus dashboard and comparison widgets. Built on
-[`@miragon-ai/analytics-client`](../analytics-client) and the `@miragon/mcp-toolkit-*` packages.
+[`@miragon/pulse-analytics-client`](../analytics-client) and the `@miragon/mcp-toolkit-*` packages.
 
 The server loads this module as `analytics` via `analyticsModule` (`src/module.ts`), which conforms
 structurally to the app's `ModuleDefinition` port. The package is published to npm in lockstep with
 the other `@miragon-ai` packages (pin them all to one version); the
-[miragon-ai-starter](https://github.com/Miragon/miragon-ai-starter) template shows how to compose it
+[pulse-starter](https://github.com/Miragon/pulse-starter) template shows how to compose it
 into your own MCP server.
 
 The consumer-shared libraries are ranged **peer dependencies** so they dedupe against your app's
@@ -24,7 +24,7 @@ hangs every in-widget query on "Loading…".
   `element_bottleneck`, `find_failed_instances`, `cluster_compare`, `version_compare`,
   `engine_landscape`, `engine_compare`, and `engine_health` (a live WIP / incidents / backlog /
   alerts snapshot). All carry the `analytics` category and run PromQL through
-  [`@miragon-ai/analytics-client`](../analytics-client).
+  [`@miragon/pulse-analytics-client`](../analytics-client).
 - **Widgets** (`src/widgets/`) — `show_dashboard`, `show_failure_dashboard`, `show_cluster_compare`,
   `show_version_compare`, `show_engine_landscape`, `show_engine_compare`, `show_bpmn_heatmap`.
 - **Configured engines only** — analytics reads exactly the server's configured engine ids:
@@ -71,7 +71,7 @@ failed read; the views ask the engines their rows come from, and the names are c
 ## Adding an analytics capability
 
 Read the [`add-analytics-feature`](../../../../.claude/skills/add-analytics-feature) skill first. The house
-pattern: add a PromQL query function in [`@miragon-ai/analytics-client`](../analytics-client) (using
+pattern: add a PromQL query function in [`@miragon/pulse-analytics-client`](../analytics-client) (using
 `METRIC_NAMES`, never raw metric strings), then a tool here, then optionally a widget. Metric names
 and labels are governed by the
 [metrics contract](../analytics-client/metrics-contract.json) — change it there first.

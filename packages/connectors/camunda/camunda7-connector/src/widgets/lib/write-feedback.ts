@@ -1,4 +1,4 @@
-import { shortId } from "@miragon-ai/widget-shell/widgets"
+import { shortId } from "@miragon/pulse-widget-shell/widgets"
 import type { T } from "../../messages/use-t.js"
 import type { TaskCompletion } from "./complete-task.js"
 import type { TargetLine, WriteFeedback } from "./engine-action.js"

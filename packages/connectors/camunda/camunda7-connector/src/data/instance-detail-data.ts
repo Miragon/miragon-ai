@@ -2,7 +2,7 @@ import {
   incidentRecovery,
   readProcessInstanceVariables,
   type Client,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import type { InstanceDetailData, TaskData } from "../view-models.js"
 import {
   getActivityInstanceTree,
@@ -11,10 +11,10 @@ import {
   getProcessInstance,
   getTasks,
   getTasksCount,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { buildTaskFormSchema } from "../tools/task-form.js"
 import { collectActiveActivityIds, collectIncidentActivityIds } from "../lib/activity-tree.js"
-import { parseBpmnNames } from "@miragon-ai/widget-shell/server"
+import { parseBpmnNames } from "@miragon/pulse-widget-shell/server"
 import { buildInstanceCockpitUrl } from "../lib/cockpit-url.js"
 import type { EngineProvider } from "../engine-provider.js"
 import {

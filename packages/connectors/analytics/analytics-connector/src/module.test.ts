@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { MCPServer } from "mcp-use"
-import { composeModules } from "@miragon-ai/widget-shell/server"
+import { composeModules } from "@miragon/pulse-widget-shell/server"
 import { analyticsModule } from "./module.js"
 import { allowsDurableWrites, ANALYTICS_TOOLSETS, analyticsToolsets } from "./toolsets.js"
 import {

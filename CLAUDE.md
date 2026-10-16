@@ -13,7 +13,7 @@ the sources or the toolkit/mcp-use typings, and each docs page stays within its 
 `docs/` holds the Pulse docs (Pulse is this server's product name), a VitePress site built
 with the Miragon docs kit (`docs/.vitepress/miragon/`, vendored from Miragon/corporate-identity,
 skill `miragon-brand:docs-site`) that `.github/workflows/docs.yml` publishes to
-https://miragon.github.io/miragon-ai/: a user-visible change (env vars, tools, ports,
+https://miragon.github.io/pulse/: a user-visible change (env vars, tools, ports,
 getting-started steps) updates them in the same PR. Headings get GitHub's anchors, so a
 `#anchor` link works on the site and on GitHub. The website https://miragon.ai lives in
 Miragon/miragon-ai-docs; a change its product page https://miragon.ai/tools/pulse/ shows needs a
@@ -68,7 +68,7 @@ render widgets manually.
 
 If generated SDK files look wrong (e.g. `client.gen.ts` importing `./src/hey-api.js`
 instead of `../hey-api.js`), the shared turbo cache replayed a poisoned `generate`
-output — fix with `pnpm exec turbo run generate --filter=@miragon-ai/camunda7-client --force`.
+output — fix with `pnpm exec turbo run generate --filter=@miragon/pulse-camunda7-client --force`.
 
 ## Design-System (verbindlich)
 
@@ -102,7 +102,7 @@ kannst. Englisch übernimmt die übertragbaren Regeln: Sentence case, aktiv, kei
 Verbinder. Glossar: Incident (nicht Vorfall), aussetzen/ausgesetzt, läuft, Geschäftsschlüssel,
 Versuche. `.miragon/brand.json` schaltet den brand-lint-Hook für jede geänderte Datei ein;
 Strings in `.ts`/`.tsx` sieht brand-lint nicht, die prüfen die Gates aus
-`@miragon-ai/widget-shell/testing` (Invariante 6).
+`@miragon/pulse-widget-shell/testing` (Invariante 6).
 
 ### Abweichungen für eingebettete Chat-Widgets
 
@@ -210,7 +210,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 5. **There are three render paths — pick deliberately:**
    - Registrar tools (`src/tools/`): plain JSON data _for the model_
    - Widget tools (`widget-tools.ts`, `show_*`, spread `...showToolBinding(name, title)`
-     from `@miragon-ai/widget-shell/server` — a `view` binding named after the tool +
+     from `@miragon/pulse-widget-shell/server` — a `view` binding named after the tool +
      `outputSchema` + the Apps-SDK `_meta` half): render a widget for the user +
      return a summary for the model
    - `*_data` feeds (also in `widget-tools.ts`, spread `...appOnly` — the native
@@ -218,16 +218,16 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
      app-only JSON for in-widget refresh/navigation — SEP-1865
      hosts hide them from the LLM, and a widget-tool result would be rendered by the
      host instead of returned to the in-widget `callTool()`. Feeds return
-     `buildDataFeedResult(data)` from `@miragon-ai/widget-shell/server` — the single
+     `buildDataFeedResult(data)` from `@miragon/pulse-widget-shell/server` — the single
      implementation of this invariant
 
    All three take STRICT input: the registrars run with `strictInput: true`, raw
    `server.tool()` registrations declare `strictToolInput(…)`
-   (`@miragon-ai/widget-shell/server`) — an unknown key is a tool error listing the valid
+   (`@miragon/pulse-widget-shell/server`) — an unknown key is a tool error listing the valid
    keys, never a silently stripped filter (`test/strict-input.e2e.test.ts` in the app).
    Parameter names follow the guide in the add-bpm-feature skill.
 
-6. **Widgets compose from the shared kit (`@miragon-ai/widget-shell/widgets`) and the
+6. **Widgets compose from the shared kit (`@miragon/pulse-widget-shell/widgets`) and the
    toolkit (`@miragon/mcp-toolkit-ui`) — never re-inline their primitives.** ONE kit: the
    toolkit's components (`KpiGrid`/`KpiGridSkeleton`, `StatusBadge`/`LivePill`/`CountPill`,
    `FilterBar`, `WidgetHeader` with `as`, `SectionHeading`, `GroupCard`, `DrillButton`,
@@ -313,7 +313,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    name first (dense, 600) and its id as a quiet Geist Mono line under it (`detail` appends
    its type or process, `lead` a state dot): ONE look in every module, never a connector's
    own copy. Those names come from ONE reader: `readBpmnNames` / `parseBpmnNames`
-   (`@miragon-ai/widget-shell/server`, server and browser alike: a process's own name, else
+   (`@miragon/pulse-widget-shell/server`, server and browser alike: a process's own name, else
    its Modeler pool's; `&#10;` and every other character reference decoded, space folded), so
    camunda7, analytics and the heatmap never name the same process or activity two ways; a
    view that shows the engine's definition name names an unnamed one from its diagram
@@ -388,7 +388,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    no `critical` (a retired name from the wire resolves through `resolveTone`): an open incident or a failed job without retries is `danger`, a failed job
    with retries left or a degraded engine is `warning`, a count without a state is `neutral`.
    The ladder for incident and job counts is the kit's, ONE for every module (`countTone` /
-   `severityTone`, `@miragon-ai/widget-shell/widgets`): camunda7's engine tiles and the
+   `severityTone`, `@miragon/pulse-widget-shell/widgets`): camunda7's engine tiles and the
    analytics landscape they embed edge the same "jobs without retries" alike.
    Each tone has three roles, theme variables of the toolkit's Miragon theme
    (`@miragon/mcp-toolkit-ui/theme.css`, light + dark): `--<tone>` is the fill, dot, edge or icon
@@ -461,7 +461,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    that scale since toolkit 2.8.1 (Miragon/mcp-toolkit#194), level with the icon buttons
    beside it, and never a `Button` dressed up with a trailing arrow
    (`row-actions.test.ts`).
-   **Every widget package runs the brand gates** from `@miragon-ai/widget-shell/testing` in
+   **Every widget package runs the brand gates** from `@miragon/pulse-widget-shell/testing` in
    its own tests (brand-lint cannot read strings in `.ts`/`.tsx`):
    `catalogTextFindings(catalog, { language })` over each en/de message catalog (no dash as a
    connector, AI not `KI`, "CIB seven", du not `Sie`/`Ihr`/`Ihnen`/`man`, also at the start of
@@ -546,7 +546,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `PERIODS`/`PERIOD_RANGE` (analytics-client) — no hardcoded enum copies. The profile STORE (record schema, in-memory/
    filesystem/postgres implementations, migrations) is core:
    `packages/core/widget-shell/src/profile-{record,store,store-postgres,migrations}.ts`
-   (`@miragon-ai/widget-shell/server`) — the record is connector-free (language,
+   (`@miragon/pulse-widget-shell/server`) — the record is connector-free (language,
    `modules.<module>` slices + metadata; no theme — a `theme` an earlier build stored stays an
    inert raw key; camunda7's engine/dashboard
    preferences live in ITS slice, `modules.camunda7`, projected to a flat
@@ -559,7 +559,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    never over the parsed view, so keys a newer build wrote survive. **Whose** profile a request touches is
    decided in exactly one place for ALL modules: `resolveProfileKey`/`resolveAuthUserId`
    - `ANONYMOUS_PROFILE_KEY` + the narrow `ProfileSource` port, in
-     `packages/core/widget-shell/src/profile.ts` (`@miragon-ai/widget-shell/server`). A
+     `packages/core/widget-shell/src/profile.ts` (`@miragon/pulse-widget-shell/server`). A
      module-local copy of that precedence would silently split one user's settings across
      two records; the app's `module-contract.ts` carries a compile-time assertion that
      camunda7's `ProfileStore` still satisfies the port. The only identity is the OAuth
@@ -573,7 +573,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
      Postgres dashboard store (`createPostgresDashboardStore`, implementing the toolkit's
      `DashboardStore`) live in `packages/core/widget-shell/src/{postgres,dashboard-store-postgres}.ts`
      next to the profile store — a composed server imports them from
-     `@miragon-ai/widget-shell/server` instead of reimplementing them, and the app's
+     `@miragon/pulse-widget-shell/server` instead of reimplementing them, and the app's
      `src/persistence/index.ts` shrinks to the env→backend SELECTION (`DATABASE_URL` beats
      `MCP_PROFILE_DIR`/`MCP_DASHBOARD_DIR` beats in-memory). Migration `name`s are the keys
      recorded in `schema_migrations`: append-only, never renamed (a rename re-runs the DDL
@@ -585,9 +585,9 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
 8. **Modules are self-contained peers; the app is a thin composition root.**
    Connector packages never import each other. Layout + naming carry the layer
    semantics and are load-bearing for the guardrails: connector modules live at
-   `packages/connectors/<family>/<name>-connector` (npm `@miragon-ai/<name>-connector`),
+   `packages/connectors/<family>/<name>-connector` (npm `@miragon/pulse-<name>-connector`),
    their SDK leaves at `packages/connectors/<family>/<name>-client`
-   (npm `@miragon-ai/<name>-client`), foundation packages under `packages/core/`
+   (npm `@miragon/pulse-<name>-client`), foundation packages under `packages/core/`
    — a new package that follows the convention is covered by the dependency rules
    without touching them; one that breaks it would silently fall OUT of the rules,
    which is why the convention itself is gated: `scripts/check-package-naming.mjs`
@@ -609,7 +609,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    a module without one has no toolsets) and threads it into `config.toolset`;
    `logEffectiveToolsets`, the one boot line stating each module's toolset and why;
    env-typo warner with prefixes derived from every known var, boot warnings,
-   AppConfig/plugin assembly) live in `@miragon-ai/widget-shell/server`. The root passes
+   AppConfig/plugin assembly) live in `@miragon/pulse-widget-shell/server`. The root passes
    `authenticated` only when it actually INSTALLED OAuth — never inferred from an env var;
    every root builds that provider with the shared `oauthFromEnv` (`MCP_OAUTH`).
    Framework durable writes no module toolset filters (the toolkit builder's
@@ -635,7 +635,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    applies the host's style variables, then the toolkit's `adoptHostFontVariables`) plus
    `LocalizedAppView` (the toolkit's `McpAppView` with its own en/de chrome catalog and
    fullscreen gate; `titleMode` "hide" over a module view, whose widget heading is the one
-   title, "show" over a composed `render-view`) live in `@miragon-ai/widget-shell/widgets`;
+   title, "show" over a composed `render-view`) live in `@miragon/pulse-widget-shell/widgets`;
    the stylesheet is the toolkit's `@miragon/mcp-toolkit-ui/theme.css` after `tailwindcss`
    (never its `globals.css`, a second Tailwind entry, nor `fonts.css`, base64 Geist per view;
    Geist arrives by URL from the server's font route, `declareServedFonts` in `HostDocument`;
@@ -701,7 +701,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    `filterLayoutToWidgets` when unresolvable, so a missing module's section disappears
    instead of erroring (a bundled section whose module is inactive hides itself once its
    feed's tool answers "not found", `classifyError(…).kind === "notOnServer"`). The
-   settings LAYOUT is not hand-maintained: `settingsLayout` (`@miragon-ai/widget-shell/widgets`)
+   settings LAYOUT is not hand-maintained: `settingsLayout` (`@miragon/pulse-widget-shell/widgets`)
    assembles the page from the HOST's widget registry — the shell's `shell:settings`
    section first, then one row per `<module>:settings` id in registration order (camunda7's
    is `camunda7:settings`: engines and dashboards) — so a custom module in a composed
@@ -713,7 +713,7 @@ Abweichungen vom Guide (Owner-Entscheidung, nur hier dokumentiert):
    does the same for its modules). Save-input schemas at tool
    boundaries must be default-FREE (zod 4 re-applies `.default()`s through `.partial()`,
    materializing omitted fields into silent resets — derive them with `withoutDefaults`
-   from `@miragon-ai/widget-shell/server`; see
+   from `@miragon/pulse-widget-shell/server`; see
    `userProfileToolSaveInput`/`analyticsSettingsSaveInput`). A durable write registered
    outside the tool registrar gates itself against the module's declared toolset names
    (`allowsDurableWrites` in `analytics-connector/src/toolsets.ts`, `isToolInToolset` in
@@ -834,7 +834,7 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   surface) and compares the complete sorted tools/list — descriptions, titles, annotations,
   `_meta` incl. `ui.visibility`, input/output schemas — against
   `test/__golden__/tools-*.json`. The ONLY update path is
-  `GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test` (refused in CI);
+  `GOLDEN_UPDATE=1 pnpm --filter @miragon/pulse-mcp-server-camunda7 test` (refused in CI);
   never hand-edit a golden. `__golden__/char-budgets.json` pins each surface's
   model-visible size (name + title + description + inputSchema of non-app-only tools):
   the test pins it exactly and `pnpm lint` makes it shrink-only, so a tool change that
@@ -856,7 +856,7 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
   identity (no saved settings), so such a deployment must name its toolsets in
   `MCP_ACTIVE_MODULES`. The generic
   `shell:kpi-grid`/`shell:data-table` widgets (catalogue + components in
-  `@miragon-ai/widget-shell`) are always registered — they are the standard
+  `@miragon/pulse-widget-shell`) are always registered — they are the standard
   `render-view`/builder composition targets for KPI rows/tables, fed via `props.dataKey`.
 
 ## Releases & toolkit contributions
@@ -864,17 +864,17 @@ viewResourceUri(name), title })` stamps only the `openai/*` half
 - **Everything releases through one release-please train.** Conventional commits on
   `main` drive `release-please.yml`, which opens/updates a single Release PR (root
   component, tag `v<version>`); release-please bumps the root, the server app, all five
-  `packages/` `package.json`s, the template's `@miragon-ai/*` pins plus
+  `packages/` `package.json`s, the template's `@miragon/pulse-*` pins plus
   `engine-plugins/gradle.properties` in lockstep (`extra-files` in
   `release-please-config.json`). Merging the PR creates the release; the publish
   workflows then wait for manual approval of the `release` environment gate.
 - **The five packages publish to the public npm registry.** The release train's
   `publish-npm` matrix calls `publish-npm-package.yml` (OIDC trusted publishing, no
-  NPM_TOKEN; provenance attached) for `@miragon-ai/{widget-shell,camunda7-connector,
+  NPM_TOKEN; provenance attached) for `@miragon/pulse-{widget-shell,camunda7-connector,
 camunda7-client,analytics-connector,analytics-client}` — matrix entries are package
   DIRECTORIES under `packages/`; the npm name is read from each `package.json`.
   Afterwards `sync-template-mirror.yml` waits until the versions are visible on npm and
-  mirrors `templates/composed-server` to the `Miragon/miragon-ai-starter` repo — the
+  mirrors `templates/composed-server` to the `Miragon/pulse-starter` repo — the
   customer-facing composition path (own server + own connector on the published
   packages), drift-gated by `scripts/test-template.sh`. Only the server app stays
   `"private": true`.
@@ -890,7 +890,7 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
   `io.miragon.mcp:cibseven-history-metrics`. Per-module publishing config lives in the
   module's own `build.gradle.kts` (`mavenPublishing { ... }`), not the root convention.
 - **The server image publishes via `publish-to-docker.yml`** (same train): builds the
-  root `Dockerfile` and pushes `docker.io/miragon/miragon-ai-server:<version>` and
+  root `Dockerfile` and pushes `docker.io/miragon/pulse-server:<version>` and
   `:latest` to Docker Hub (version = release tag without the `v` prefix, falling back
   to `apps/mcp-server-camunda7/package.json`).
 - **`@miragon/mcp-toolkit-*` lives in a separate repository.** In `devDependencies` it is
@@ -914,7 +914,7 @@ camunda7-client,analytics-connector,analytics-client}` — matrix entries are pa
 | `pnpm test:mutation` | Diff-scoped Stryker run (`scripts/mutation-diff.mjs`): changed files inside a package's `mutate` allowlist must keep the mutation score above the package's `thresholds.break` (`stryker.config.json`); runs in CI as "Mutation (changed files)". The gate bypasses the package's incremental cache, so a local run and CI agree. More than 25 in-scope files in one package FAIL the gate unless the branch carries a reviewed `Mutation-Cap-Exception: <reason>` trailer                                                                                                                                                                                                                           |
 | `pnpm fitness`       | Aggregated fitness report — architecture graph, ratchet debt, per-package coverage + mutation scores (diff-scoped in CI — the file count next to each score says over what); its own CI job, fed by the test + mutation jobs' artifacts                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `./gradlew build`    | Kotlin compile + unit tests + Konsist architecture tests (run in `engine-plugins/`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `test:host`          | `pnpm --filter @miragon-ai/mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle: the view document `createApp` serves (`resources/read`), sandboxed behind a SEP-1865 host shim, rendering a real camunda7 show tool against a stub engine (keep/strip, slow tool, `isError`, cancel, host theme, display modes, served fonts: Geist drawn when allowed, the host's font when the host ignores `resourceDomains` or the route is unreachable; `pinned …` scenarios = known defects, flipped when fixed); runs in CI as "Widget host simulation (test:host)" — run it locally for changes to the widget shell, `src/ui/`, or the toolkit pin                    |
+| `test:host`          | `pnpm --filter @miragon/pulse-mcp-server-camunda7 test:host` — Playwright host simulation of the **built** widget bundle: the view document `createApp` serves (`resources/read`), sandboxed behind a SEP-1865 host shim, rendering a real camunda7 show tool against a stub engine (keep/strip, slow tool, `isError`, cancel, host theme, display modes, served fonts: Geist drawn when allowed, the host's font when the host ignores `resourceDomains` or the route is unreachable; `pinned …` scenarios = known defects, flipped when fixed); runs in CI as "Widget host simulation (test:host)" — run it locally for changes to the widget shell, `src/ui/`, or the toolkit pin                 |
 | `pnpm test:pg`       | The database slice: reruns the suites with `TEST_DATABASE_URL` pointed at the compose stack's test database, which un-skips the Postgres store + migration-runner tests (`describe.skipIf`). **The only check that executes the Postgres adapters**; runs in CI as "Postgres adapters (test:pg)" against a `postgres:` service container — run it locally for changes to `postgres.ts` or any `*-store-postgres.ts`                                                                                                                                                                                                                                                                                  |
 | Docker build         | `.github/workflows/docker-build.yml`: plain `docker build` of the root `Dockerfile` (no push) on every PR touching it, `apps/`, `packages/` or a root file the build stage copies                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Manual               | `docker compose -f playground/docker/docker-compose.yml up -d` + `pnpm dev`, then exercise tools/widgets via the inspector at `http://localhost:8400/mcp/inspector` (`pnpm dev` only). The default boot is read-only — write paths need an explicit suffix, e.g. `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in `.env`                                                                                                                                                                                                                                                                                                                                                                    |

@@ -1,4 +1,8 @@
-import { BPMN_TOKENS, type BpmnCanvas, type BpmnOverlays } from "@miragon-ai/widget-shell/widgets"
+import {
+  BPMN_TOKENS,
+  type BpmnCanvas,
+  type BpmnOverlays,
+} from "@miragon/pulse-widget-shell/widgets"
 
 /**
  * The diagram-overlay colours, by meaning: the kit's ONE BPMN token module

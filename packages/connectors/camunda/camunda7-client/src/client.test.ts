@@ -147,7 +147,7 @@ describe("createCamunda7Client", () => {
     })
     await client.get({ url: "/engine", fetch: fetchStub })
     expect(seen?.get("Accept")).toBe("application/json")
-    expect(seen?.get("User-Agent")).toContain("@miragon-ai/camunda7-client")
+    expect(seen?.get("User-Agent")).toContain("@miragon/pulse-camunda7-client")
   })
 
   it("always sends the JSON content negotiation headers and identifies itself", () => {
@@ -155,7 +155,7 @@ describe("createCamunda7Client", () => {
     const h = headers(client)
     expect(h.get("Content-Type")).toBe("application/json")
     expect(h.get("Accept")).toBe("application/json")
-    expect(h.get("User-Agent")).toContain("@miragon-ai/camunda7-client")
+    expect(h.get("User-Agent")).toContain("@miragon/pulse-camunda7-client")
   })
 
   it("normalizes a trailing slash off the base URL", () => {

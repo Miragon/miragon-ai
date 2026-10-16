@@ -1,11 +1,11 @@
 name: Docs
 
 # The Pulse docs (docs/*.md) as a VitePress site on GitHub Pages:
-# https://miragon.github.io/miragon-ai/. A pull request that touches docs/ checks
+# https://miragon.github.io/pulse/. A pull request that touches docs/ checks
 # the vendored Miragon docs kit and builds the site (VitePress fails the build on
 # a dead link). A push to main also deploys it.
 # Template from Miragon/corporate-identity (skill docs-site), with the pnpm
-# workspace steps: docs/ is the workspace package @miragon-ai/docs.
+# workspace steps: docs/ is the workspace package @miragon/pulse-docs.
 
 on:
   push:
@@ -47,7 +47,7 @@ jobs:
       # The kit in docs/.vitepress/miragon/ and the logos in docs/public/logo/ come
       # unchanged from the corporate identity. Fails when someone edited them here.
       - name: Check the Miragon docs kit
-        run: pnpm --filter @miragon-ai/docs check:kit
+        run: pnpm --filter @miragon/pulse-docs check:kit
 
       - run: pnpm docs:build
         env:

@@ -18,7 +18,7 @@ analytics stack, read-only. See [Connect your Claude in 30 seconds](getting-star
 ## Clone and install
 
 ```bash
-git clone git@github.com:miragon/miragon-ai.git
+git clone git@github.com:miragon/pulse.git
 cd miragon-ai
 pnpm install
 ```
@@ -55,20 +55,20 @@ write paths, uncomment `MCP_ACTIVE_MODULES=camunda7:admin,analytics:standard` in
 
 ## Build your own server
 
-The modules ship on public npm: `@miragon-ai/camunda7-connector`,
-`@miragon-ai/analytics-connector`, `@miragon-ai/widget-shell` plus the two client packages,
+The modules ship on public npm: `@miragon/pulse-camunda7-connector`,
+`@miragon/pulse-analytics-connector`, `@miragon/pulse-widget-shell` plus the two client packages,
 released in lockstep (pin one version across all of them).
-[`templates/composed-server/`](https://github.com/Miragon/miragon-ai/tree/main/templates/composed-server)
+[`templates/composed-server/`](https://github.com/Miragon/pulse/tree/main/templates/composed-server)
 is a ready-to-copy pnpm workspace that composes them with an example custom module (tools,
 widget, guard tests included); its `CLAUDE.md` and `.claude/skills/` document the module
 contract and the invariants, its `README.md` is the quick tour. CI runs the template against the
 workspace's packed packages on every change (`scripts/test-template.sh`). Each release also
 syncs it (tested against the published packages, with a committed lockfile) to the read-only
-mirror [`Miragon/miragon-ai-starter`](https://github.com/Miragon/miragon-ai-starter)
-("Use this template" ready; contribute in Miragon/miragon-ai, not there).
+mirror [`Miragon/pulse-starter`](https://github.com/Miragon/pulse-starter)
+("Use this template" ready; contribute in Miragon/pulse, not there).
 
 ## Documentation
 
-- These pages are Markdown in `docs/`, next to the code they describe, and build into this VitePress site (`pnpm docs:dev`, `pnpm docs:build`), published to [miragon.github.io/miragon-ai](https://miragon.github.io/miragon-ai/) on every push to `main`. A change to env vars, tools, ports or the getting-started steps updates them in the same PR. `apps/mcp-server-camunda7/test/docs-refs.test.ts` checks every tool name and repo path they cite, and each page's line budget.
+- These pages are Markdown in `docs/`, next to the code they describe, and build into this VitePress site (`pnpm docs:dev`, `pnpm docs:build`), published to [miragon.github.io/pulse](https://miragon.github.io/pulse/) on every push to `main`. A change to env vars, tools, ports or the getting-started steps updates them in the same PR. `apps/mcp-server-camunda7/test/docs-refs.test.ts` checks every tool name and repo path they cite, and each page's line budget.
 - The product page [miragon.ai/tools/pulse](https://miragon.ai/tools/pulse/) is built from [Miragon/miragon-ai-docs](https://github.com/Miragon/miragon-ai-docs).
-- The root [`README.md`](https://github.com/Miragon/miragon-ai/blob/main/README.md) stays the full reference for every tool, toolset and env var; [`engine-plugins/README.md`](https://github.com/Miragon/miragon-ai/blob/main/engine-plugins/README.md) covers the Kotlin plugin build.
+- The root [`README.md`](https://github.com/Miragon/pulse/blob/main/README.md) stays the full reference for every tool, toolset and env var; [`engine-plugins/README.md`](https://github.com/Miragon/pulse/blob/main/engine-plugins/README.md) covers the Kotlin plugin build.

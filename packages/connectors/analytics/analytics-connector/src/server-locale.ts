@@ -3,7 +3,7 @@ import {
   createLocalizeViewFor,
   resolveAuthUserId,
   resolveProfileKey,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { translator } from "./messages/index.js"
 
 /**
@@ -19,7 +19,7 @@ import { translator } from "./messages/index.js"
  * module; `save` merges per module key on the store side, so writing
  * `modules.analytics` never touches other modules' slices.
  */
-export type { ProfileSlice, ProfileSource } from "@miragon-ai/widget-shell/server"
+export type { ProfileSlice, ProfileSource } from "@miragon/pulse-widget-shell/server"
 
 /**
  * Resolve the profile key for the in-flight request: the OAuth caller (off the
@@ -37,7 +37,7 @@ export const resolveSettingsKey = resolveProfileKey
 export const resolveSettingsAuthUserId = resolveAuthUserId
 
 /** A locale-bound translate for summaries; a show tool's summary translate + view title. */
-export type { ServerT, ViewLocale } from "@miragon-ai/widget-shell/server"
+export type { ServerT, ViewLocale } from "@miragon/pulse-widget-shell/server"
 
 /**
  * Resolve the request locale and return a translate bound to it + the analytics

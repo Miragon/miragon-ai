@@ -4,7 +4,7 @@ import {
   type EngineHealthResult,
   type PrometheusClient,
   type PromSample,
-} from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import { createEngineScope } from "../engine-ids.js"
 import { registerHealthTools } from "./health.js"

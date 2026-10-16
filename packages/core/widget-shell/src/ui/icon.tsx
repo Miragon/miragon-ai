@@ -28,7 +28,7 @@ export const DENSE_ICON_STROKE = 2
  * its own (a status icon without words). Tint it with `TONE_ICON[tone]`.
  *
  * Never draw an icon with a Unicode glyph or emoji: `scanGlyphs` from
- * `@miragon-ai/widget-shell/testing` fails the package that does.
+ * `@miragon/pulse-widget-shell/testing` fails the package that does.
  */
 export function Icon({
   icon: Glyph,

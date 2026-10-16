@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { AnalyticsDashboardData, CompareKpiDelta } from "@miragon-ai/analytics-client"
+import type { AnalyticsDashboardData, CompareKpiDelta } from "@miragon/pulse-analytics-client"
 import type { AnalyticsBpmnHeatmapData } from "./bpmn-heatmap.js"
 import {
   describeActivityBottlenecks,

@@ -4,7 +4,7 @@ import {
   createBackendRegistry,
   type BackendRegistry,
 } from "@miragon/mcp-toolkit-core/tools"
-import { withCallerSignal, type Client } from "@miragon-ai/camunda7-client"
+import { withCallerSignal, type Client } from "@miragon/pulse-camunda7-client"
 import type { EngineProvider } from "../engine-provider.js"
 import { providerForEntry } from "../providers/index.js"
 

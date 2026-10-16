@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { collectLayoutWidgets } from "@miragon/mcp-toolkit-core"
-import { filterLayoutToWidgets, SHELL_SETTINGS_PAGE_WIDGET } from "@miragon-ai/widget-shell/widgets"
+import {
+  filterLayoutToWidgets,
+  SHELL_SETTINGS_PAGE_WIDGET,
+} from "@miragon/pulse-widget-shell/widgets"
 import { cockpitViews } from "./views.js"
 
 describe("cockpitViews.settings", () => {

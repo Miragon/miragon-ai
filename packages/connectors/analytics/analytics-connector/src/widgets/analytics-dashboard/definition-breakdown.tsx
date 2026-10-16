@@ -9,7 +9,7 @@ import {
   formatDuration,
   formatNumber,
   type ListTableColumn,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { useDashboardSelfFetch, type DashboardScopeProps, type DashboardView } from "./lib.js"
 import { QueryGate } from "../query-gate.js"
 import { useT, type T } from "../../messages/use-t.js"

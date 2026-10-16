@@ -1,5 +1,5 @@
 import { useId, useState } from "react"
-import { ViewDataState, WidgetShell, formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { ViewDataState, WidgetShell, formatNumber } from "@miragon/pulse-widget-shell/widgets"
 import { FilterBar, ListFooter, useDebouncedValue, DrillButton } from "@miragon/mcp-toolkit-ui"
 import { useViewData } from "@miragon/mcp-toolkit-ui/hooks"
 import type { CockpitDashboardData } from "../../view-models.js"

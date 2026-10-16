@@ -14,7 +14,7 @@ const SRC = fileURLToPath(new URL("./", import.meta.url))
  * `Accept: application/json` with a 406, the variable reads deserialize
  * Object values eagerly (one missing class fails the whole read) and render
  * Json as Jackson's view of the Spin node. The wrappers live in the engine
- * contract (`@miragon-ai/camunda7-client`) unless `home` names the one module
+ * contract (`@miragon/pulse-camunda7-client`) unless `home` names the one module
  * of this package that may make the raw call.
  */
 const TASK_COMPLETION = { wrapper: "completeUserTask", home: "lib/task-completion.ts" }
@@ -39,7 +39,7 @@ function sources(): Array<{ file: string; text: string }> {
 
 /** Names imported from the generated SDK, per file. */
 function sdkImports(text: string): string[] {
-  return [...text.matchAll(/import\s*\{([^}]*)\}\s*from\s*"@miragon-ai\/camunda7-client\/sdk"/g)]
+  return [...text.matchAll(/import\s*\{([^}]*)\}\s*from\s*"@miragon\/pulse-camunda7-client\/sdk"/g)]
     .flatMap((m) => m[1].split(","))
     .map((name) => name.trim().split(/\s+as\s+/)[0])
     .filter(Boolean)

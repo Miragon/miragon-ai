@@ -4,9 +4,13 @@ import {
   fetchAndLockInput,
   completeExternalTaskInput,
   handleExternalTaskFailureInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { complementaryFlags, engineSorting, toEngineVariables } from "@miragon-ai/camunda7-client"
+import {
+  complementaryFlags,
+  engineSorting,
+  toEngineVariables,
+} from "@miragon/pulse-camunda7-client"
 import {
   getExternalTasks,
   getExternalTasksCount,
@@ -14,7 +18,7 @@ import {
   fetchAndLock,
   completeExternalTaskResource,
   handleFailure,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"

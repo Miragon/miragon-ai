@@ -1,11 +1,11 @@
-import type { Client } from "@miragon-ai/camunda7-client"
-import { MAX_PAGE_SIZE } from "@miragon-ai/camunda7-client/schemas"
+import type { Client } from "@miragon/pulse-camunda7-client"
+import { MAX_PAGE_SIZE } from "@miragon/pulse-camunda7-client/schemas"
 import {
   getHistoricActivityInstances,
   getHistoricActivityInstancesCount,
   getHistoricProcessInstances,
   getIncidents,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { collectIncidentActivityIds } from "../lib/activity-tree.js"
 import type { HistoryTimelineData } from "../view-models.js"
 import type { PagingArgs } from "../feed-contracts.js"

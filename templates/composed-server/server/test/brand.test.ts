@@ -6,7 +6,7 @@ import {
   ROLE_CONTRAST_PAIRS,
   toneContrastPairs,
   toolkitThemeStylesheets,
-} from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-widget-shell/testing"
 
 /**
  * Your brand stays readable. src/ui/brand.css overrides role variables on top

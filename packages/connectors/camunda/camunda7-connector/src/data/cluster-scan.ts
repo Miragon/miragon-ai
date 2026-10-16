@@ -1,4 +1,4 @@
-import { earliestEngineDate, engineDateMillis } from "@miragon-ai/camunda7-client"
+import { earliestEngineDate, engineDateMillis } from "@miragon/pulse-camunda7-client"
 
 /**
  * The incident scan behind the failure clusters — shared by the engine-health

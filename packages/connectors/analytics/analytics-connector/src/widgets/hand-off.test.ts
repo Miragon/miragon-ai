@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { FailureDashboardData } from "@miragon-ai/analytics-client"
+import type { FailureDashboardData } from "@miragon/pulse-analytics-client"
 import { enAskAi } from "../messages/en.ask-ai.js"
 import { deAskAi } from "../messages/de.ask-ai.js"
 import { ANALYTICS_ONLY_SURFACE, analyticsSurface, bindHandOff } from "./hand-off.js"

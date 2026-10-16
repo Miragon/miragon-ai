@@ -1,11 +1,11 @@
 import { Badge } from "@miragon/mcp-toolkit-ui"
-import type { EngineCompareResult } from "@miragon-ai/analytics-client"
+import type { EngineCompareResult } from "@miragon/pulse-analytics-client"
 import {
   HandOffButton,
   ViewMeta,
   formatLookback,
   formatNumber,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { useT } from "../messages/use-t.js"
 import {
   ComparisonCard,

@@ -106,7 +106,7 @@ done
 rsync -a --exclude node_modules --exclude dist --exclude .mcp-use "$TEMPLATE/" "$WORK/"
 
 # Overrides beat both the template's direct pins and the transitive
-# @miragon-ai/* ranges inside the packed packages.
+# @miragon/pulse-* ranges inside the packed packages.
 {
   echo ""
   echo "overrides:"

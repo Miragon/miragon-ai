@@ -16,7 +16,7 @@ export const createClientConfig: CreateClientConfig = (override) => ({
     {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "User-Agent": "@miragon-ai/camunda7-client/0.1.0",
+      "User-Agent": "@miragon/pulse-camunda7-client/0.1.0",
     },
     override?.headers,
   ),

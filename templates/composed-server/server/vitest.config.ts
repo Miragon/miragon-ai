@@ -15,7 +15,7 @@ export default defineConfig({
         // (and thus transformed), from npm they would be externalized — and
         // widget-shell's dist uses bundler-style extensionless imports
         // (bpmn-js/lib/NavigatedViewer) that plain Node cannot resolve.
-        inline: [/@miragon-ai\//],
+        inline: [/@miragon\/pulse-/],
       },
     },
   },

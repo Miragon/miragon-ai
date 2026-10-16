@@ -1,6 +1,6 @@
-import { getBatchInput } from "@miragon-ai/camunda7-client/schemas"
+import { getBatchInput } from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { readBatch } from "@miragon-ai/camunda7-client"
+import { readBatch } from "@miragon/pulse-camunda7-client"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"
 

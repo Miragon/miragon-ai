@@ -1,6 +1,6 @@
-import type { Client } from "@miragon-ai/camunda7-client"
-import { getProcessDefinitionBpmn20Xml } from "@miragon-ai/camunda7-client/sdk"
-import { callerCacheKey } from "@miragon-ai/widget-shell/server"
+import type { Client } from "@miragon/pulse-camunda7-client"
+import { getProcessDefinitionBpmn20Xml } from "@miragon/pulse-camunda7-client/sdk"
+import { callerCacheKey } from "@miragon/pulse-widget-shell/server"
 
 /**
  * How many diagrams one engine client keeps. A deployed definition's XML

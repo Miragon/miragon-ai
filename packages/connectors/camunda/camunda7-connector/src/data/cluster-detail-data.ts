@@ -4,12 +4,12 @@ import {
   latestEngineDate,
   toEngineDate,
   type Client,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import {
   getIncidents,
   getIncidentsCount,
   getProcessInstances,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import type { ClusterDetailData, ClusterIncidentRow } from "../view-models.js"
 import type { ClusterDetailFilters, PagingArgs } from "../feed-contracts.js"
 import {

@@ -1,5 +1,5 @@
 import type { MCPServer } from "mcp-use"
-import type { CompareKpiDelta, PrometheusClient } from "@miragon-ai/analytics-client"
+import type { CompareKpiDelta, PrometheusClient } from "@miragon/pulse-analytics-client"
 import type { ProfileSource, ServerT } from "../server-locale.js"
 import type { AnalyticsEngineScope } from "../engine-ids.js"
 import type { NameLookup } from "../bpmn-name-lookup.js"
@@ -8,7 +8,7 @@ import type { NameLookup } from "../bpmn-name-lookup.js"
  * Everything the per-domain widget-tool registrars need, handed over by the
  * `widget-tools.ts` entry — mirrors camunda7's `WidgetToolsContext`. The
  * `_meta`/view bindings are NOT passed through: each registration spreads
- * `showToolBinding()` / `appOnly` from `@miragon-ai/widget-shell/server`
+ * `showToolBinding()` / `appOnly` from `@miragon/pulse-widget-shell/server`
  * itself, so the dual-protocol contract stays in one place.
  */
 export interface AnalyticsWidgetToolsContext {

@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { useEffect } from "react"
 import { cleanup, render, waitFor } from "@testing-library/react"
-import { useBpmnViewer, type BpmnViewerWithGet } from "@miragon-ai/widget-shell/widgets"
+import { useBpmnViewer, type BpmnViewerWithGet } from "@miragon/pulse-widget-shell/widgets"
 
 // Exercises the shared widget-shell viewer lifecycle hook through the same
 // entry point the widgets use, with bpmn-js replaced by a recording stub —

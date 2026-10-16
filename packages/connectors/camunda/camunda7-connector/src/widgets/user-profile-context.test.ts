@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { modelContextText } from "@miragon-ai/widget-shell/widgets"
+import { modelContextText } from "@miragon/pulse-widget-shell/widgets"
 import { liveSurface } from "./lib/hand-off.test-support.js"
 import { describeProfile, profileSurface } from "./user-profile-context.js"
 

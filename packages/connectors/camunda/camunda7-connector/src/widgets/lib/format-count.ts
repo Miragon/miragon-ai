@@ -1,4 +1,4 @@
-import { formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { formatNumber } from "@miragon/pulse-widget-shell/widgets"
 
 /**
  * A count as the widgets render it, in the view's locale ("1.234" in a

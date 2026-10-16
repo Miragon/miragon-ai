@@ -10,7 +10,7 @@ import {
 } from "react"
 import { createPortal } from "react-dom"
 import { Button, usePortalContainer } from "@miragon/mcp-toolkit-ui"
-import { Icon } from "@miragon-ai/widget-shell/widgets"
+import { Icon } from "@miragon/pulse-widget-shell/widgets"
 import { Ellipsis } from "lucide-react"
 
 /** Gap between the button and its panel, in px. */

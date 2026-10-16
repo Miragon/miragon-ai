@@ -1,4 +1,4 @@
-import { createCamunda7Client, type Client } from "@miragon-ai/camunda7-client"
+import { createCamunda7Client, type Client } from "@miragon/pulse-camunda7-client"
 import type { EngineAuth, EngineClientSettings, EngineEntry } from "../engine-provider.js"
 import { resolveMcpBearerToken } from "../lib/mcp-auth.js"
 

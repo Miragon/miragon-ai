@@ -4,7 +4,7 @@ import {
   queryHistoricTaskInstancesInput,
   queryHistoricVariableInstancesInput,
   queryHistoricIncidentsInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   RAW_VARIABLES,
@@ -13,7 +13,7 @@ import {
   engineSorting,
   toOptionalEngineDate,
   trueOnly,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import {
   getHistoricProcessInstances,
   getHistoricProcessInstancesCount,
@@ -25,7 +25,7 @@ import {
   getHistoricVariableInstancesCount,
   getHistoricIncidents,
   getHistoricIncidentsCount,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { truncateVariableRows, VARIABLE_TRUNCATION_NOTE } from "../lib/variable-truncation.js"

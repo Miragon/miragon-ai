@@ -13,7 +13,7 @@ import {
   useHostWidgets,
   useResetOnChange,
   WidgetShell,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { translator } from "../messages/index.js"
 import { NavBreadcrumb } from "./cockpit-app/breadcrumb.js"
 import { cockpitViews } from "./cockpit-app/views.js"

@@ -6,14 +6,14 @@ import {
   completeTaskInput,
   setTaskAssigneeInput,
   getTaskVariablesInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   complementaryFlags,
   engineSorting,
   readTaskVariables,
   trueOnly,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import {
   getTasks,
   getTasksCount,
@@ -21,7 +21,7 @@ import {
   claim,
   unclaim,
   setAssignee,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import {

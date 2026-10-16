@@ -4,7 +4,7 @@ import {
   useActionFeedback,
   useResetOnChange,
   type ConfirmTarget,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 
 import type { CAMUNDA7_SAVE_SETTINGS, Camunda7WidgetAction } from "../../tool-names.js"
 import { useCanRun } from "../widget-actions.js"

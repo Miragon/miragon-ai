@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { createToolRegistrar, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
-import type { Client } from "@miragon-ai/camunda7-client"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import type { EngineProvider } from "../engine-provider.js"
 import { resolveEngine, type EngineCallContext, type EngineRegistry } from "./resolve-engine.js"
 

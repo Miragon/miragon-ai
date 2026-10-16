@@ -5,7 +5,7 @@ import {
   SERVED_FONT_FILES,
   SERVED_FONT_PATH,
   type RunningServer,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { createApp } from "../src/app.js"
 import { stubNeutralEnv } from "./neutral-env.js"
 

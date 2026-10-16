@@ -6,7 +6,7 @@ import {
   scanGlyphs,
   scanIconSizes,
   scanTypeScale,
-} from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-widget-shell/testing"
 
 /**
  * The camunda7 package under the kit's code gates (CLAUDE.md invariant 6,

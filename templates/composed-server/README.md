@@ -41,7 +41,7 @@ open the inspector at `http://localhost:8400/mcp/inspector` and call
 `notes_show_notes` — the example widget renders with no external systems (the
 production entrypoint the image runs mounts no inspector).
 The camunda7/analytics tools need a running engine and Prometheus; the
-[miragon-ai playground](https://github.com/Miragon/miragon-ai/tree/main/playground)
+[miragon-ai playground](https://github.com/Miragon/pulse/tree/main/playground)
 ships a ready-made Docker Compose stack whose URLs match `.env.example`.
 
 ## Connect an assistant
@@ -215,7 +215,7 @@ docker run -p 8400:8400 \
 ## Going further
 
 The stock server (`apps/mcp-server-camunda7` in the
-[miragon-ai repo](https://github.com/Miragon/miragon-ai)) additionally ships,
+[miragon-ai repo](https://github.com/Miragon/pulse)) additionally ships,
 and is the reference for: Postgres profile and dashboard stores for
 multi-instance deployments, and a Playwright host simulation of the widget
 bundle.

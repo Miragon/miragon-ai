@@ -20,7 +20,7 @@
  * that terminates auth in front of the server is invisible here — identity
  * reaches the server only through this OAuth.
  *
- * Server path only (`@miragon-ai/widget-shell/server`).
+ * Server path only (`@miragon/pulse-widget-shell/server`).
  */
 import type { OAuthProvider } from "mcp-use/oauth"
 import { oauthAuth0Provider } from "mcp-use/oauth/auth0"

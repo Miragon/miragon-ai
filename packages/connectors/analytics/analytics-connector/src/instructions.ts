@@ -1,4 +1,4 @@
-import { PERIODS } from "@miragon-ai/analytics-client"
+import { PERIODS } from "@miragon/pulse-analytics-client"
 
 /**
  * The analytics module's slice of the MCP server `instructions`

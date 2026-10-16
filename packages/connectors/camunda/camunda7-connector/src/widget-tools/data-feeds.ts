@@ -7,7 +7,7 @@ import {
   buildDataFeedResult as rawData,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import {
   buildCockpitDashboardData,
   buildJobPanelData,

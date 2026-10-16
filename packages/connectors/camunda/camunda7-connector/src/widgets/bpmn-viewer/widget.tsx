@@ -1,6 +1,6 @@
 import { Alert, AlertDescription, useToolQuery } from "@miragon/mcp-toolkit-ui"
 import type { BpmnViewerData } from "../../view-models.js"
-import { WidgetShell } from "@miragon-ai/widget-shell/widgets"
+import { WidgetShell } from "@miragon/pulse-widget-shell/widgets"
 import { CAMUNDA7_BPMN_VIEWER_DATA } from "../../tool-names.js"
 import { useT } from "../../messages/use-t.js"
 import { BpmnViewerHeader } from "./header.js"

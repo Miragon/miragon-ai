@@ -10,8 +10,8 @@ import type {
   EngineCompareResult,
   VersionCompareKpi,
   VersionCompareResult,
-} from "@miragon-ai/analytics-client"
-import { setFormatLocale } from "@miragon-ai/widget-shell/testing"
+} from "@miragon/pulse-analytics-client"
+import { setFormatLocale } from "@miragon/pulse-widget-shell/testing"
 import { VersionCompareWidget } from "./version-compare.js"
 import { EngineCompareWidget } from "./engine-compare.js"
 import { ClusterCompareWidget } from "./cluster-compare.js"

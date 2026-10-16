@@ -7,7 +7,7 @@ import { createRequire } from "node:module"
  * other dark scopes), resolves `var()` chains, hex, `oklch()` and
  * `color-mix()` the way the browser would, and measures text/background and
  * non-text pairs in both modes. Built for tests
- * (`@miragon-ai/widget-shell/testing`): a brand override that drops a role
+ * (`@miragon/pulse-widget-shell/testing`): a brand override that drops a role
  * below AA fails the suite that runs it, not a screenshot review.
  */
 

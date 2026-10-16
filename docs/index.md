@@ -14,13 +14,13 @@ hero:
       link: https://miragon.ai/tools/pulse/
     - theme: alt
       text: GitHub
-      link: https://github.com/Miragon/miragon-ai
+      link: https://github.com/Miragon/pulse
 ---
 
 ## Try it, then run it on your engine
 
 [Getting started](./getting-started.md) connects your Claude to the public playground with one
-command, then runs the Docker image `miragon/miragon-ai-server` against your own engine's REST API.
+command, then runs the Docker image `miragon/pulse-server` against your own engine's REST API.
 [Usage](./usage.md) covers the other assistants, what to ask and your settings.
 
 ## Run it for your team
@@ -32,5 +32,5 @@ server, its two modules (camunda7 and analytics) and the systems they talk to.
 ## Build on it
 
 The [developer guide](./developer.md) runs the stack from source and composes the published
-`@miragon-ai/*` modules into a server of your own. Pulse is pre-1.0: minor releases can rename
-tools, so pin a version from the [releases](https://github.com/Miragon/miragon-ai/releases).
+`@miragon/pulse-*` modules into a server of your own. Pulse is pre-1.0: minor releases can rename
+tools, so pin a version from the [releases](https://github.com/Miragon/pulse/releases).

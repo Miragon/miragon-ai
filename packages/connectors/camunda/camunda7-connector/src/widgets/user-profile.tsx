@@ -6,7 +6,7 @@ import {
   classifyError,
   useDetailView,
   useResetOnChange,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 
 import { CAMUNDA7_SAVE_SETTINGS, CAMUNDA7_SETTINGS_DATA } from "../tool-names.js"
 import type { UserProfileView } from "../lib/profile-schema.js"

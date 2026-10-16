@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { feedPayload } from "./tools/test-support/feed-payload.js"
 import type { MCPServer } from "mcp-use"
-import type { Client } from "@miragon-ai/camunda7-client"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import { z } from "zod"
 import {
   createInMemoryProfileStore,
   runWithMcpRequestInfo,
   type McpRequestInfo,
   type ProfileStore,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { createPlugin, type Camunda7PluginConfig } from "./plugin.js"
 import {
   EngineNotSelectedError,

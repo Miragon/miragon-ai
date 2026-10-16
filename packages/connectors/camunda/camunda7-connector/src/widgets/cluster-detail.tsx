@@ -11,7 +11,7 @@ import {
   formatNumber,
   formatTimestamp,
   usePagedListView,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { HostModelContext } from "@miragon/mcp-toolkit-ui/app"
 import {
   FilterBar,

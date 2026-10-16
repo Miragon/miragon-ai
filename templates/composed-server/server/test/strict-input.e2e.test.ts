@@ -1,7 +1,7 @@
 import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
-import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon-ai/camunda7-connector"
+import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon/pulse-camunda7-connector"
 import { createApp } from "../src/app.js"
 import { MODULES } from "../src/setup.js"
 import { stubNeutralEnv } from "./neutral-env.js"
@@ -105,7 +105,7 @@ async function probeBoot(selection: string, probed: Map<string, ProbedTool>): Pr
  * misnamed optional filter then silently widens the result and the model
  * never learns. Registrar tools take `{ strictInput: true }`
  * (`createToolRegistrar`), raw `server.tool()` registrations
- * `strictToolInput(shape)` (`@miragon-ai/widget-shell/server`) — then an
+ * `strictToolInput(shape)` (`@miragon/pulse-widget-shell/server`) — then an
  * unknown key is a tool error naming the valid keys, which the model fixes
  * in one retry.
  */

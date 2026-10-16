@@ -1,13 +1,13 @@
-# @miragon-ai/camunda7-connector
+# @miragon/pulse-camunda7-connector
 
 The **camunda7 module** for [Miragon AI](../../../../README.md): Camunda 7 / CIB Seven BPM operations as
 `camunda7_*` MCP tools, plus the interactive cockpit widgets (MCP Apps). Built on
-[`@miragon-ai/camunda7-client`](../camunda7-client) and the `@miragon/mcp-toolkit-*` packages.
+[`@miragon/pulse-camunda7-client`](../camunda7-client) and the `@miragon/mcp-toolkit-*` packages.
 
 The server loads this module as `camunda7` via `camunda7Module` (`src/module.ts`), which conforms
 structurally to the app's `ModuleDefinition` port. The package is published to npm in lockstep with
 the other `@miragon-ai` packages (pin them all to one version); the
-[miragon-ai-starter](https://github.com/Miragon/miragon-ai-starter) template shows how to compose it
+[pulse-starter](https://github.com/Miragon/pulse-starter) template shows how to compose it
 into your own MCP server.
 
 The consumer-shared libraries are ranged **peer dependencies** so they dedupe against your app's
@@ -52,7 +52,7 @@ hangs every in-widget query on "Loading…".
 This module has strict house patterns — read the
 [`add-bpm-feature`](../../../../.claude/skills/add-bpm-feature) skill and the architecture invariants in
 [`CLAUDE.md`](../../../../CLAUDE.md) before adding tools, schemas, or widgets. In short: input schemas live
-in [`@miragon-ai/camunda7-client`](../camunda7-client), tools register via the registrar (never raw
+in [`@miragon/pulse-camunda7-client`](../camunda7-client), tools register via the registrar (never raw
 `server.tool()`), and a widget must be wired across all four registration links.
 
 ## Layout

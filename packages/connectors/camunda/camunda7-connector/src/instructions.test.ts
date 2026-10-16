@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { createInMemoryProfileStore, runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import {
+  createInMemoryProfileStore,
+  runWithMcpRequestInfo,
+} from "@miragon/pulse-widget-shell/server"
 import { camunda7Module } from "./module.js"
 import { resolveEngine, type Camunda7StepAppConfig } from "./lib/resolve-engine.js"
 

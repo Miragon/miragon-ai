@@ -1,4 +1,4 @@
-# @miragon-ai/camunda7-client
+# @miragon/pulse-camunda7-client
 
 TypeScript client for the [CIB Seven](https://cibseven.org/) REST API: an SDK
 generated with [`@hey-api/openapi-ts`](https://heyapi.dev/) plus hand-written,
@@ -29,8 +29,8 @@ default client and `createCamunda7Client` share — generated types and runtime
 behavior always agree.
 
 ```ts
-import { createCamunda7Client } from "@miragon-ai/camunda7-client"
-import { getProcessDefinitions } from "@miragon-ai/camunda7-client/sdk"
+import { createCamunda7Client } from "@miragon/pulse-camunda7-client"
+import { getProcessDefinitions } from "@miragon/pulse-camunda7-client/sdk"
 
 const client = createCamunda7Client({
   baseUrl: "http://localhost:8410/engine-rest",
@@ -85,7 +85,7 @@ checked in and CI assumes it matches the spec.
 ## MCP-oriented input schemas
 
 `src/schemas/` (exported as `./schemas`) are hand-written Zod schemas for the
-MCP tools in `@miragon-ai/camunda7-connector`: flat parameter objects with
+MCP tools in `@miragon/pulse-camunda7-connector`: flat parameter objects with
 LLM-friendly descriptions, sensible defaults, and conservative bounds. They
 are intentionally narrower than the full REST API surface and are not
 generated from the spec — they are the package's value-add for building MCP

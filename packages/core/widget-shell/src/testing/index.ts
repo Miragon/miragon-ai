@@ -1,5 +1,5 @@
 /**
- * `@miragon-ai/widget-shell/testing` — the brand gates every widget package
+ * `@miragon/pulse-widget-shell/testing` — the brand gates every widget package
  * runs in its own test suite (Node, never bundled into a view):
  *  - `catalogTextFindings` — the voice rules over a message catalog;
  *  - `glossaryFindings` with `PRODUCT_GLOSSARY` — one word per thing across

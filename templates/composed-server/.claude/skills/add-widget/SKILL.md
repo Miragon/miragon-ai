@@ -10,7 +10,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 (component), `widgets/index.ts` (component map), `definition.ts` (catalogue),
 `widget-tools.ts` (show tool + data feed), `tool-names.ts` (rename safety).
 Richer patterns (paged lists, KPI grids, BPMN viewers, settings cards) live in
-`node_modules/@miragon-ai/{camunda7,analytics}-connector/src/widgets/`.
+`node_modules/@miragon/pulse-{camunda7,analytics}-connector/src/widgets/`.
 
 ## Step 0 — pick the render path
 
@@ -28,7 +28,7 @@ the widget `_meta` contract by name across all composed modules.
 ## Step 1 — the component
 
 Widgets live in `src/widgets/` and receive their payload as a `data` prop.
-Compose them from the shared kit `@miragon-ai/widget-shell/widgets` and the
+Compose them from the shared kit `@miragon/pulse-widget-shell/widgets` and the
 toolkit `@miragon/mcp-toolkit-ui` — never re-inline their primitives. The
 toolkit's own components, tone maps and `cn` come from the toolkit itself; the
 kit neither forks nor re-exports them:
@@ -89,9 +89,9 @@ somewhere** (no build error):
    `consumes`, `size`). Links 1↔2 are guarded by the module's
    `widgets/catalogue-sync.test.ts`. `description` is the model's text; the
    view builder shows people a `title` and `summary` (`{ en, de }`, or from
-   your catalogs via `createBuilderTexts` from `@miragon-ai/widget-shell/server`)
+   your catalogs via `createBuilderTexts` from `@miragon/pulse-widget-shell/server`)
    and each top-level `propsSchema` field's `x-display`, else the id;
-   `missingDisplayTexts` from `@miragon-ai/widget-shell/testing` lists what is
+   `missingDisplayTexts` from `@miragon/pulse-widget-shell/testing` lists what is
    still unnamed, `displayTextsSentToModel` any text the model would read (a
    nested field's `x-display` is never stripped, so leave nested fields bare).
 3. `server/src/ui/widget-registry.ts` — your module's spread must reach the
@@ -110,7 +110,7 @@ This file is the documented exception that calls `server.tool()` directly.
 Model both tools on `modules/mcp-notes/src/widget-tools.ts`:
 
 - **`show_*` tool**: spread `...showToolBinding(name, title)` (from
-  `@miragon-ai/widget-shell/server`) — it binds the mcp-use view, the
+  `@miragon/pulse-widget-shell/server`) — it binds the mcp-use view, the
   passthrough `outputSchema`, and the Apps-SDK `_meta` half. **Never hand-write
   `_meta.ui.*` keys**; mcp-use owns and overwrites that namespace. Return
   `buildSingleWidgetView({ widget, app, dataType, data, title, summary })` —
@@ -122,7 +122,7 @@ Model both tools on `modules/mcp-notes/src/widget-tools.ts`:
   `buildDataFeedResult(data)` — so the in-widget `callTool()` gets JSON back
   instead of the host rendering a new widget.
 - Wrap every handler in `withToolErrors` (all from
-  `@miragon-ai/widget-shell/server`).
+  `@miragon/pulse-widget-shell/server`).
 - Share the input shape between the pair (one `const <thing>InputShape`), so
   the widget can re-issue the show tool's arguments against the feed, and
   declare it as `inputSchema: strictToolInput(<thing>InputShape)` — never a bare
@@ -132,7 +132,7 @@ Model both tools on `modules/mcp-notes/src/widget-tools.ts`:
   module's `toolsets` vocabulary, where a missing toolset is the read-only
   floor (the no-suffix default without `MCP_OAUTH`), never "everything"; see
   the add-settings-section skill and
-  `node_modules/@miragon-ai/analytics-connector/src/settings-tools.ts`.
+  `node_modules/@miragon/pulse-analytics-connector/src/settings-tools.ts`.
 
 ## Step 4 — verify
 

@@ -3,7 +3,7 @@ import type { ComponentType } from "react"
 import { cleanup, render, screen, within } from "@testing-library/react"
 import { LocaleProvider, queryClient } from "@miragon/mcp-toolkit-ui"
 import { WidgetFixtureHost } from "@miragon/mcp-toolkit-ui/app"
-import { setFormatLocale } from "@miragon-ai/widget-shell/testing"
+import { setFormatLocale } from "@miragon/pulse-widget-shell/testing"
 
 /**
  * Rendering the analytics widgets as a person reads them, for the DOM suites

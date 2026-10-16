@@ -1,6 +1,6 @@
 import type { MCPServer } from "mcp-use"
 import { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import type { PrometheusClient } from "@miragon-ai/analytics-client"
+import type { PrometheusClient } from "@miragon/pulse-analytics-client"
 import type { ProfileSource } from "../server-locale.js"
 import type { AnalyticsEngineScope } from "../engine-ids.js"
 import { registerPerformanceTools } from "./performance.js"

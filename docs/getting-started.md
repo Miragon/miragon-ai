@@ -38,12 +38,12 @@ read-only, and `MCP_ACTIVE_MODULES=camunda7` leaves out analytics until you run 
 docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8080/engine-rest \
   -e MCP_ACTIVE_MODULES=camunda7 \
-  docker.io/miragon/miragon-ai-server:latest
+  docker.io/miragon/pulse-server:latest
 claude mcp add --transport http miragon-ai http://localhost:8400/mcp
 ```
 
 Pulse is pre-1.0 and minor releases can rename tools, so pin a version tag from the
-[releases](https://github.com/Miragon/miragon-ai/releases) for anything beyond a first try. If the
+[releases](https://github.com/Miragon/pulse/releases) for anything beyond a first try. If the
 REST API needs a login, add `CAMUNDA_AUTH_TYPE=basic` with `CAMUNDA_USERNAME` and
 `CAMUNDA_PASSWORD`. [Operations](operations.md) covers several engines, OAuth and the toolsets that
 allow writes. For analytics, your engine project adds the plugin

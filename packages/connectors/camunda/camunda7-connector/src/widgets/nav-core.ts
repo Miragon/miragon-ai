@@ -1,4 +1,4 @@
-import { truncate } from "@miragon-ai/widget-shell/widgets"
+import { truncate } from "@miragon/pulse-widget-shell/widgets"
 import { translator } from "../messages/index.js"
 import type { ViewParams } from "./cockpit-app/views.js"
 import type { NavIntent } from "./navigation.js"

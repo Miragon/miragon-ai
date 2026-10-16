@@ -7,7 +7,7 @@ import type { ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import type {
   CreateDeploymentResponse,
   MultiFormDeploymentDto,
-} from "@miragon-ai/camunda7-client/types"
+} from "@miragon/pulse-camunda7-client/types"
 import {
   createEngineRegistry,
   type EngineEntry,

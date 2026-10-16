@@ -2,7 +2,7 @@
  * View-model contracts shared between the `src/data` builders, the widget
  * tools, and the React widgets (`src/widgets`). These shapes describe what the
  * widgets render — they are not engine API types (those live in
- * `@miragon-ai/camunda7-client/types`).
+ * `@miragon/pulse-camunda7-client/types`).
  */
 import type { IncidentsDashboardFilters, JobsFilters } from "./feed-contracts.js"
 
@@ -246,7 +246,7 @@ export interface VariableValue {
 
 /**
  * What clears an incident — the engine contract's `incidentRecovery`
- * (`@miragon-ai/camunda7-client`): the built-in types are retried
+ * (`@miragon/pulse-camunda7-client`): the built-in types are retried
  * (`camunda7_set_job_retries` / `camunda7_set_external_task_retries`), only
  * custom ones resolved; `none` = propagated from a called instance, cleared by
  * retrying its root cause.

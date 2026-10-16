@@ -1,4 +1,4 @@
-import { ListTable, Td, formatDuration, formatTimestamp } from "@miragon-ai/widget-shell/widgets"
+import { ListTable, Td, formatDuration, formatTimestamp } from "@miragon/pulse-widget-shell/widgets"
 import { StatusBadge, type ToneVariant } from "@miragon/mcp-toolkit-ui"
 import { useT, type T } from "../messages/use-t.js"
 

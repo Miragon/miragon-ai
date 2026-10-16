@@ -1,4 +1,4 @@
-# @miragon-ai/mcp-server-camunda7
+# @miragon/pulse-mcp-server-camunda7
 
 The MCP host for [Miragon AI](../../README.md). It composes the `camunda7` and `analytics` modules
 into a single [mcp-use](https://github.com/mcp-use/mcp-use) server, bundles every React widget into
@@ -6,7 +6,7 @@ one Vite bundle served as per-tool view resources, and serves the streamable-HTT
 port `8400`.
 
 This is the deployable artifact: it ships as the Docker image
-[`miragon/miragon-ai-server`](https://hub.docker.com/r/miragon/miragon-ai-server). The package itself
+[`miragon/pulse-server`](https://hub.docker.com/r/miragon/pulse-server). The package itself
 is `private` and not published to npm.
 
 ## What it does
@@ -40,7 +40,7 @@ upstream/proxy federation.
 docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
   -e PROMETHEUS_URL=http://host.docker.internal:9090 \
-  docker.io/miragon/miragon-ai-server:latest
+  docker.io/miragon/pulse-server:latest
 
 # From source (local dev — needs the Docker infra; see the root README)
 pnpm dev          # build:ui + mcp-use dev on :8400, inspector at /mcp/inspector

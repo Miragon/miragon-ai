@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { runWithMcpRequestInfo } from "@miragon-ai/widget-shell/server"
+import { runWithMcpRequestInfo } from "@miragon/pulse-widget-shell/server"
 import { resolveMcpBearerToken } from "./mcp-auth.js"
 
 /**

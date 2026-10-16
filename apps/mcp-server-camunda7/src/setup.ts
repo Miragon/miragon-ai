@@ -5,8 +5,8 @@ import {
   camunda7Module,
   configuredEngineIds,
   createBpmnXmlFetcher,
-} from "@miragon-ai/camunda7-connector"
-import { analyticsModule } from "@miragon-ai/analytics-connector"
+} from "@miragon/pulse-camunda7-connector"
+import { analyticsModule } from "@miragon/pulse-analytics-connector"
 import {
   composeModules,
   createShellPlugin,
@@ -16,7 +16,7 @@ import {
   type ProfileStore,
   type ResolveBootOptions,
   type ResolvedBoot,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import type { ModuleDefinition, SharedResources } from "./module-contract.js"
 import { createDefaultProfileStore } from "./persistence/index.js"
 
@@ -126,7 +126,7 @@ export function getPlugins(
     // and the UI language, deliberately outside the MCP_ACTIVE_MODULES
     // selection. Its language save is a framework write: OAuth and no module
     // on its read-only floor. Catalogue, tools and components live in
-    // @miragon-ai/widget-shell (apps own no domain UI).
+    // @miragon/pulse-widget-shell (apps own no domain UI).
     createShellPlugin({ profileStore, allowSave: frameworkWritesAllowed(boot) }),
     ...composition.pluginsFor(entries, shared),
   ]

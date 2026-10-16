@@ -19,7 +19,7 @@ import {
   useResetOnChange,
   ViewDataState,
   WidgetShell,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { Layers, LayoutDashboard, Settings, TriangleAlert } from "lucide-react"
 import type { CockpitAppData } from "../../view-models.js"
 import { groupEnginesByEnvironment } from "../../lib/environments.js"

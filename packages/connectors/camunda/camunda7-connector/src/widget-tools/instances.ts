@@ -8,7 +8,7 @@ import {
   showToolBinding,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { buildJobPanelData } from "../data/cockpit-data.js"
 import { buildInstanceDetailData } from "../data/instance-detail-data.js"
 import { buildBpmnViewerData } from "../data/bpmn-viewer-data.js"

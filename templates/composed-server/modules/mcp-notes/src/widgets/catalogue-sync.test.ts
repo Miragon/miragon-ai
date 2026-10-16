@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { catalogueSyncIssues } from "@miragon-ai/widget-shell/server"
+import { catalogueSyncIssues } from "@miragon/pulse-widget-shell/server"
 import { definition } from "../definition.js"
 import { notesWidgets } from "./index.js"
 

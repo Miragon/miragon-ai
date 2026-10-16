@@ -1,5 +1,5 @@
 import { cn } from "@miragon/mcp-toolkit-ui"
-import { IdText } from "@miragon-ai/widget-shell/widgets"
+import { IdText } from "@miragon/pulse-widget-shell/widgets"
 
 /**
  * Names before ids, one instance label everywhere (#322 U13). An operator

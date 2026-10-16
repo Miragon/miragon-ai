@@ -5,7 +5,7 @@ import {
   NamedId,
   Td,
   VersionChip,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { TriangleAlert } from "lucide-react"
 import {
   CountPill,

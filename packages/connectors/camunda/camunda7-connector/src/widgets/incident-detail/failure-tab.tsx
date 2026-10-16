@@ -15,7 +15,7 @@ import {
   IdText,
   LogText,
   TEXT_BLOCK_FRAME,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import { Check, RotateCcw } from "lucide-react"
 
 import type { IncidentDetailData, IncidentDetailJob } from "../../view-models.js"

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@miragon-ai/camunda7-client/sdk", () => ({
+vi.mock("@miragon/pulse-camunda7-client/sdk", () => ({
   getHistoricProcessInstancesCount: vi.fn(),
   getIncidents: vi.fn(),
   getIncidentsCount: vi.fn(),
@@ -14,8 +14,8 @@ import {
   getIncidentsCount,
   getProcessDefinitionStatistics,
   getProcessInstances,
-} from "@miragon-ai/camunda7-client/sdk"
-import type { Client } from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client/sdk"
+import type { Client } from "@miragon/pulse-camunda7-client"
 import { buildClusterDetailData } from "./cluster-detail-data.js"
 import {
   buildEngineHealthData,

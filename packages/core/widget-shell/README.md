@@ -1,10 +1,10 @@
-# @miragon-ai/widget-shell
+# @miragon/pulse-widget-shell
 
 Shared widget plumbing for the [Miragon AI](../../../README.md) MCP App widgets. It is the common base
 both widget modules ([`camunda7-connector`](../../connectors/camunda/camunda7-connector), [`analytics-connector`](../../connectors/analytics/analytics-connector)) build on,
 so every widget gets the same data-loading, refresh and view-composition behaviour.
 
-Published to the public npm registry as `@miragon-ai/widget-shell` — the foundation
+Published to the public npm registry as `@miragon/pulse-widget-shell` — the foundation
 package customers build their own connectors and composed servers on (see the
 `composed-server` template).
 
@@ -155,7 +155,7 @@ on "Loading…".
 camunda7-connector / analytics-connector widgets
             │  use
             ▼
-   @miragon-ai/widget-shell   ──  adaptDataWidget · view builders · UI primitives
+   @miragon/pulse-widget-shell   ──  adaptDataWidget · view builders · UI primitives
             │  build on
             ▼
    @miragon/mcp-toolkit-ui (React + react-query)

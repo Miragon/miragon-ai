@@ -1,5 +1,5 @@
-import type { PrometheusClient } from "@miragon-ai/analytics-client"
-import { schemas, queries } from "@miragon-ai/analytics-client"
+import type { PrometheusClient } from "@miragon/pulse-analytics-client"
+import { schemas, queries } from "@miragon/pulse-analytics-client"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import type { ProfileSource } from "../server-locale.js"
 import { optionalMinBucketSize, settingsFor } from "../settings.js"

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
-import type { CompareKpiDelta } from "@miragon-ai/analytics-client"
-import { setFormatLocale } from "@miragon-ai/widget-shell/testing"
+import type { CompareKpiDelta } from "@miragon/pulse-analytics-client"
+import { setFormatLocale } from "@miragon/pulse-widget-shell/testing"
 import { translator } from "../messages/index.js"
 import type { T } from "../messages/use-t.js"
 import {

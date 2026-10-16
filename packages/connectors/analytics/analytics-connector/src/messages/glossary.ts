@@ -5,7 +5,7 @@
  * the document names each term. The terms analytics shares with the other
  * modules' views (Incident, Jobs ohne Versuche, bereitstellen,
  * Geschäftsschlüssel, aussetzen, Versuche, alle Engines) are the kit's
- * `PRODUCT_GLOSSARY` (`@miragon-ai/widget-shell/testing`), run by the same test.
+ * `PRODUCT_GLOSSARY` (`@miragon/pulse-widget-shell/testing`), run by the same test.
  */
 export interface GlossaryTerm {
   /** The German word the catalogs use. */

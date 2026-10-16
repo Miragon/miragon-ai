@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { EMPTY_TOOL_SURFACE } from "@miragon-ai/widget-shell/widgets"
+import { EMPTY_TOOL_SURFACE } from "@miragon/pulse-widget-shell/widgets"
 import { enAskAi } from "../../messages/en.ask-ai.js"
 import { deAskAi } from "../../messages/de.ask-ai.js"
 import { modelToolsAnswer } from "../widget-actions.js"

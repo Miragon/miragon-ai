@@ -2,9 +2,9 @@ import type {
   AnalyticsDashboardData,
   CompareKpiDelta,
   FailureDashboardData,
-} from "@miragon-ai/analytics-client"
-import { modelContextText, type ModelContextSpec } from "@miragon-ai/widget-shell/widgets"
-import type { DescribeForModel } from "@miragon-ai/widget-shell/ui"
+} from "@miragon/pulse-analytics-client"
+import { modelContextText, type ModelContextSpec } from "@miragon/pulse-widget-shell/widgets"
+import type { DescribeForModel } from "@miragon/pulse-widget-shell/ui"
 import { ANALYTICS_ONLY_SURFACE, engineIdsOf, isAggregate } from "./hand-off.js"
 import type { ClusterCompareData } from "./cluster-compare.js"
 import type { VersionCompareData } from "./version-compare.js"

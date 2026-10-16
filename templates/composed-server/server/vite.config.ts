@@ -10,7 +10,7 @@ export default defineConfig({
     // their own pnpm instance of the toolkit/React/Query libs; bundling two
     // copies gives each its own React context, `useCallTool()` reads the
     // wrong one, and every in-widget query hangs on "Loading…". Dedupe
-    // collapses them to a single instance. @miragon-ai/widget-shell is listed
+    // collapses them to a single instance. @miragon/pulse-widget-shell is listed
     // because it is installed from npm here and carries a React context of
     // its own.
     dedupe: [
@@ -20,7 +20,7 @@ export default defineConfig({
       "mcp-use",
       "@miragon/mcp-toolkit-ui",
       "@miragon/mcp-toolkit-core",
-      "@miragon-ai/widget-shell",
+      "@miragon/pulse-widget-shell",
       // The kit's Lucide icons and the toolkit's: one instance.
       "lucide-react",
     ],

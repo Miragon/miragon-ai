@@ -1,4 +1,4 @@
-import type { Camunda7AuthType, Client } from "@miragon-ai/camunda7-client"
+import type { Camunda7AuthType, Client } from "@miragon/pulse-camunda7-client"
 
 /**
  * The provider port: one small object per engine VENDOR of the Camunda-7

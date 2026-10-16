@@ -71,7 +71,7 @@ operaton | camunda7`) and `auth` — overrides the single-engine shorthand
   a timeout error instead of holding it.
 
 No engine at hand? The
-[miragon-ai playground](https://github.com/Miragon/miragon-ai/tree/main/playground)
+[miragon-ai playground](https://github.com/Miragon/pulse/tree/main/playground)
 is a ready-made Docker Compose stack (engine + Prometheus + Grafana) whose
 defaults match this template's `.env.example`.
 
@@ -117,7 +117,7 @@ MCP_OAUTH={"provider":"keycloak","serverUrl":"https://kc.example.com","realm":"p
 ```
 
 `server/src/app.ts` wires it through `oauthFromEnv`
-(`@miragon-ai/widget-shell/server`) — the same helper the stock server uses.
+(`@miragon/pulse-widget-shell/server`) — the same helper the stock server uses.
 `/mcp` then answers 401 without a valid bearer token, the default toolsets rise
 to `operations`/`standard`, and every settings save (`shell_save_settings` for
 the language, `camunda7_save_settings`, `analytics_save_settings`,
@@ -139,7 +139,7 @@ MCP_DASHBOARD_DIR=./.data/dashboards   # saved builder dashboards — only under
 
 Postgres stores are deliberately trimmed from this template — the stock server
 (`apps/mcp-server-camunda7` in the
-[miragon-ai repo](https://github.com/Miragon/miragon-ai)) is the reference
+[miragon-ai repo](https://github.com/Miragon/pulse)) is the reference
 (README, "Going further").
 
 ## Step 5 — make it yours

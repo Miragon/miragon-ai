@@ -10,7 +10,7 @@ import {
   withToolErrors,
   type ProfileStore,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { allowsProfileSave, type Camunda7Toolset } from "../lib/toolsets.js"
 import {
   CAMUNDA7_SAVE_SETTINGS,
@@ -188,7 +188,7 @@ export function registerUserProfileTools(
     withToolErrors(async (params, ctx) => {
       // Keyless refusal + a patch-only slice save are the shared slice-write
       // contract (`requireProfileKey` + `saveModuleSlice` in
-      // `@miragon-ai/widget-shell/server`). The store is called directly for
+      // `@miragon/pulse-widget-shell/server`). The store is called directly for
       // the record it returns (its `updatedAt` re-syncs the section's form),
       // with the same patch: ONLY the given fields, merged by the store over
       // the RAW stored slice under its per-key lock, so a concurrent

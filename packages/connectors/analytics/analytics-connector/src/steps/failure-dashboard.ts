@@ -1,5 +1,5 @@
 import type { PipelineStepDefinition } from "@miragon/mcp-toolkit-core"
-import { queries } from "@miragon-ai/analytics-client"
+import { queries } from "@miragon/pulse-analytics-client"
 import { ENGINE_KEY_DECLARATION, stepEngines, type AnalyticsAppConfig } from "./app-config.js"
 import { builderText } from "../builder-texts.js"
 import { NO_NAMES } from "../bpmn-name-lookup.js"

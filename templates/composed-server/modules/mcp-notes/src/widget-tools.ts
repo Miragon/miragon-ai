@@ -7,7 +7,7 @@ import {
   showToolBinding,
   strictToolInput,
   withToolErrors,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { NOTES_LIST_DATA } from "./tool-names.js"
 import type { NotesStore } from "./notes-store.js"
 

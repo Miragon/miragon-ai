@@ -3,16 +3,16 @@ import {
   listDeploymentsInput,
   createDeploymentInput,
   getDeploymentInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
-import { engineLike, engineSorting } from "@miragon-ai/camunda7-client"
+import { engineLike, engineSorting } from "@miragon/pulse-camunda7-client"
 import {
   getDeployments,
   getDeploymentsCount,
   getDeployment,
   createDeployment,
-} from "@miragon-ai/camunda7-client/sdk"
-import type { MultiFormDeploymentDto } from "@miragon-ai/camunda7-client/types"
+} from "@miragon/pulse-camunda7-client/sdk"
+import type { MultiFormDeploymentDto } from "@miragon/pulse-camunda7-client/types"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import { engineParamShape, withEngine } from "../lib/with-engine.js"

@@ -6,7 +6,7 @@ import {
   frameworkWritesAllowed,
   oauthFromEnv,
   type ComposedServer,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { initRuntime, type RuntimeBackends } from "./persistence/index.js"
 import { composition, getPlugins } from "./setup.js"
 
@@ -54,7 +54,7 @@ export interface AppDeps {
  * (`initRuntime`) and the plugins with their cross-module wiring
  * (`setup.ts`); the OAuth provider comes from the shared `oauthFromEnv` and
  * the order of everything else lives in the shared `createComposedServer`
- * (both `@miragon-ai/widget-shell/server`) — wired exactly like the
+ * (both `@miragon/pulse-widget-shell/server`) — wired exactly like the
  * composed-server template.
  */
 export async function createApp(
@@ -73,7 +73,7 @@ export async function createApp(
       version: packageVersion(),
       title: "Miragon AI",
       description: "Camunda 7 / CIB Seven operations and process analytics",
-      websiteUrl: "https://github.com/Miragon/miragon-ai",
+      websiteUrl: "https://github.com/Miragon/pulse",
       instructions: SERVER_INSTRUCTIONS,
     },
     composition,

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest"
 import { cleanup, screen, within } from "@testing-library/react"
-import type { EngineLandscapeResult, FailureDashboardData } from "@miragon-ai/analytics-client"
+import type { EngineLandscapeResult, FailureDashboardData } from "@miragon/pulse-analytics-client"
 import { FailureSummaryKpi } from "./failure-dashboard/summary-kpi.js"
 import { ErrorPatternsTable } from "./failure-dashboard/error-patterns-table.js"
 import { FailureRateTable, rateBarWidth } from "./failure-dashboard/failure-rate-table.js"

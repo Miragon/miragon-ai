@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { Client } from "@modelcontextprotocol/client"
-import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon-ai/camunda7-connector"
+import { CAMUNDA7_ADMIN_ONLY_TOOLS } from "@miragon/pulse-camunda7-connector"
 import { bootServer, createTestRuntime, listToolNames, type BootedServer } from "./boot-server.js"
 import {
   EXPECTED_TOOLS_ADMIN,

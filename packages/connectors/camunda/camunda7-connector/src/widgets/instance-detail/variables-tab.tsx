@@ -1,4 +1,4 @@
-import { HandOffButton } from "@miragon-ai/widget-shell/widgets"
+import { HandOffButton } from "@miragon/pulse-widget-shell/widgets"
 import type { VariableValue } from "../../view-models.js"
 import { VariablesTable } from "../instance-sections.js"
 import { useHandOff, type HandOff } from "../lib/hand-off.js"

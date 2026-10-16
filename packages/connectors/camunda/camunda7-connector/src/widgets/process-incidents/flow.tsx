@@ -8,7 +8,7 @@ import {
   WidgetShell,
   formatNumber,
   type SegmentedControlOption,
-} from "@miragon-ai/widget-shell/widgets"
+} from "@miragon/pulse-widget-shell/widgets"
 import type { ProcessIncidentsData } from "../../view-models.js"
 import { BpmnDiagram, useDefinitionXml, type BpmnHighlight } from "../bpmn-diagram.js"
 import { useT } from "../../messages/use-t.js"

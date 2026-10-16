@@ -203,7 +203,7 @@ The widget chain mirrors the camunda7 module:
 1. Component in `packages/connectors/analytics/analytics-connector/src/widgets/`, taking a `data` prop.
 2. Register it in `src/widgets/index.ts` in `analyticsWidgets` via
    `adaptDataWidget(MyWidget, "analytics:<dataType>")` (from
-   `@miragon-ai/widget-shell/ui`).
+   `@miragon/pulse-widget-shell/ui`).
 3. Add the widget entry (`id`, `description`, `requires`/`consumes`, `size`, optional
    `propsSchema`) to `src/definition.ts`, with `...builderText("widget.<slug>")` — the view
    builder's title and one-line summary for people, `builder.widget.<slug>.title|summary`
@@ -218,10 +218,10 @@ The widget chain mirrors the camunda7 module:
    `inputSchema: strictToolInput({ … })` (strict like the registrar's `strictInput`: an
    unknown key is a tool error listing the valid ones — naming per the guide in the
    add-bpm-feature skill, e.g. `maxResults`, never `limit`; `activityId`, never `elementId`) and spread `...showToolBinding(TOOL_NAME, "Title")` (from
-   `@miragon-ai/widget-shell/server` — native `view` binding named after the tool + required
+   `@miragon/pulse-widget-shell/server` — native `view` binding named after the tool + required
    passthrough `outputSchema` + the Apps-SDK `_meta` half; never hand-write
    `_meta.ui` keys, mcp-use owns them), returning `buildComposedView(...)` /
-   `buildSingleWidgetView(...)` from `@miragon-ai/widget-shell/server` (see
+   `buildSingleWidgetView(...)` from `@miragon/pulse-widget-shell/server` (see
    `analytics_show_dashboard`). An app-only `*_data` feed spreads `...appOnly`
    (`visibility: "app"` + `openai/widgetAccessible`, **no** view binding) and returns
    `buildDataFeedResult(data)`. Both resolve `engine` through `withEngineScope` like the
@@ -233,7 +233,7 @@ The widget chain mirrors the camunda7 module:
 
 Rules while building:
 
-- Compose the component from `@miragon-ai/widget-shell/widgets` and the toolkit
+- Compose the component from `@miragon/pulse-widget-shell/widgets` and the toolkit
   `@miragon/mcp-toolkit-ui` — `ViewDataState` for the loading/error/no-data guard
   (`onRetry` required, a `skeleton` slot under a polite sr-only status),
   `Section`, `Th`/`Td`, `WidgetShell` from the kit; `WidgetHeader` (no
@@ -271,7 +271,7 @@ Rules while building:
   kept, a failed read REJECTS and is never kept. A view waits 2 s at most and reads up
   to 40 keys, named by priority (the dashboard: its scope, then the activities'
   processes, then the breakdown's). The widget shows the kit's `NamedId`
-  (`@miragon-ai/widget-shell/widgets`: the name first, the id quiet in mono below, the id
+  (`@miragon/pulse-widget-shell/widgets`: the name first, the id quiet in mono below, the id
   alone in mono without a name; one look with camunda7) and an activity's type in words
   (`activityTypeLabel`, `src/widgets/names.ts`).
 - A count nobody measured is `null` and renders "—" through `Figure`
@@ -312,7 +312,7 @@ Rules while building:
   kit). Copy follows the brand voice in en + de; the package's brand-gate test
   runs `catalogTextFindings` over both catalogs, `scanGlyphs` over `src/widgets` +
   `src/messages`, `scanIconSizes` and `scanColors` over `src/widgets`
-  (`@miragon-ai/widget-shell/testing`). The words come from `src/messages/GLOSSARY.md`
+  (`@miragon/pulse-widget-shell/testing`). The words come from `src/messages/GLOSSARY.md`
   ("nicht belastbar", "Zeitraum" …, plus the kit's `PRODUCT_GLOSSARY` shared with camunda7:
   "Incident", "Jobs ohne Versuche", "bereitgestellt" …; `glossary.test.ts` rejects the
   synonyms both rule out), counted entries are `plural(…)` and take the count formatted.
@@ -357,7 +357,7 @@ pnpm build && pnpm typecheck && pnpm test && pnpm lint
 
 A new or changed tool changes the wire surface: add its name to
 `apps/mcp-server-camunda7/test/expected-tools.ts`, then refresh the per-toolset goldens with
-`GOLDEN_UPDATE=1 pnpm --filter @miragon-ai/mcp-server-camunda7 test` and commit the
+`GOLDEN_UPDATE=1 pnpm --filter @miragon/pulse-mcp-server-camunda7 test` and commit the
 `test/__golden__/` diff. If `char-budgets.json` grew, `pnpm lint` fails until the commit
 carries a `Ratchet-Exception: <why the model must read more>` trailer — trim wording first.
 A camunda7 widget that names an analytics feed by raw string is checked against the booted

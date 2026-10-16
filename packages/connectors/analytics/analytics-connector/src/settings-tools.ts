@@ -8,7 +8,7 @@ import {
   showToolBinding,
   withToolErrors,
   strictToolInput,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { ANALYTICS_SAVE_SETTINGS, ANALYTICS_SETTINGS_DATA } from "./tool-names.js"
 import {
   localizeFor,
@@ -139,7 +139,7 @@ export function registerSettingsTools(
     },
     withToolErrors(async (params, ctx) => {
       // Keyless refusal + a patch-only slice save are the shared slice-write
-      // contract (`@miragon-ai/widget-shell/server`) — every module's save
+      // contract (`@miragon/pulse-widget-shell/server`) — every module's save
       // tool uses the same pair. The store merges the patch under its per-key
       // lock, so a concurrent save of the other field is never reverted.
       const key = requireProfileKey(ctx)

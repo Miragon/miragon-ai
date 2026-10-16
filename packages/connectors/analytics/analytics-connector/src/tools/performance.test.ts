@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
-import { increaseIn, type PrometheusClient } from "@miragon-ai/analytics-client"
+import { increaseIn, type PrometheusClient } from "@miragon/pulse-analytics-client"
 import type { RegisteredToolMeta, ToolConfig } from "@miragon/mcp-toolkit-core/tools"
 import { createEngineScope } from "../engine-ids.js"
 import { registerPerformanceTools } from "./performance.js"

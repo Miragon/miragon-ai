@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { parseToolResult } from "@miragon/mcp-toolkit-ui"
 import type { MCPServer } from "mcp-use"
-import type { PrometheusClient, PromSample } from "@miragon-ai/analytics-client"
+import type { PrometheusClient, PromSample } from "@miragon/pulse-analytics-client"
 import {
   createEngineScope,
   NO_ENGINE_SCOPE_MESSAGE,

@@ -7,7 +7,7 @@ import {
   oauthFromEnv,
   persistenceFromEnv,
   type ComposedServer,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 import { composition, createDashboardStore, createProfileStore, getPlugins } from "./setup.js"
 
 /** `src/` under tsx/vitest, `dist/` when compiled — the package root is one level up either way. */
@@ -41,7 +41,7 @@ export interface AppDeps {
  * selection and boot log, the mcp-use server, request context, tool-call
  * logging, `/metrics`, the Host/Origin guard, `/health/*`, the body-capped
  * listener and the graceful drain — lives in `createComposedServer`, the
- * OAuth wiring in `oauthFromEnv` (both `@miragon-ai/widget-shell/server`);
+ * OAuth wiring in `oauthFromEnv` (both `@miragon/pulse-widget-shell/server`);
  * this file only wires what is yours: persistence and the plugins
  * (`setup.ts`).
  */

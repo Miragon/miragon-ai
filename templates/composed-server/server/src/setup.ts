@@ -7,8 +7,8 @@ import {
   camunda7Module,
   configuredEngineIds,
   createBpmnXmlFetcher,
-} from "@miragon-ai/camunda7-connector"
-import { analyticsModule, type FetchBpmnXml } from "@miragon-ai/analytics-connector"
+} from "@miragon/pulse-camunda7-connector"
+import { analyticsModule, type FetchBpmnXml } from "@miragon/pulse-analytics-connector"
 import { notesModule } from "@acme/mcp-notes"
 import {
   composeModules,
@@ -20,7 +20,7 @@ import {
   type ComposableModule,
   type ProfileStore,
   type ResolvedBoot,
-} from "@miragon-ai/widget-shell/server"
+} from "@miragon/pulse-widget-shell/server"
 
 /**
  * Cross-module resources the server wires at boot and threads into every
@@ -53,7 +53,7 @@ export interface SharedResources {
 /**
  * The port every mounted module satisfies — structurally: modules never
  * import this file, and your own module doesn't have to either. The port
- * shape and selection machinery live in `@miragon-ai/widget-shell/server`;
+ * shape and selection machinery live in `@miragon/pulse-widget-shell/server`;
  * this app only instantiates it with its own `SharedResources`.
  */
 export type ModuleDefinition = ComposableModule<SharedResources>

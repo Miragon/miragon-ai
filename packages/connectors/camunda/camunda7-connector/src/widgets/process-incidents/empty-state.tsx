@@ -1,5 +1,5 @@
 import { CountPill, FOCUS_RING, cn } from "@miragon/mcp-toolkit-ui"
-import { formatNumber } from "@miragon-ai/widget-shell/widgets"
+import { formatNumber } from "@miragon/pulse-widget-shell/widgets"
 import type { IncidentsByProcess } from "../../view-models.js"
 import { useT } from "../../messages/use-t.js"
 

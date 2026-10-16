@@ -8,7 +8,7 @@ import {
   getProcessInstanceVariablesInput,
   setProcessInstanceVariableInput,
   setProcessInstanceSuspensionInput,
-} from "@miragon-ai/camunda7-client/schemas"
+} from "@miragon/pulse-camunda7-client/schemas"
 import type { createToolRegistrar } from "@miragon/mcp-toolkit-core/tools"
 import {
   complementaryFlags,
@@ -18,7 +18,7 @@ import {
   trueOnly,
   toEngineVariable,
   toEngineVariables,
-} from "@miragon-ai/camunda7-client"
+} from "@miragon/pulse-camunda7-client"
 import {
   startProcessInstanceByKey,
   getProcessInstances,
@@ -29,7 +29,7 @@ import {
   getActivityInstanceTree,
   setProcessInstanceVariable,
   updateSuspensionStateById,
-} from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client/sdk"
 import { paginatedListOutput, toPaginatedList } from "../lib/pagination.js"
 import type { EngineRegistry } from "../lib/resolve-engine.js"
 import {

@@ -24,8 +24,8 @@ import {
   type Client,
   type EngineVariableInput,
   type VariableMap,
-} from "@miragon-ai/camunda7-client"
-import { complete, getTask, resolve, submit } from "@miragon-ai/camunda7-client/sdk"
+} from "@miragon/pulse-camunda7-client"
+import { complete, getTask, resolve, submit } from "@miragon/pulse-camunda7-client/sdk"
 import { formFieldSubmitRules, type FormFieldSubmitRule } from "./bpmn-task-form.js"
 import { fetchDefinitionXml } from "./definition-xml.js"
 

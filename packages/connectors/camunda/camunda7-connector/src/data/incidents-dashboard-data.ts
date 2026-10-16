@@ -1,5 +1,5 @@
-import { latestEngineDate, toEngineDate, type Client } from "@miragon-ai/camunda7-client"
-import { getIncidentsCount } from "@miragon-ai/camunda7-client/sdk"
+import { latestEngineDate, toEngineDate, type Client } from "@miragon/pulse-camunda7-client"
+import { getIncidentsCount } from "@miragon/pulse-camunda7-client/sdk"
 import type {
   IncidentsDashboardActivity,
   IncidentsDashboardData,

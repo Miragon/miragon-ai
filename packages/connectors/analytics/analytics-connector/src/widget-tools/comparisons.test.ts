@@ -4,7 +4,7 @@ import type {
   ClusterCompareResult,
   PrometheusClient,
   VersionCompareResult,
-} from "@miragon-ai/analytics-client"
+} from "@miragon/pulse-analytics-client"
 import { createEngineScope } from "../engine-ids.js"
 import type { ProfileSource } from "../server-locale.js"
 import { registerComparisonWidgetTools } from "./comparisons.js"

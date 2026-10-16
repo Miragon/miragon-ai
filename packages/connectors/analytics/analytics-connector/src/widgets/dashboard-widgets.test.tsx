@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest"
 import { cleanup, screen, within } from "@testing-library/react"
-import type { AnalyticsDashboardData } from "@miragon-ai/analytics-client"
+import type { AnalyticsDashboardData } from "@miragon/pulse-analytics-client"
 import { ExecutionSummaryKpi } from "./analytics-dashboard/execution-summary-kpi.js"
 import { ExecutionPerformanceKpi } from "./analytics-dashboard/execution-performance-kpi.js"
 import { ProcessDefinitionBreakdown } from "./analytics-dashboard/definition-breakdown.js"

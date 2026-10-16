@@ -47,22 +47,22 @@
         {
           "type": "json",
           "path": "templates/composed-server/server/package.json",
-          "jsonpath": "$.dependencies['@miragon-ai/analytics-connector']"
+          "jsonpath": "$.dependencies['@miragon/pulse-analytics-connector']"
         },
         {
           "type": "json",
           "path": "templates/composed-server/server/package.json",
-          "jsonpath": "$.dependencies['@miragon-ai/camunda7-connector']"
+          "jsonpath": "$.dependencies['@miragon/pulse-camunda7-connector']"
         },
         {
           "type": "json",
           "path": "templates/composed-server/server/package.json",
-          "jsonpath": "$.dependencies['@miragon-ai/widget-shell']"
+          "jsonpath": "$.dependencies['@miragon/pulse-widget-shell']"
         },
         {
           "type": "json",
           "path": "templates/composed-server/modules/mcp-notes/package.json",
-          "jsonpath": "$.dependencies['@miragon-ai/widget-shell']"
+          "jsonpath": "$.dependencies['@miragon/pulse-widget-shell']"
         }
       ]
     }
