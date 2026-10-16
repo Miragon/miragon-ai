@@ -8,7 +8,8 @@ export default miragonDocs({
   repo: "Miragon/pulse",
   // The product name. Miragon AI is the family of all tools, this repo is Pulse, and so
   // are its technical names (#415): the repo Miragon/pulse, the Docker image
-  // miragon/pulse-server, the @miragon/pulse-* packages and the MCP server name "pulse".
+  // ghcr.io/miragon/pulse-server, the @miragon/pulse-* packages and the MCP server
+  // name "pulse".
   title: "Miragon Pulse",
   siteTitle: "Pulse",
   description:

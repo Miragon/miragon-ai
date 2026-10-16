@@ -6,8 +6,8 @@ one Vite bundle served as per-tool view resources, and serves the streamable-HTT
 port `8400`.
 
 This is the deployable artifact: it ships as the Docker image
-[`miragon/pulse-server`](https://hub.docker.com/r/miragon/pulse-server). The package itself
-is `private` and not published to npm.
+[`ghcr.io/miragon/pulse-server`](https://github.com/Miragon/pulse/pkgs/container/pulse-server).
+The package itself is `private` and not published to npm.
 
 ## What it does
 
@@ -40,7 +40,7 @@ upstream/proxy federation.
 docker run --rm -p 127.0.0.1:8400:8400 \
   -e CAMUNDA_BASE_URL=http://host.docker.internal:8410/engine-rest \
   -e PROMETHEUS_URL=http://host.docker.internal:9090 \
-  docker.io/miragon/pulse-server:latest
+  ghcr.io/miragon/pulse-server:latest
 
 # From source (local dev — needs the Docker infra; see the root README)
 pnpm dev          # build:ui + mcp-use dev on :8400, inspector at /mcp/inspector

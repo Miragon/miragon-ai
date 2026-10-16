@@ -5,9 +5,11 @@ import { REPO_ROOT } from "./source-scan.js"
 
 /**
  * This repo and everything it ships was renamed to Pulse (#415): the npm scope
- * @miragon/pulse-*, the repo Miragon/pulse, the image miragon/pulse-server, the
- * starter Miragon/pulse-starter, the docs at miragon.github.io/pulse, the MCP
- * server slug and log label "pulse". An old name fails SILENTLY in most places
+ * @miragon/pulse-*, the repo Miragon/pulse, the image ghcr.io/miragon/pulse-server
+ * (the GitHub Container Registry: nothing publishes to Docker Hub any more, so the
+ * image there, or a bare miragon/pulse-server that Docker resolves there, does not
+ * exist), the starter Miragon/pulse-starter, the docs at miragon.github.io/pulse,
+ * the MCP server slug and log label "pulse". An old name fails SILENTLY in most places
  * it survives: an import or a vi.mock id resolves the last old release from npm
  * or mocks nothing, a pnpm filter matches nothing and exits 0, a link 404s, a
  * client key or a log alert stops matching. No other gate reads these names
@@ -29,6 +31,12 @@ const RULES = [
   { name: "old repo", pattern: /(?<![\w-])miragon\/miragon-ai(?![\w-])/i },
   { name: "old docs URL", pattern: /miragon\.github\.io\/miragon-ai/i },
   { name: "old image", pattern: /miragon-ai-server/i },
+  // The image lives on GHCR only: a Docker Hub reference (docker.io/…, hub.docker.com/r/…)
+  // or a bare name, which Docker resolves on Docker Hub, pulls nothing.
+  { name: "image off GHCR", pattern: /(?<!ghcr\.io\/)(?<![\w.-])miragon\/pulse-server/i },
+  // Docker refuses a repository name with a capital ("repository name must be lowercase");
+  // the tag after the colon may have one.
+  { name: "image not lowercase", pattern: /ghcr\.io\/[\w./-]*[A-Z]/ },
   { name: "old starter", pattern: /miragon-ai-starter|miragon ai starter/i },
   { name: "old product name", pattern: /automation[-_ ]mcp|miragon ai platform/i },
   // A client key, a log label, a compose project, a package name: the slug on
@@ -211,6 +219,10 @@ describe("the old-name rules", () => {
     ["git@github.com:miragon/miragon-ai.git", "old repo"],
     ["https://miragon.github.io/miragon-ai/usage", "old docs URL"],
     ["docker.io/miragon/miragon-ai-server:latest", "old image"],
+    ["docker.io/miragon/pulse-server:latest", "image off GHCR"],
+    ["https://hub.docker.com/r/miragon/pulse-server", "image off GHCR"],
+    ["the Docker image `miragon/pulse-server`", "image off GHCR"],
+    ["ghcr.io/Miragon/pulse-server:latest", "image not lowercase"],
     ["Miragon/miragon-ai-starter", "old starter"],
     ["the Miragon AI Starter", "old starter"],
     ["automation-mcp", "old product name"],
@@ -234,7 +246,10 @@ describe("the old-name rules", () => {
     "scripts/check-miragon-ai-refs.mjs",
     "@miragon/pulse-widget-shell",
     "@miragon/mcp-toolkit-core",
-    "docker.io/miragon/pulse-server",
+    "ghcr.io/miragon/pulse-server:latest",
+    "ghcr.io/miragon/pulse-server:0.21.0-RC1",
+    "https://github.com/Miragon/pulse/pkgs/container/pulse-server",
+    "docker build -t pulse-server .",
   ])("%s is no old name", (text) => {
     expect(rulesMatching(text)).toEqual([])
   })

@@ -1,4 +1,9 @@
-name: Publish to Docker Hub
+name: Publish to GitHub Container Registry
+
+# Pushes the server image to GHCR as ghcr.io/miragon/pulse-server (file name kept:
+# release-please.yml calls it). The workflow's own GITHUB_TOKEN logs in, so no
+# registry secret exists. Called from the release train, the token holds only
+# what the calling job grants: that job must grant packages: write too.
 
 on:
   workflow_call:
@@ -24,10 +29,12 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  # No id-token: provenance and SBOM are BuildKit attestations, pushed with the
+  # image over the same registry login.
+  packages: write # push to ghcr.io with the GITHUB_TOKEN
 
 env:
-  IMAGE: docker.io/miragon/pulse-server
+  IMAGE: ghcr.io/miragon/pulse-server
 
 jobs:
   publish:
@@ -50,12 +57,13 @@ jobs:
       - uses: docker/setup-qemu-action@v4.4.0
       - uses: docker/setup-buildx-action@v4.4.1
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         if: ${{ inputs.dry_run != true }}
         uses: docker/login-action@v4.6.0
         with:
-          username: ${{ secrets.DOCKER_MIRAGON_USERNAME }}
-          password: ${{ secrets.DOCKER_MIRAGON_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
         uses: docker/build-push-action@v7.4.0
@@ -67,11 +75,18 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.IMAGE }}:latest
-          # Links the image on Docker Hub back to its source repo.
+          # The source label links the GHCR package to Miragon/pulse: the package
+          # lists under the repo and shows its README.
           labels: |
             org.opencontainers.image.source=https://github.com/Miragon/pulse
             org.opencontainers.image.title=Pulse
+            org.opencontainers.image.description=Pulse MCP server: process operations and analytics for Camunda 7 / CIB seven / Operaton engines
+            org.opencontainers.image.licenses=MIT
             org.opencontainers.image.version=${{ steps.version.outputs.version }}
+          # GHCR shows a multi-arch package's description from the index, not from
+          # the per-platform labels above.
+          annotations: |
+            index:org.opencontainers.image.description=Pulse MCP server: process operations and analytics for Camunda 7 / CIB seven / Operaton engines
           provenance: ${{ inputs.dry_run != true }}
           sbom: ${{ inputs.dry_run != true }}
           cache-from: type=gha

@@ -20,7 +20,8 @@ hero:
 ## Try it, then run it on your engine
 
 [Getting started](./getting-started.md) connects your Claude to the public playground with one
-command, then runs the Docker image `miragon/pulse-server` against your own engine's REST API.
+command, then runs the Docker image `ghcr.io/miragon/pulse-server` against your own engine's
+REST API.
 [Usage](./usage.md) covers the other assistants, what to ask and your settings.
 
 ## Run it for your team
